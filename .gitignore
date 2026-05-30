@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+ENV/
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+*service-account*.json
+*credentials*.json
+*-key.json
+
+# Node
+node_modules/
+dashboard/dist/
+.vite/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cloud Run build artifacts
+*.tar.gz
