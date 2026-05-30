@@ -93,38 +93,38 @@
 
 ---
 
-## Day 3 — Brief Assembler + Fixtures + ADK Coordinator
+## Day 3 — Brief Assembler + Fixtures + ADK Coordinator ✓ COMPLETE
 *Goal: GET /api/brief returns all 5 sections. POST /api/sweep invokes coordinator.*
 
 ### Ingestion fixtures
-- [ ] D3-01 `backend/app/ingestion/demo_fixtures.py` — Gmail and Calendar fixture data
-- [ ] D3-02 `backend/app/ingestion/gmail_adapter.py` — DemoFixtureGmailSource + stub
-- [ ] D3-03 `backend/app/ingestion/calendar_adapter.py` — DemoFixtureCalendarSource + stub
+- [x] D3-01 `backend/app/ingestion/demo_fixtures.py` — Gmail and Calendar fixture data
+- [x] D3-02 `backend/app/ingestion/gmail_adapter.py` — DemoFixtureGmailSource + stub
+- [x] D3-03 `backend/app/ingestion/calendar_adapter.py` — DemoFixtureCalendarSource + stub
 
 ### Brief assembler
-- [ ] D3-04 `backend/app/brief/schemas.py` — BriefResponse, all section types
-- [ ] D3-05 `backend/app/brief/assembler.py` — all 5 sections from Firestore state
+- [x] D3-04 `backend/app/brief/schemas.py` — BriefResponse, all section types
+- [x] D3-05 `backend/app/brief/assembler.py` — all 5 sections from Firestore state
 
 ### Brief API route
-- [ ] D3-06 `backend/app/routes/brief.py` — `GET /api/brief`
+- [x] D3-06 `backend/app/routes/brief.py` — `GET /api/brief`
 
 ### ADK coordinator
-- [ ] D3-07 `backend/app/agents/coordinator.py` — MCPToolset connection, deterministic routing dict, `execute_sweep()`
-- [ ] D3-08 `backend/app/agents/billing_agent.py` — thin sub-agent, returns billing section
-- [ ] D3-09 `backend/app/agents/deadline_agent.py` — thin sub-agent, date math, escalation cadence, calls `log_deadline_event()` via MCP
+- [x] D3-07 `backend/app/agents/coordinator.py` — SIGNAL_ROUTING dict, classify_signal(), execute_sweep()
+- [x] D3-08 `backend/app/agents/billing_agent.py` — scans PENDING entries, logs anomalies via log_anomaly()
+- [x] D3-09 `backend/app/agents/deadline_agent.py` — escalation cadence, log_deadline_event() + log_escalation()
 
 ### Sweep API route
-- [ ] D3-10 `backend/app/routes/brief.py` — `POST /api/sweep`
+- [x] D3-10 `backend/app/routes/brief.py` — `POST /api/sweep`
 
 ### TypeScript types and API client
-- [ ] D3-11 `dashboard/src/types.ts` — mirrors all Pydantic models
-- [ ] D3-12 `dashboard/src/api.ts` — all API calls
+- [x] D3-11 `dashboard/src/types.ts` — mirrors all Pydantic models
+- [x] D3-12 `dashboard/src/api.ts` — all API calls
 
 ### Tests
-- [ ] D3-13 `backend/tests/test_brief_assembly.py` — partial (deadlines + billing sections)
-- [ ] D3-14 `backend/tests/test_deduplication.py`
+- [x] D3-13 `backend/tests/test_brief_assembly.py` — 25 tests (all 5 sections + 5 demo conditions)
+- [x] D3-14 `backend/tests/test_deduplication.py` — 14 tests (hash, fixtures, adapters)
 
-**Day 3 checkpoint: GET /api/brief returns all 5 sections with seed data. dl-mercer-001 in deadlines, te-005 with scrubber warning.**
+**Day 3 checkpoint: GET /api/brief returns all 5 sections with seed data. dl-mercer-001 in deadlines, te-005 with scrubber warning. ✓**
 
 ---
 

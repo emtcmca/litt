@@ -195,6 +195,9 @@
 - `[AGENT]` **Install + configure Google ADK**  
   `pip install google-adk`. Set up Vertex AI credentials. Configure Gemini 2.5 Pro as the reasoning model. Verify a basic agent invocation works end-to-end before writing any domain logic.
 
+- `[AGENT]` **Enable ADK observability**  
+  Configure ADK's built-in trace exporter to emit structured execution traces to Cloud Trace. This is a config-level addition on the `AdkApp` or `Runner` initialization — not a separate build task. Enables judges (and developers) to visually inspect agent reasoning chains in the GCP console. Required by Track 1 judging criteria ("Agent Observability").
+
 - `[AGENT]` **Coordinator agent skeleton**  
   `agents/coordinator.py` — ADK agent with system prompt injection from firm context document. Routing logic: deadline / billing / comms / anomaly. Escalation brief assembly. Returns structured output — never writes data directly.
 
@@ -415,9 +418,11 @@
 
 - `[SUBMIT]` **Create architecture diagram**  
   `docs/architecture.png` — required by submission rules. Must clearly show:
-  - Ingestion layer: Gmail API + Google Calendar API
+  - Ingestion layer: Gmail API + Google Calendar API (labeled as MCP-compatible adapter interfaces)
+  - MCP connector layer between ADK agents and external adapters — show MCP as the protocol boundary even though v1.0 uses fixture adapters; this is the production-intent design the judges are evaluating
   - Coordinator agent (Gemini 2.5 Pro / ADK)
   - Four sub-agents: Deadline Monitor, Billing Reconciliation, Client Comms, Anomaly Escalation
+  - ADK observability → Cloud Trace export path
   - Deterministic tool layer (Python)
   - Firestore collections
   - Attorney interface: React dashboard + email digest
@@ -454,7 +459,7 @@
   | Timestamp | Action | Voiceover |
   |-----------|--------|-----------|
   | 0:00–0:10 | Blank dashboard | "A solo attorney at a small civil firm ends every day not knowing what slipped. Litt fixes that." |
-  | 0:10–0:25 | Daily Closeout Brief appears — Strand & Okafor LLP | [Pause on brief structure — deadline badge, WIP total, budget bar, client silence] |
+  | 0:10–0:25 | Daily Closeout Brief appears — Strand & Okafor LLP | "Litt ran autonomously — scanned deadlines, scored billing anomalies, drafted client updates, and assembled this brief. The attorney's job is to review and confirm, not to find what needs doing." [Pause on brief structure — deadline badge, WIP total, budget bar, client silence] |
   | 0:25–0:50 | Click Confirm on HARD_LEGAL deadline. Brief flash of audit_log write in Firestore console. | "Every confirmation is logged. Every escalation is documented. If there's ever a malpractice claim, this is the record." |
   | 0:50–1:15 | Open billing panel for te-005. Pre-bill scrubber warning inline. Edit narrative, approve. Open te-001 (no narrative), add narrative, approve. | "Litt flagged the billing guideline violation before the invoice went out." |
   | 1:15–1:38 | Whitmore Group draft surfaces — 16 days since contact. Source attribution per sentence visible. Attorney approves, draft goes to Gmail. | "The draft is Litt's. The send is the attorney's. Always." |
@@ -470,8 +475,18 @@
 - `[SUBMIT]` **Business case section**  
   The problem: malpractice risk from deadline misses, billing reconstruction inaccuracy, AI billing transparency gap (ABA FO 512), client communication lapses, budget blindness. The market: 100,000+ small firms, underserved by enterprise legal tech. The wedge: operational control layer with defensible audit trail — not another chatbot.
 
+  **Autonomous action framing (required — judges score on this):** Explicitly distinguish what Litt does autonomously from what requires attorney confirmation. Autonomous (no human trigger): deadline escalation cadence execution, anomaly detection and scoring, brief assembly, FactPacket construction, source-backed draft generation, budget threshold monitoring, client silence detection. Attorney-confirmed: status state transitions, communication sends, alert dismissals. Frame this as a product strength, not a limitation: *"Litt acts autonomously where the decision is operational. It gates on the attorney where the decision is legal."*
+
 - `[SUBMIT]` **Technical implementation section**  
   ADK multi-agent architecture. Coordinator routing logic and escalation brief assembly. Four sub-agents and their defined scope. Deterministic tool layer rationale — why the LLM cannot write data directly. State machine enforcement in `advance_entry_status()`. Immutable `audit_log` at Firestore security rule level. Gmail + Calendar ingestion with unverified-to-verified deadline flow. Gemini 2.5 Pro via Vertex AI throughout.
+
+  **Three content additions required in this section:**
+
+  1. **MCP paragraph:** "Gmail and Calendar ingestion adapters implement a Model Context Protocol-compatible interface. v1.0 uses seeded fixture adapters for demo reliability; the MCP server endpoints are the v1.1 production path, allowing attorneys to connect their existing Workspace accounts without re-authentication. The adapter boundary is visible in `backend/app/ingestion/`."
+
+  2. **Firestore vs. ADK Memory Bank paragraph:** "Litt uses Firestore for all session and operational state rather than ADK Memory Bank. Legal billing records, deadline confirmations, and audit events require durable, schema-enforced, append-only storage with Firestore security rule enforcement — properties ADK Memory Bank does not provide. The `audit_log` collection is CREATE-only at the Firestore security rule layer, making it tamper-resistant by design."
+
+  3. **ADK Observability paragraph:** "Litt enables ADK's built-in trace exporter to emit structured agent execution traces to Cloud Trace. Every coordinator sweep produces a full execution graph showing which sub-agents were invoked, what Gemini returned, and which tool functions were called — providing a real-time lens into agent reasoning for debugging and audit."
 
 - `[SUBMIT]` **Architecture diagram embed**  
   Embed `docs/architecture.png` in the written description. This is explicitly required by the submission rules.

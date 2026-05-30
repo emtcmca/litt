@@ -1,5 +1,5 @@
 """
-FastMCP SSE server — exposes the Litt tool layer as MCP tools.
+FastMCP HTTP server — exposes the Litt tool layer as MCP tools.
 Mounted at /mcp in main.py. ADK coordinator connects via MCPToolset.
 
 All tools accept firm_id as a parameter to enforce multi-tenant isolation.

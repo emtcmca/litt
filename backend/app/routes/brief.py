@@ -1,44 +1,32 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.brief.assembler import assemble_brief
+from app.brief.schemas import BriefResponse, SweepResponse
+from app.agents.coordinator import Coordinator
+
 router = APIRouter()
+
+_coordinator = Coordinator()
 
 
 class SweepRequest(BaseModel):
     firm_id: str
 
 
-@router.get("/brief")
+@router.get("/brief", response_model=BriefResponse)
 def get_brief(firm_id: str, attorney_id: str = "dana-strand"):
-    """
-    Returns Daily Closeout Brief for the attorney.
-    Day 3: implemented in brief/assembler.py
-    """
-    return {
-        "firm_id": firm_id,
-        "attorney_id": attorney_id,
-        "message": "Brief assembler not yet implemented — coming Day 3",
-        "sections": {
-            "deadlines": {"items": [], "count": 0, "has_critical": False},
-            "time_entries": {"items": [], "count": 0, "total_wip_usd": 0},
-            "budget_risks": {"items": [], "count": 0},
-            "client_silence": {"items": [], "count": 0},
-            "anomalies": {"items": [], "count": 0},
-        },
-    }
+    """Returns Daily Closeout Brief assembled from live Firestore state."""
+    try:
+        return assemble_brief(firm_id=firm_id, attorney_id=attorney_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/sweep")
+@router.post("/sweep", response_model=SweepResponse)
 def run_sweep(req: SweepRequest):
-    """
-    Triggers coordinator sweep.
-    Day 3: wired to ADK coordinator.
-    """
-    return {
-        "sweep_id": "not-yet-implemented",
-        "firm_id": req.firm_id,
-        "message": "Coordinator not yet wired — coming Day 3",
-        "sections_updated": [],
-        "escalations_created": 0,
-        "anomalies_detected": 0,
-    }
+    """Triggers coordinator sweep — runs all sub-agents and returns summary."""
+    try:
+        return _coordinator.execute_sweep(firm_id=req.firm_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

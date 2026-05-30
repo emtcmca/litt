@@ -25,4 +25,4 @@ app.include_router(actions.router, prefix="/api")
 app.include_router(demo.router, prefix="/api")
 
 from app.mcp_server.server import mcp
-app.mount("/mcp", mcp.sse_app())
+app.mount("/mcp", mcp.http_app())
