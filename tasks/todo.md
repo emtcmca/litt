@@ -37,7 +37,7 @@
 ### Cloud Run deployment
 - [x] D1-17 Deploy `litt-backend` Cloud Run service — https://litt-backend-1073532050878.us-central1.run.app
 - [x] D1-18 Deploy `litt-dashboard` Cloud Run service — https://litt-dashboard-1073532050878.us-central1.run.app
-- [!] D1-19-FIX `allUsers` org policy blocked — need org admin to run `gcloud org-policies set-policy allow-all-members-policy.json --project=litt-hackathon` then re-run IAM bindings for both services
+- [x] D1-19-FIX `allUsers` org policy override applied, IAM bindings set — both services publicly accessible
 
 ### Demo skeleton endpoints
 - [x] D1-19 `GET /api/demo/ready` skeleton — returns JSON structure, all checks false
