@@ -25,7 +25,9 @@ import uuid
 from enum import Enum
 from typing import Dict, List
 
+from app.agents.anomaly_agent import AnomalyAgent
 from app.agents.billing_agent import BillingAgent
+from app.agents.comms_agent import CommsAgent
 from app.agents.deadline_agent import DeadlineAgent
 from app.brief.schemas import SweepResponse
 
@@ -80,18 +82,18 @@ class Coordinator:
     def __init__(self):
         self._billing = BillingAgent()
         self._deadline = DeadlineAgent()
+        self._comms = CommsAgent()
+        self._anomaly = AnomalyAgent()
 
     def execute_sweep(self, firm_id: str) -> SweepResponse:
-        """
-        Run all available sub-agents for the firm and return a sweep summary.
-        Day 3: BillingAgent + DeadlineAgent only.
-        Day 4 adds: CommsAgent, AnomalyAgent.
-        """
+        """Run all four sub-agents for the firm and return a sweep summary."""
         sweep_id = f"sweep-{uuid.uuid4().hex[:12]}"
         start_ms = time.time()
 
         billing_result = self._billing.run(firm_id)
         deadline_result = self._deadline.run(firm_id)
+        comms_result = self._comms.run(firm_id)
+        anomaly_result = self._anomaly.run(firm_id)
 
         duration_ms = int((time.time() - start_ms) * 1000)
 
@@ -100,10 +102,15 @@ class Coordinator:
             sections_updated.append("billing")
         if deadline_result["escalations_created"] > 0:
             sections_updated.append("deadlines")
+        if comms_result["comms_created"] > 0:
+            sections_updated.append("comms")
+        if anomaly_result["anomalies_logged"] > 0:
+            sections_updated.append("anomalies")
 
-        total_escalations = (
-            billing_result["anomalies_logged"] + deadline_result["escalations_created"]
+        total_anomalies = (
+            billing_result["anomalies_logged"] + anomaly_result["anomalies_logged"]
         )
+        total_escalations = deadline_result["escalations_created"] + total_anomalies
 
         return SweepResponse(
             sweep_id=sweep_id,
@@ -111,5 +118,5 @@ class Coordinator:
             duration_ms=duration_ms,
             sections_updated=sections_updated,
             escalations_created=total_escalations,
-            anomalies_detected=billing_result["anomalies_logged"],
+            anomalies_detected=total_anomalies,
         )

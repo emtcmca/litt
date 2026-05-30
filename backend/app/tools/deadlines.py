@@ -130,6 +130,161 @@ def verify_deadline(
     return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=audit_id)
 
 
+def confirm_deadline(
+    firm_id: str,
+    deadline_id: str,
+    attorney_id: str,
+    idempotency_key: str,
+    expected_version: int,
+) -> Union[ToolResult, ToolError]:
+    """Attorney confirms the deadline is on track. Updates last_confirmed_by/at."""
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=existing)
+
+    lock_ok, data = check_optimistic_lock(firm_id, "deadlines", deadline_id, expected_version)
+    if not lock_ok:
+        if data is None:
+            return ToolError(error_type="NOT_FOUND", message=f"deadline {deadline_id} not found")
+        return ToolError(error_type="STALE_STATE", message="Version mismatch", detail={"actual": data.get("version")})
+
+    now = get_effective_datetime()
+    collection_ref(firm_id, "deadlines").document(deadline_id).update({
+        "last_confirmed_by": attorney_id,
+        "last_confirmed_at": now,
+        "version": expected_version + 1,
+        "updated_at": now,
+    })
+
+    log_deadline_event(
+        firm_id=firm_id,
+        deadline_id=deadline_id,
+        event_type=DeadlineEventType.ATTORNEY_CONFIRMED.value,
+        actor=attorney_id,
+        idempotency_key=f"{idempotency_key}-evt",
+        attorney_id=attorney_id,
+    )
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.legal_defensibility,
+        event_type="DEADLINE_CONFIRMED",
+        actor=attorney_id,
+        entity_type="deadline",
+        entity_id=deadline_id,
+        after_state={"last_confirmed_by": attorney_id},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, audit_id)
+    return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=audit_id)
+
+
+def resolve_deadline(
+    firm_id: str,
+    deadline_id: str,
+    attorney_id: str,
+    idempotency_key: str,
+    expected_version: int,
+) -> Union[ToolResult, ToolError]:
+    """Mark deadline as RESOLVED. Logs ATTORNEY_RESOLVED event."""
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=existing)
+
+    lock_ok, data = check_optimistic_lock(firm_id, "deadlines", deadline_id, expected_version)
+    if not lock_ok:
+        if data is None:
+            return ToolError(error_type="NOT_FOUND", message=f"deadline {deadline_id} not found")
+        return ToolError(error_type="STALE_STATE", message="Version mismatch", detail={"actual": data.get("version")})
+
+    now = get_effective_datetime()
+    collection_ref(firm_id, "deadlines").document(deadline_id).update({
+        "status": "RESOLVED",
+        "version": expected_version + 1,
+        "updated_at": now,
+    })
+
+    log_deadline_event(
+        firm_id=firm_id,
+        deadline_id=deadline_id,
+        event_type=DeadlineEventType.ATTORNEY_RESOLVED.value,
+        actor=attorney_id,
+        idempotency_key=f"{idempotency_key}-evt",
+        attorney_id=attorney_id,
+    )
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.legal_defensibility,
+        event_type="DEADLINE_RESOLVED",
+        actor=attorney_id,
+        entity_type="deadline",
+        entity_id=deadline_id,
+        before_state={"status": data.get("status")},
+        after_state={"status": "RESOLVED"},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, audit_id)
+    return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=audit_id)
+
+
+def dismiss_deadline(
+    firm_id: str,
+    deadline_id: str,
+    attorney_id: str,
+    reason: str,
+    idempotency_key: str,
+    expected_version: int,
+) -> Union[ToolResult, ToolError]:
+    """Dismiss deadline with required reason. Logs DISMISSED_WITH_REASON event."""
+    if not reason or not reason.strip():
+        return ToolError(error_type="VALIDATION_FAILED", message="reason required for deadline dismissal")
+
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=existing)
+
+    lock_ok, data = check_optimistic_lock(firm_id, "deadlines", deadline_id, expected_version)
+    if not lock_ok:
+        if data is None:
+            return ToolError(error_type="NOT_FOUND", message=f"deadline {deadline_id} not found")
+        return ToolError(error_type="STALE_STATE", message="Version mismatch", detail={"actual": data.get("version")})
+
+    now = get_effective_datetime()
+    collection_ref(firm_id, "deadlines").document(deadline_id).update({
+        "status": "DISMISSED",
+        "version": expected_version + 1,
+        "updated_at": now,
+    })
+
+    log_deadline_event(
+        firm_id=firm_id,
+        deadline_id=deadline_id,
+        event_type=DeadlineEventType.DISMISSED_WITH_REASON.value,
+        actor=attorney_id,
+        idempotency_key=f"{idempotency_key}-evt",
+        attorney_id=attorney_id,
+        dismissal_reason=reason,
+    )
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.legal_defensibility,
+        event_type="DEADLINE_DISMISSED",
+        actor=attorney_id,
+        entity_type="deadline",
+        entity_id=deadline_id,
+        before_state={"status": data.get("status")},
+        after_state={"status": "DISMISSED", "reason": reason},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, audit_id)
+    return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=audit_id)
+
+
 def supersede_deadline(
     firm_id: str,
     old_deadline_id: str,

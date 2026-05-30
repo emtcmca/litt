@@ -413,6 +413,58 @@ def compute_budget_utilization(
 # generate_invoice
 # ---------------------------------------------------------------------------
 
+def update_entry_narrative(
+    firm_id: str,
+    entry_id: str,
+    narrative: str,
+    actor: str,
+    idempotency_key: str,
+    expected_version: int,
+) -> Union[ToolResult, ToolError]:
+    """Update narrative on a PENDING or APPROVED time entry."""
+    if not narrative or not narrative.strip():
+        return ToolError(error_type="VALIDATION_FAILED", message="narrative cannot be empty")
+
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=entry_id, entity_type="time_entry", audit_event_id=existing)
+
+    lock_ok, data = check_optimistic_lock(firm_id, "time_entries", entry_id, expected_version)
+    if not lock_ok:
+        if data is None:
+            return ToolError(error_type="NOT_FOUND", message=f"time_entry {entry_id} not found")
+        return ToolError(error_type="STALE_STATE", message="Version mismatch", detail={"actual": data.get("version")})
+
+    current_status = data.get("status", "PENDING")
+    if current_status not in ("PENDING", "APPROVED"):
+        return ToolError(
+            error_type="INVALID_TRANSITION",
+            message=f"Cannot update narrative on entry with status {current_status}",
+        )
+
+    now = get_effective_datetime()
+    collection_ref(firm_id, "time_entries").document(entry_id).update({
+        "narrative": narrative,
+        "version": expected_version + 1,
+        "updated_at": now,
+    })
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.operational,
+        event_type="ENTRY_NARRATIVE_UPDATED",
+        actor=actor,
+        entity_type="time_entry",
+        entity_id=entry_id,
+        before_state={"narrative": data.get("narrative")},
+        after_state={"narrative": narrative},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, audit_id)
+    return ToolResult(entity_id=entry_id, entity_type="time_entry", audit_event_id=audit_id)
+
+
 def generate_invoice(
     firm_id: str,
     client_id: str,

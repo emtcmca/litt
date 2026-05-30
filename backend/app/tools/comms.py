@@ -5,7 +5,8 @@ CRITICAL: Only log_client_comm_sent() updates last_client_contact.
 approve_client_comm_draft() and queue_client_comm_for_delivery() do NOT.
 """
 
-from typing import Optional, Union
+import uuid
+from typing import List, Optional, Union
 
 from app.config import get_effective_datetime
 from app.db import collection_ref
@@ -25,6 +26,112 @@ _COMM_TRANSITIONS = {
 
 def _check_comm_transition(current: str, new: str) -> bool:
     return new in _COMM_TRANSITIONS.get(current, [])
+
+
+def create_client_comm(
+    firm_id: str,
+    matter_id: str,
+    client_id: str,
+    trigger: str,
+    draft_body: str,
+    source_map: List[dict],
+    actor: str,
+    idempotency_key: str,
+) -> Union[ToolResult, ToolError]:
+    """Create a new client_communication record in DRAFT_GENERATED status."""
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=existing, entity_type="client_communication", audit_event_id=existing)
+
+    now = get_effective_datetime()
+    comm_id = f"comm-{uuid.uuid4().hex[:10]}"
+
+    doc = {
+        "id": comm_id,
+        "firm_id": firm_id,
+        "matter_id": matter_id,
+        "client_id": client_id,
+        "trigger": trigger,
+        "draft_body": draft_body,
+        "source_map": source_map,
+        "status": CommStatus.DRAFT_GENERATED.value,
+        "approved_by": None,
+        "approved_at": None,
+        "queued_at": None,
+        "sent_confirmed_at": None,
+        "dismissal_reason": None,
+        "version": 1,
+        "created_at": now,
+        "updated_at": now,
+    }
+    collection_ref(firm_id, "client_communications").document(comm_id).create(doc)
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.operational,
+        event_type="COMM_DRAFT_CREATED",
+        actor=actor,
+        entity_type="client_communication",
+        entity_id=comm_id,
+        after_state={"matter_id": matter_id, "client_id": client_id, "trigger": trigger},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, comm_id)
+    return ToolResult(entity_id=comm_id, entity_type="client_communication", audit_event_id=audit_id)
+
+
+def dismiss_comm(
+    firm_id: str,
+    comm_id: str,
+    attorney_id: str,
+    reason: str,
+    idempotency_key: str,
+    expected_version: int,
+) -> Union[ToolResult, ToolError]:
+    """Dismiss a communication draft. reason required."""
+    if not reason or not reason.strip():
+        return ToolError(error_type="VALIDATION_FAILED", message="reason required to dismiss communication")
+
+    existing = check_idempotency(firm_id, idempotency_key)
+    if existing:
+        return ToolResult(entity_id=comm_id, entity_type="client_communication", audit_event_id=existing)
+
+    lock_ok, data = check_optimistic_lock(firm_id, "client_communications", comm_id, expected_version)
+    if not lock_ok:
+        if data is None:
+            return ToolError(error_type="NOT_FOUND", message=f"comm {comm_id} not found")
+        return ToolError(error_type="STALE_STATE", message="Version mismatch", detail={"actual": data.get("version")})
+
+    current_status = data.get("status", "DRAFT_GENERATED")
+    if not _check_comm_transition(current_status, "DISMISSED_WITH_REASON"):
+        return ToolError(
+            error_type="INVALID_TRANSITION",
+            message=f"{current_status} → DISMISSED_WITH_REASON is not valid",
+        )
+
+    now = get_effective_datetime()
+    collection_ref(firm_id, "client_communications").document(comm_id).update({
+        "status": CommStatus.DISMISSED_WITH_REASON.value,
+        "dismissal_reason": reason,
+        "version": expected_version + 1,
+        "updated_at": now,
+    })
+
+    audit_id = log_audit_event(
+        firm_id=firm_id,
+        tier=AuditTier.operational,
+        event_type="COMM_DISMISSED",
+        actor=attorney_id,
+        entity_type="client_communication",
+        entity_id=comm_id,
+        before_state={"status": current_status},
+        after_state={"status": "DISMISSED_WITH_REASON", "reason": reason},
+        idempotency_key=idempotency_key,
+    )
+
+    register_idempotency(firm_id, idempotency_key, audit_id)
+    return ToolResult(entity_id=comm_id, entity_type="client_communication", audit_event_id=audit_id)
 
 
 def approve_client_comm_draft(

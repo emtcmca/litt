@@ -129,31 +129,37 @@
 
 ---
 
-## Day 4 — Remaining Agents + Full API Routes + Demo Reset
+## Day 4 — Remaining Agents + Full API Routes + Demo Reset ✓ COMPLETE
 *Goal: GET /api/demo/ready all passing. All action endpoints work.*
 
 ### Agents
-- [ ] D4-01 `backend/app/agents/comms_agent.py` — FactPacket → Gemini → citation validation
-- [ ] D4-02 `backend/app/agents/anomaly_agent.py` — all detectors, scoring overrides
+- [x] D4-01 `backend/app/agents/comms_agent.py` — FactPacket → Gemini → citation validation
+- [x] D4-02 `backend/app/agents/anomaly_agent.py` — all detectors, scoring overrides
 
 ### Action routes
-- [ ] D4-03 `backend/app/routes/actions.py` — all deadline action endpoints
-- [ ] D4-04 `backend/app/routes/actions.py` — all billing action endpoints (+ LEDES stub)
-- [ ] D4-05 `backend/app/routes/actions.py` — all comms action endpoints
-- [ ] D4-06 `backend/app/routes/actions.py` — alert dismiss endpoint
+- [x] D4-03 `backend/app/routes/actions.py` — all deadline action endpoints
+- [x] D4-04 `backend/app/routes/actions.py` — all billing action endpoints (+ LEDES stub)
+- [x] D4-05 `backend/app/routes/actions.py` — all comms action endpoints
+- [x] D4-06 `backend/app/routes/actions.py` — alert dismiss endpoint
 
 ### Demo routes (full)
-- [ ] D4-07 `backend/app/routes/demo.py` — `GET /api/demo/ready` full implementation
-- [ ] D4-08 `backend/app/routes/demo.py` — `POST /api/demo/reset` full (delete + re-seed)
-- [ ] D4-09 `backend/app/routes/demo.py` — `GET /api/demo/state`
+- [x] D4-07 `backend/app/routes/demo.py` — `GET /api/demo/ready` full implementation
+- [x] D4-08 `backend/app/routes/demo.py` — `POST /api/demo/reset` full (delete + re-seed via app/demo/seeder.py)
+- [x] D4-09 `backend/app/routes/demo.py` — `GET /api/demo/state`
 
 ### Tests
-- [ ] D4-10 `backend/tests/test_brief_assembly.py` — complete all 5 sections
-- [ ] D4-11 `backend/tests/test_anomaly_scoring.py` — override rules
-- [ ] D4-12 `backend/tests/test_prompt_injection.py`
-- [ ] D4-13 `backend/tests/test_demo_readiness.py` — all 5 conditions + reset
+- [x] D4-10 `backend/tests/test_brief_assembly.py` — complete all 5 sections (25 tests, passing from Day 3)
+- [x] D4-11 `backend/tests/test_anomaly_scoring.py` — override rules (29 tests)
+- [x] D4-12 `backend/tests/test_prompt_injection.py` (18 tests)
+- [x] D4-13 `backend/tests/test_demo_readiness.py` — all 5 conditions + reset (26 tests)
 
-**Day 4 checkpoint: GET /api/demo/ready → ok: true. POST /api/demo/reset restores all conditions. All pytest tests pass.**
+### Tool layer additions (required by Day 4 routes)
+- [x] `backend/app/tools/deadlines.py` — confirm_deadline(), resolve_deadline(), dismiss_deadline()
+- [x] `backend/app/tools/billing.py` — update_entry_narrative()
+- [x] `backend/app/tools/comms.py` — create_client_comm(), dismiss_comm()
+- [x] `backend/app/demo/seeder.py` — inline seed data for reset endpoint (container-safe)
+
+**Day 4 checkpoint: 173/173 tests pass. GET /api/demo/ready wired to all 5 live checks. POST /api/demo/reset deletes + re-seeds. ✓**
 
 ---
 
