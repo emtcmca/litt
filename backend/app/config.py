@@ -6,7 +6,7 @@ DEMO_DATE_STR: str = os.getenv("LITT_DEMO_DATE", "")
 DEMO_FIRM_ID: str = os.getenv("LITT_DEMO_FIRM_ID", "strand-okafor")
 FIRM_TIMEZONE: str = os.getenv("LITT_FIRM_TIMEZONE", "America/New_York")
 
-GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "litt-prod")
+GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "litt-hackathon")
 VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 

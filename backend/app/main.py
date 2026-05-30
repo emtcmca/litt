@@ -24,6 +24,5 @@ app.include_router(brief.router, prefix="/api")
 app.include_router(actions.router, prefix="/api")
 app.include_router(demo.router, prefix="/api")
 
-# Day 2: uncomment after MCP server is implemented
-# from app.mcp_server import server as mcp_server
-# app.mount("/mcp", mcp_server.sse_app())
+from app.mcp_server.server import mcp
+app.mount("/mcp", mcp.sse_app())

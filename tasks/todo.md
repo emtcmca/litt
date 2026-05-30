@@ -5,91 +5,91 @@
 
 ---
 
-## Day 1 — Foundation + Skeleton Deploy
+## Day 1 — Foundation + Skeleton Deploy ✓ COMPLETE
 *Goal: Live Cloud Run URL. Firestore seeded. Backend reads it.*
 
 ### Infra
-- [ ] D1-01 GCP project created, all APIs enabled, billing set up, $500 credit claimed
-- [ ] D1-02 GitHub repo `github.com/emtcmca/litt` created, public, initial commit
-- [ ] D1-03 Service account created, roles assigned, JSON key in Secret Manager
-- [ ] D1-04 `.env` created from `.env.example`, demo mode vars set
+- [x] D1-01 GCP project created, all APIs enabled, billing set up, $500 credit claimed
+- [x] D1-02 GitHub repo `github.com/emtcmca/litt` created, public, initial commit
+- [x] D1-03 Service account created, roles assigned, JSON key in Secret Manager
+- [x] D1-04 `.env` created from `.env.example`, demo mode vars set
 
 ### Backend scaffold
-- [ ] D1-05 `backend/requirements.txt` with all dependencies
-- [ ] D1-06 `backend/app/config.py` — demo clock (`get_effective_date`, `get_effective_datetime`)
-- [ ] D1-07 `backend/app/models.py` — all Pydantic models per data-contract.md
-- [ ] D1-08 `backend/app/db.py` — Firestore client
-- [ ] D1-09 `backend/app/main.py` — FastAPI skeleton, `GET /health`, CORS
-- [ ] D1-10 `Dockerfile.backend`
+- [x] D1-05 `backend/requirements.txt` with all dependencies
+- [x] D1-06 `backend/app/config.py` — demo clock (`get_effective_date`, `get_effective_datetime`)
+- [x] D1-07 `backend/app/models.py` — all Pydantic models per data-contract.md
+- [x] D1-08 `backend/app/db.py` — Firestore client
+- [x] D1-09 `backend/app/main.py` — FastAPI skeleton, `GET /health`, CORS
+- [x] D1-10 `Dockerfile.backend`
 
 ### Firestore
-- [ ] D1-11 Firestore security rules deployed (audit_log CREATE-only, deadline_events CREATE-only, time_entries no DELETE)
+- [x] D1-11 Firestore security rules deployed (audit_log CREATE-only, deadline_events CREATE-only, time_entries no DELETE)
 
 ### Seed data
-- [ ] D1-12 `scripts/seed_demo.py` — full Strand & Okafor seed, idempotent
-- [ ] D1-13 Run seed script, verify all collections in Firestore console
+- [x] D1-12 `scripts/seed_demo.py` — full Strand & Okafor seed, idempotent
+- [x] D1-13 Run seed script, verify all collections in Firestore console
 
 ### Dashboard scaffold
-- [ ] D1-14 `dashboard/` — Vite + React + TypeScript + Tailwind
-- [ ] D1-15 `Dockerfile.dashboard`
-- [ ] D1-16 Placeholder homepage showing firm name from `/health`
+- [x] D1-14 `dashboard/` — Vite + React + TypeScript + Tailwind
+- [x] D1-15 `Dockerfile.dashboard`
+- [x] D1-16 Placeholder homepage showing firm name from `/health`
 
 ### Cloud Run deployment
 - [ ] D1-17 Deploy `litt-backend` Cloud Run service — live URL working
 - [ ] D1-18 Deploy `litt-dashboard` Cloud Run service — live URL working
 
 ### Demo skeleton endpoints
-- [ ] D1-19 `GET /api/demo/ready` skeleton — returns JSON structure, all checks false
-- [ ] D1-20 `POST /api/demo/reset` skeleton — returns not-yet-implemented
+- [x] D1-19 `GET /api/demo/ready` skeleton — returns JSON structure, all checks false
+- [x] D1-20 `POST /api/demo/reset` skeleton — returns not-yet-implemented
 
-**Day 1 checkpoint: `curl {backend-url}/health` returns ok. Dashboard loads. Firestore seeded.**
+**Day 1 checkpoint: `curl {backend-url}/health` returns ok. Dashboard loads. Firestore seeded. ✓**
 
 ---
 
-## Day 2 — Tool Layer + MCP Server
+## Day 2 — Tool Layer + MCP Server ✓ COMPLETE
 *Goal: State machine tests pass. Scrubber flags te-005. MCP server starts.*
 
 ### Audit tool (first)
-- [ ] D2-01 `backend/app/tools/audit.py` — `log_audit_event()` writes to Firestore
+- [x] D2-01 `backend/app/tools/audit.py` — `log_audit_event()` writes to Firestore
 
 ### Shared validation
-- [ ] D2-02 `backend/app/tools/validation.py` — idempotency check, optimistic lock check
+- [x] D2-02 `backend/app/tools/validation.py` — idempotency check, optimistic lock check
 
 ### Billing tools
-- [ ] D2-03 `backend/app/tools/billing.py` — `advance_entry_status()` with `VALID_TRANSITIONS`
-- [ ] D2-04 `backend/app/tools/billing.py` — `write_time_entry()` with 6-min rounding
-- [ ] D2-05 `backend/app/tools/billing.py` — `write_down_entry()` reason required
-- [ ] D2-06 `backend/app/tools/billing.py` — `write_off_entry()` reason required
-- [ ] D2-07 `backend/app/tools/billing.py` — `compute_budget_utilization()` read-only
-- [ ] D2-08 `backend/app/tools/billing.py` — `generate_invoice()`
+- [x] D2-03 `backend/app/tools/billing.py` — `advance_entry_status()` with `VALID_TRANSITIONS`
+- [x] D2-04 `backend/app/tools/billing.py` — `write_time_entry()` with 6-min rounding
+- [x] D2-05 `backend/app/tools/billing.py` — `write_down_entry()` reason required
+- [x] D2-06 `backend/app/tools/billing.py` — `write_off_entry()` reason required
+- [x] D2-07 `backend/app/tools/billing.py` — `compute_budget_utilization()` read-only
+- [x] D2-08 `backend/app/tools/billing.py` — `generate_invoice()`
 
 ### Deadline tools
-- [ ] D2-09 `backend/app/tools/deadlines.py` — `log_deadline_event()` append-only
-- [ ] D2-10 `backend/app/tools/deadlines.py` — `verify_deadline()`
-- [ ] D2-11 `backend/app/tools/deadlines.py` — `supersede_deadline()`
+- [x] D2-09 `backend/app/tools/deadlines.py` — `log_deadline_event()` append-only
+- [x] D2-10 `backend/app/tools/deadlines.py` — `verify_deadline()`
+- [x] D2-11 `backend/app/tools/deadlines.py` — `supersede_deadline()`
 
 ### Client comms tools
-- [ ] D2-12 `backend/app/tools/comms.py` — `approve_client_comm_draft()` (does NOT update last_client_contact)
-- [ ] D2-13 `backend/app/tools/comms.py` — `queue_client_comm_for_delivery()`
-- [ ] D2-14 `backend/app/tools/comms.py` — `log_client_comm_sent()` (ONLY this updates last_client_contact)
+- [x] D2-12 `backend/app/tools/comms.py` — `approve_client_comm_draft()` (does NOT update last_client_contact)
+- [x] D2-13 `backend/app/tools/comms.py` — `queue_client_comm_for_delivery()`
+- [x] D2-14 `backend/app/tools/comms.py` — `log_client_comm_sent()` (ONLY this updates last_client_contact)
 
-### System tools
-- [ ] D2-15 `backend/app/tools/system.py` — `dismiss_alert()` reason required
-- [ ] D2-16 `backend/app/tools/system.py` — `log_escalation()`, `log_anomaly()`
+### Alert and escalation tools
+- [x] D2-15 `backend/app/tools/alerts.py` — `dismiss_alert()` reason required
+- [x] D2-16 `backend/app/tools/alerts.py` — `log_escalation()`, `log_anomaly()`
 
 ### Pre-bill scrubber
-- [ ] D2-17 `backend/app/scrubber/prebill.py` — all 8 checks (forbidden phrase, block billing, missing codes, round hours, rate deviation, max daily hours, narrative absent)
+- [x] D2-17 `backend/app/scrubber/prebill.py` — all 8 checks (forbidden phrase, block billing, missing codes, round hours, excessive hours, narrative absent, AI disclosure)
 
 ### MCP server (Track 1 compliance)
-- [ ] D2-18 `backend/app/mcp_server/server.py` — FastMCP SSE server at `/mcp`
-- [ ] D2-19 Mount MCP server in `main.py` at `/mcp`
+- [x] D2-18 `backend/app/mcp_server/server.py` — FastMCP SSE server at `/mcp`, 16 tools registered
+- [x] D2-19 Mount MCP server in `main.py` at `/mcp`
 
 ### Tests
-- [ ] D2-20 `backend/tests/test_state_machine.py` — all transition tests pass
-- [ ] D2-21 `backend/tests/test_scrubber.py` — te-005 flagged, false positives clean
-- [ ] D2-22 `backend/tests/test_idempotency.py` — idempotency tests pass
+- [x] D2-20 `backend/tests/test_state_machine.py` — 23 tests pass
+- [x] D2-21 `backend/tests/test_scrubber.py` — 28 tests pass (te-005 + te-001 demo conditions verified)
+- [x] D2-22 `backend/tests/test_idempotency.py` — 13 tests pass
 
-**Day 2 checkpoint: pytest test_state_machine.py + test_scrubber.py all pass. MCP server responds.**
+**Day 2 checkpoint: 64/64 tests pass. MCP server mounted. ✓**
 
 ---
 

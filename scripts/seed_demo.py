@@ -102,7 +102,7 @@ def seed(db: firestore.Client):
         "created_at": FIRM_SETUP_DT,
         "updated_at": FIRM_SETUP_DT,
     })
-    print("  ✓ attorneys")
+    print("  [ok] attorneys")
 
     # ------------------------------------------------------------------
     # Clients
@@ -132,7 +132,7 @@ def seed(db: firestore.Client):
         "client_approval_required_above": 15000,
         "outside_counsel_guidelines_attached": True,
         "engagement_letter_signed": True,
-        "engagement_letter_date": date(2026, 1, 15),
+        "engagement_letter_date": "2026-01-15",
     }
 
     # acme-commercial at 78% = $11,700 of $15,000
@@ -185,7 +185,7 @@ def seed(db: firestore.Client):
         "client_approval_required_above": None,
         "outside_counsel_guidelines_attached": False,
         "engagement_letter_signed": True,
-        "engagement_letter_date": date(2026, 1, 15),
+        "engagement_letter_date": "2026-01-15",
     }
 
     col(db, "clients").document("mercer-industries").set({
@@ -256,7 +256,7 @@ def seed(db: firestore.Client):
         "created_at": FIRM_SETUP_DT,
         "updated_at": DEMO_DT,
     })
-    print("  ✓ clients")
+    print("  [ok] clients")
 
     # ------------------------------------------------------------------
     # Matters
@@ -328,7 +328,7 @@ def seed(db: firestore.Client):
         "created_at": dt(2026, 3, 1),
         "updated_at": dt(2026, 5, 13),
     })
-    print("  ✓ matters")
+    print("  [ok] matters")
 
     # ------------------------------------------------------------------
     # Time entries
@@ -341,7 +341,7 @@ def seed(db: firestore.Client):
         "matter_id": "mercer-v-dunlap",
         "client_id": "mercer-industries",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 27),
+        "entry_date": "2026-05-27",
         "hours": 1.4,
         "rate": 350,
         "amount": 490.00,
@@ -380,7 +380,7 @@ def seed(db: firestore.Client):
         "matter_id": "mercer-v-dunlap",
         "client_id": "mercer-industries",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 26),
+        "entry_date": "2026-05-26",
         "hours": 0.5,
         "rate": 350,
         "amount": 175.00,
@@ -419,7 +419,7 @@ def seed(db: firestore.Client):
         "matter_id": "reyes-acquisition",
         "client_id": "reyes-family-holdings",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 28),
+        "entry_date": "2026-05-28",
         "hours": 0.8,
         "rate": 350,
         "amount": 280.00,
@@ -461,7 +461,7 @@ def seed(db: firestore.Client):
         "matter_id": "reyes-acquisition",
         "client_id": "reyes-family-holdings",
         "attorney_id": "kofi-okafor",
-        "entry_date": date(2026, 5, 27),
+        "entry_date": "2026-05-27",
         "hours": 1.2,
         "rate": 375,
         "amount": 450.00,
@@ -500,7 +500,7 @@ def seed(db: firestore.Client):
         "matter_id": "acme-contract-review-2026",
         "client_id": "acme-commercial",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 28),
+        "entry_date": "2026-05-28",
         "hours": 0.8,
         "rate": 350,
         "amount": 280.00,
@@ -543,7 +543,7 @@ def seed(db: firestore.Client):
         "matter_id": "acme-contract-review-2026",
         "client_id": "acme-commercial",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 22),
+        "entry_date": "2026-05-22",
         "hours": 2.0,  # round hours — anomaly (already flagged/logged)
         "rate": 350,
         "amount": 700.00,
@@ -582,7 +582,7 @@ def seed(db: firestore.Client):
         "matter_id": "whitmore-employment-2026",
         "client_id": "whitmore-group",
         "attorney_id": "dana-strand",
-        "entry_date": date(2026, 5, 10),
+        "entry_date": "2026-05-10",
         "hours": 0.6,
         "rate": 350,
         "amount": 210.00,
@@ -621,7 +621,7 @@ def seed(db: firestore.Client):
         "matter_id": "whitmore-employment-2026",
         "client_id": "whitmore-group",
         "attorney_id": "kofi-okafor",
-        "entry_date": date(2026, 5, 20),
+        "entry_date": "2026-05-20",
         "hours": 1.1,
         "rate": 375,
         "amount": 412.50,
@@ -655,7 +655,7 @@ def seed(db: firestore.Client):
         "created_at": dt(2026, 5, 20, 15, 0),
         "updated_at": dt(2026, 5, 21, 9, 0),
     })
-    print("  ✓ time_entries")
+    print("  [ok] time_entries")
 
     # ------------------------------------------------------------------
     # Deadlines
@@ -667,7 +667,7 @@ def seed(db: firestore.Client):
         "firm_id": FIRM_ID,
         "matter_id": "mercer-v-dunlap",
         "description": "Opposition to defendant's motion for summary judgment due",
-        "due_date": date(2026, 6, 4),
+        "due_date": "2026-06-04",
         "classification": "HARD_LEGAL",
         "status": "ACTIVE",
         "source_type": "court_order",
@@ -691,7 +691,7 @@ def seed(db: firestore.Client):
         "firm_id": FIRM_ID,
         "matter_id": "reyes-acquisition",
         "description": "LOI acceptance window closes — counterparty signature required",
-        "due_date": date(2026, 6, 9),
+        "due_date": "2026-06-09",
         "classification": "HARD_CONTRACTUAL",
         "status": "ACTIVE",
         "source_type": "contract",
@@ -708,7 +708,7 @@ def seed(db: firestore.Client):
         "created_at": dt(2026, 5, 18, 14, 0),
         "updated_at": dt(2026, 5, 18, 14, 0),
     })
-    print("  ✓ deadlines")
+    print("  [ok] deadlines")
 
     # ------------------------------------------------------------------
     # Client communications — Whitmore silence trigger draft
@@ -754,7 +754,7 @@ def seed(db: firestore.Client):
         "created_at": DEMO_DT,
         "updated_at": DEMO_DT,
     })
-    print("  ✓ client_communications")
+    print("  [ok] client_communications")
 
     # ------------------------------------------------------------------
     # Invoice (for te-007 reference)
@@ -763,8 +763,8 @@ def seed(db: firestore.Client):
         "id": "INV-2026-006",
         "firm_id": FIRM_ID,
         "client_id": "whitmore-group",
-        "period_start": date(2026, 5, 1),
-        "period_end": date(2026, 5, 15),
+        "period_start": "2026-05-01",
+        "period_end": "2026-05-15",
         "total_hours": 0.6,
         "total_amount": 210.00,
         "retainer_draw": None,
@@ -778,7 +778,7 @@ def seed(db: firestore.Client):
         "created_at": dt(2026, 5, 16, 9, 0),
         "updated_at": dt(2026, 5, 16, 9, 0),
     })
-    print("  ✓ invoices")
+    print("  [ok] invoices")
 
     # ------------------------------------------------------------------
     # Ingestion signals (for deduplication demo)
@@ -790,7 +790,7 @@ def seed(db: firestore.Client):
         "source_id": "gmail-court-order-20260508",
         "source_hash": "sha256-mercer-opposition-june4-2026",
         "signal_type": "deadline_candidate",
-        "extracted_date": date(2026, 6, 4),
+        "extracted_date": "2026-06-04",
         "matter_id": "mercer-v-dunlap",
         "processed": True,
         "outcome_id": "dl-mercer-001",
@@ -799,9 +799,9 @@ def seed(db: firestore.Client):
         "created_at": dt(2026, 5, 8, 11, 0),
         "updated_at": dt(2026, 5, 8, 11, 0),
     })
-    print("  ✓ ingestion_signals")
+    print("  [ok] ingestion_signals")
 
-    print(f"\n✅ Seed complete — {FIRM_ID} ready")
+    print(f"\n[DONE] Seed complete — {FIRM_ID} ready")
     print(f"   Demo date: {DEMO_DATE}")
     print(f"   dl-mercer-001: HARD_LEGAL, due {date(2026,6,4)} ({(date(2026,6,4)-DEMO_DATE).days} days out)")
     print(f"   te-005: PENDING, 'review documents' in narrative")
