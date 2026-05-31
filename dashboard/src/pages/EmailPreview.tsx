@@ -1,9 +1,30 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { BriefResponse } from '../types';
 import { getBrief } from '../api';
 
 const FIRM_ID = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
+
+function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  if (count === 0) return null;
+  return (
+    <section style={{ marginBottom: 28 }}>
+      <h2 style={{ margin: '0 0 12px', paddingBottom: 8, borderBottom: '0.5px solid var(--color-border-tertiary)', fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>
+        {title} / {count}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function EmailItem({ accent, children }: { accent: string; children: ReactNode }) {
+  return (
+    <div style={{ borderLeft: `3px solid ${accent}`, paddingLeft: 12, marginBottom: 16 }}>
+      {children}
+    </div>
+  );
+}
 
 export function EmailPreview() {
   const [brief, setBrief] = useState<BriefResponse | null>(null);
@@ -13,112 +34,86 @@ export function EmailPreview() {
     getBrief(FIRM_ID, ATTORNEY_ID).then(setBrief).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-gray-500 text-sm">Loading…</div>;
-  if (!brief) return <div className="p-8 text-red-600 text-sm">Failed to load brief.</div>;
+  if (loading) return <div style={{ padding: 32, color: 'var(--color-text-tertiary)', fontSize: 14 }}>Loading...</div>;
+  if (!brief) return <div style={{ padding: 32, color: 'var(--color-text-danger)', fontSize: 14 }}>Failed to load brief.</div>;
 
   const s = brief.sections;
   const date = brief.generated_at.slice(0, 10);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 text-sm text-gray-800" style={{ fontFamily: 'ui-monospace, "Cascadia Code", monospace' }}>
-      <div className="border-b-2 border-gray-900 pb-3 mb-6">
-        <p className="text-xs text-gray-400 mb-1 uppercase tracking-widest">DAILY CLOSEOUT BRIEF — CONFIDENTIAL — DEMO MODE</p>
-        <h1 className="text-2xl font-bold text-gray-900">Litt / {brief.firm_name}</h1>
-        <p className="text-xs text-gray-500 mt-1">{brief.attorney_name} · {date}</p>
-      </div>
+    <main style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px', color: 'var(--color-text-primary)', background: 'var(--color-background-primary)', minHeight: '100vh' }}>
+      <header style={{ borderBottom: '2px solid var(--color-text-primary)', paddingBottom: 14, marginBottom: 28 }}>
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+          Daily closeout brief / confidential / demo mode
+        </p>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>Litt / {brief.firm_name}</h1>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>{brief.attorney_name} / {date}</p>
+      </header>
 
-      {s.deadlines.count > 0 && (
-        <section className="mb-7">
-          <h2 className="font-bold uppercase text-xs tracking-widest text-gray-900 border-b border-gray-300 pb-1 mb-3">
-            ■ DEADLINES ({s.deadlines.count})
-          </h2>
-          {s.deadlines.items.map(d => (
-            <div key={d.deadline_id} className="mb-4 pl-3 border-l-2 border-red-400">
-              <p className="font-bold">{d.classification} · {d.deadline_id}</p>
-              <p>{d.description}</p>
-              <p className="text-gray-500 text-xs mt-0.5">
-                Due {d.due_date} ({d.days_out}d) · {d.matter_name} · {d.client_name}
-                {d.is_unconfirmed ? ' · UNCONFIRMED' : ''}
+      <Section title="Deadlines" count={s.deadlines.count}>
+        {s.deadlines.items.map(d => (
+          <EmailItem key={d.deadline_id} accent="var(--color-border-danger)">
+            <p style={{ margin: '0 0 4px', fontWeight: 500 }}>{d.classification} / {d.deadline_id}</p>
+            <p style={{ margin: '0 0 4px' }}>{d.description}</p>
+            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+              Due {d.due_date} ({d.days_out}d) / {d.matter_name} / {d.client_name}{d.is_unconfirmed ? ' / attorney confirmation required' : ''}
+            </p>
+          </EmailItem>
+        ))}
+      </Section>
+
+      <Section title="Work in progress" count={s.time_entries.count}>
+        {s.time_entries.items.map(e => (
+          <EmailItem key={e.entry_id} accent={e.has_block ? 'var(--color-border-danger)' : e.has_warn ? 'var(--color-border-warning)' : 'var(--color-border-info)'}>
+            <p style={{ margin: '0 0 4px', fontWeight: 500 }}>
+              {e.entry_id} / {e.status}{e.has_block ? ' / BLOCK' : e.has_warn ? ' / WARN' : ''}
+            </p>
+            <p style={{ margin: '0 0 4px' }}>{e.narrative ?? 'No narrative'}</p>
+            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+              {e.hours}h / ${e.amount.toFixed(2)} / {e.matter_name} / {e.entry_date}
+            </p>
+            {e.scrubber_flags.map((f, i) => (
+              <p key={i} style={{ margin: '4px 0 0', color: f.severity === 'BLOCK' ? 'var(--color-text-danger)' : 'var(--color-text-warning)', fontSize: 12 }}>
+                {f.severity}: {f.message}{f.matched_text ? ` ("${f.matched_text}")` : ''}
               </p>
-            </div>
-          ))}
-        </section>
-      )}
+            ))}
+          </EmailItem>
+        ))}
+      </Section>
 
-      {s.time_entries.count > 0 && (
-        <section className="mb-7">
-          <h2 className="font-bold uppercase text-xs tracking-widest text-gray-900 border-b border-gray-300 pb-1 mb-3">
-            ■ WIP ENTRIES ({s.time_entries.count}) — ${s.time_entries.total_wip_usd.toLocaleString()} total
-          </h2>
-          {s.time_entries.items.map(e => (
-            <div key={e.entry_id} className="mb-4 pl-3 border-l-2 border-amber-400">
-              <p className="font-bold">
-                {e.entry_id} · {e.status}
-                {e.has_block ? ' [BLOCK]' : e.has_warn ? ' [WARN]' : ''}
-              </p>
-              <p>{e.narrative ?? '(no narrative)'}</p>
-              <p className="text-gray-500 text-xs mt-0.5">
-                {e.hours}h · ${e.amount.toFixed(2)} · {e.matter_name} · {e.entry_date}
-              </p>
-              {e.scrubber_flags.map((f, i) => (
-                <p key={i} className="text-red-600 text-xs mt-0.5">
-                  → {f.severity}: {f.message}{f.matched_text ? ` ("${f.matched_text}")` : ''}
-                </p>
-              ))}
-            </div>
-          ))}
-        </section>
-      )}
+      <Section title="Budget risks" count={s.budget_risks.count}>
+        {s.budget_risks.items.map(b => (
+          <EmailItem key={b.client_id} accent="var(--color-border-warning)">
+            <p style={{ margin: '0 0 4px', fontWeight: 500 }}>{b.alert_status} / {b.client_name}</p>
+            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+              ${b.total_committed.toLocaleString()} / ${b.budget_cap.toLocaleString()} ({b.utilization_pct.toFixed(0)}%)
+            </p>
+          </EmailItem>
+        ))}
+      </Section>
 
-      {s.budget_risks.count > 0 && (
-        <section className="mb-7">
-          <h2 className="font-bold uppercase text-xs tracking-widest text-gray-900 border-b border-gray-300 pb-1 mb-3">
-            ■ BUDGET RISKS ({s.budget_risks.count})
-          </h2>
-          {s.budget_risks.items.map(b => (
-            <div key={b.client_id} className="mb-4 pl-3 border-l-2 border-orange-400">
-              <p className="font-bold">{b.alert_status} · {b.client_name}</p>
-              <p className="text-xs text-gray-500">
-                ${b.total_committed.toLocaleString()} / ${b.budget_cap.toLocaleString()} ({(b.utilization_pct * 100).toFixed(0)}%)
-              </p>
-            </div>
-          ))}
-        </section>
-      )}
+      <Section title="Client silence" count={s.client_silence.count}>
+        {s.client_silence.items.map(c => (
+          <EmailItem key={c.matter_id} accent="var(--color-border-warning)">
+            <p style={{ margin: '0 0 4px', fontWeight: 500 }}>{c.matter_id}</p>
+            <p style={{ margin: 0 }}>{c.client_name} / {c.days_since_contact} days since contact / threshold {c.threshold_days}</p>
+          </EmailItem>
+        ))}
+      </Section>
 
-      {s.client_silence.count > 0 && (
-        <section className="mb-7">
-          <h2 className="font-bold uppercase text-xs tracking-widest text-gray-900 border-b border-gray-300 pb-1 mb-3">
-            ■ CLIENT SILENCE ({s.client_silence.count})
-          </h2>
-          {s.client_silence.items.map(c => (
-            <div key={c.matter_id} className="mb-4 pl-3 border-l-2 border-purple-400">
-              <p className="font-bold">{c.matter_id}</p>
-              <p>{c.client_name} — {c.days_since_contact} days since contact (threshold {c.threshold_days})</p>
-              {c.comm_draft_id && <p className="text-xs text-gray-500">Draft ready: {c.comm_draft_id}</p>}
-            </div>
-          ))}
-        </section>
-      )}
+      <Section title="Anomalies" count={s.anomalies.count}>
+        {s.anomalies.items.map(a => (
+          <EmailItem key={a.escalation_id} accent={a.risk_level === 'CRITICAL' ? 'var(--color-border-danger)' : 'var(--color-border-warning)'}>
+            <p style={{ margin: '0 0 4px', fontWeight: 500 }}>{a.risk_level} P{a.priority}/5 / {a.entity_id}</p>
+            <p style={{ margin: '0 0 4px' }}>{a.what_is_happening}</p>
+            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 12 }}>Decision needed: {a.what_attorney_must_decide}</p>
+          </EmailItem>
+        ))}
+      </Section>
 
-      {s.anomalies.count > 0 && (
-        <section className="mb-7">
-          <h2 className="font-bold uppercase text-xs tracking-widest text-gray-900 border-b border-gray-300 pb-1 mb-3">
-            ■ ANOMALIES ({s.anomalies.count})
-          </h2>
-          {s.anomalies.items.map(a => (
-            <div key={a.escalation_id} className="mb-4 pl-3 border-l-2 border-gray-400">
-              <p className="font-bold">{a.risk_level} P{a.priority}/5 · {a.entity_id}</p>
-              <p>{a.what_is_happening}</p>
-              <p className="text-gray-500 text-xs mt-0.5">→ {a.what_attorney_must_decide}</p>
-            </div>
-          ))}
-        </section>
-      )}
-
-      <div className="border-t border-gray-200 pt-3 text-xs text-gray-400">
-        Generated {brief.generated_at.slice(0, 19).replace('T', ' ')} UTC · Litt v1.0 · Defensible audit trail enabled
-      </div>
-    </div>
+      <footer style={{ borderTop: '0.5px solid var(--color-border-tertiary)', paddingTop: 12, fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+        Generated {brief.generated_at.slice(0, 19).replace('T', ' ')} UTC / Litt v1.0 / audit trail enabled
+      </footer>
+    </main>
   );
 }

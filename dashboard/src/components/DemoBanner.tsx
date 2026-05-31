@@ -5,8 +5,19 @@ interface Props {
 
 export function DemoBanner({ firmName, demoDate }: Props) {
   return (
-    <div className="bg-amber-400 text-amber-900 text-xs font-medium text-center py-2 px-4 sticky top-0 z-40">
-      DEMO MODE — {firmName} — Synthetic data only — {demoDate}
+    <div style={{
+      background: 'var(--color-ramp-amber-200)',
+      color: 'var(--color-ramp-amber-900)',
+      fontSize: 12,
+      fontWeight: 500,
+      textAlign: 'center',
+      padding: '8px 16px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+      letterSpacing: 0,
+    }}>
+      Demo mode / {firmName} / synthetic data only / {demoDate}
     </div>
   );
 }

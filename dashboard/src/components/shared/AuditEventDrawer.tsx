@@ -15,37 +15,53 @@ export function AuditEventDrawer({ result, onClose }: Props) {
 
   if (!result) return null;
 
-  const ts = (result.data?.timestamp as string | undefined)?.slice(0, 19).replace('T', ' ') ?? new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const ts = (result.data?.timestamp as string | undefined)
+    ?.slice(0, 19).replace('T', ' ')
+    ?? new Date().toISOString().slice(0, 19).replace('T', ' ');
   const actor = (result.data?.actor as string | undefined) ?? '—';
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-80 rounded-xl shadow-2xl overflow-hidden">
-      <div className="px-4 py-3 bg-green-700 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-white text-sm font-semibold">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      zIndex: 60,
+      width: 360,
+      borderRadius: 'var(--border-radius-lg)',
+      overflow: 'hidden',
+      border: '0.5px solid rgba(255,255,255,0.12)',
+      background: 'var(--color-audit-surface)',
+    }}>
+      {/* Green header */}
+      <div style={{ padding: '12px 14px', background: '#085041', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-audit-success)', fontSize: 13, fontWeight: 500 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
           </svg>
-          Written to audit log
+          Action logged
         </div>
-        <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none ml-2">×</button>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-audit-success)', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: '0 2px', opacity: 0.7 }}>×</button>
       </div>
-      <div className="bg-gray-900 px-4 py-3 space-y-1.5 font-mono text-xs">
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">event id</span>
-          <span className="text-green-400 truncate">{result.audit_event_id}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">entity</span>
-          <span className="text-gray-300">{result.entity_type} / {result.entity_id}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">actor</span>
-          <span className="text-gray-300">{actor}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">at</span>
-          <span className="text-gray-300">{ts} UTC</span>
-        </div>
+      {/* Dark data rows */}
+      <div style={{ background: 'var(--color-audit-surface)', padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <p style={{ margin: '0 0 4px', color: '#E8E6DC', fontSize: 14, lineHeight: 1.45 }}>
+          Litt wrote the attorney decision to the append-only operational audit trail.
+        </p>
+        {[
+          { label: 'event id', value: result.audit_event_id, mono: true, highlight: true },
+          { label: 'entity',   value: `${result.entity_type} / ${result.entity_id}`, mono: true },
+          { label: 'actor',    value: actor, mono: false },
+          { label: 'at',       value: `${ts} UTC`, mono: false },
+        ].map(({ label, value, mono, highlight }) => (
+          <div key={label} style={{ display: 'flex', gap: 10, fontSize: 12 }}>
+            <span style={{ color: '#5F5E5A', width: 56, flexShrink: 0, fontFamily: 'var(--font-mono)' }}>{label}</span>
+            <span style={{
+              color: highlight ? 'var(--color-audit-success)' : '#A9A7A1',
+              fontFamily: mono ? 'var(--font-mono)' : 'var(--font-sans)',
+              wordBreak: 'break-all',
+            }}>{value}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

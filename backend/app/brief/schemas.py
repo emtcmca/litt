@@ -27,6 +27,7 @@ class BriefScrubberFlag(BaseModel):
 
 class BriefDeadlineItem(BaseModel):
     deadline_id: str
+    version: int = 1
     matter_id: str
     matter_name: str
     client_id: str
@@ -55,6 +56,7 @@ class DeadlineSection(BaseModel):
 
 class BriefTimeEntryItem(BaseModel):
     entry_id: str
+    version: int = 1
     matter_id: str
     matter_name: str
     client_id: str

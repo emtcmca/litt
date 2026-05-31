@@ -25,14 +25,25 @@ export function DemoResetButton({ firmId, onReset }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {error && <span className="text-xs text-red-600">{error}</span>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {error && <span style={{ fontSize: 12, color: 'var(--color-text-danger)' }}>{error}</span>}
       <button
         onClick={handleReset}
         disabled={loading}
-        className="text-xs px-3 py-1.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg hover:bg-amber-200 disabled:opacity-50 transition-colors"
+        style={{
+          fontSize: 13,
+          padding: '6px 12px',
+          background: 'var(--color-background-warning)',
+          color: 'var(--color-text-warning)',
+          border: '0.5px solid var(--color-border-warning)',
+          borderRadius: 'var(--border-radius-md)',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          opacity: loading ? 0.6 : 1,
+          fontWeight: 400,
+          transition: 'background 0.15s',
+        }}
       >
-        {loading ? 'Resetting…' : 'Reset Demo'}
+        {loading ? 'Resetting…' : 'Reset demo'}
       </button>
     </div>
   );

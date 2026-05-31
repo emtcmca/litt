@@ -20,6 +20,7 @@ export interface ScrubberFlag {
 
 export interface BriefDeadlineItem {
   deadline_id: string;
+  version: number;
   matter_id: string;
   matter_name: string;
   client_id: string;
@@ -44,6 +45,7 @@ export interface DeadlineSection {
 
 export interface BriefTimeEntryItem {
   entry_id: string;
+  version: number;
   matter_id: string;
   matter_name: string;
   client_id: string;
@@ -157,6 +159,7 @@ export interface DeadlineConfirmRequest {
   firm_id: string;
   attorney_id: string;
   deadline_id: string;
+  expected_version?: number;
   idempotency_key: string;
 }
 
@@ -166,6 +169,7 @@ export interface DeadlineExtendRequest {
   deadline_id: string;
   new_due_date: string;
   reason: string;
+  expected_version?: number;
   idempotency_key: string;
 }
 
@@ -174,6 +178,7 @@ export interface DeadlineDismissRequest {
   attorney_id: string;
   deadline_id: string;
   reason: string;
+  expected_version?: number;
   idempotency_key: string;
 }
 
@@ -181,7 +186,7 @@ export interface BillingApproveRequest {
   firm_id: string;
   attorney_id: string;
   entry_id: string;
-  expected_status: string;
+  expected_version: number;
   idempotency_key: string;
 }
 
@@ -192,7 +197,7 @@ export interface BillingWriteDownRequest {
   new_hours: number;
   new_amount: number;
   reason: string;
-  expected_status: string;
+  expected_version: number;
   idempotency_key: string;
 }
 
@@ -201,7 +206,7 @@ export interface BillingWriteOffRequest {
   attorney_id: string;
   entry_id: string;
   reason: string;
-  expected_status: string;
+  expected_version: number;
   idempotency_key: string;
 }
 

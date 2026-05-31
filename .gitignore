@@ -36,6 +36,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
 
 # Cloud Run build artifacts
 *.tar.gz

@@ -9,10 +9,10 @@ export default function App() {
         <Route path="/" element={<DailyCloseoutBrief />} />
         <Route path="/email-preview" element={<EmailPreview />} />
         <Route path="*" element={
-          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-semibold text-gray-700 mb-2">404</p>
-              <Link to="/" className="text-blue-600 text-sm underline">Back to brief</Link>
+          <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 8px' }}>404</p>
+              <Link to="/" style={{ color: 'var(--color-text-info)', fontSize: 14 }}>Back to brief</Link>
             </div>
           </div>
         } />

@@ -111,6 +111,7 @@ def _build_deadlines_section(
 
         items.append(BriefDeadlineItem(
             deadline_id=dl["id"],
+            version=int(dl.get("version", 1)),
             matter_id=dl.get("matter_id", ""),
             matter_name=matter.get("name", dl.get("matter_id", "")),
             client_id=matter.get("client_id", ""),
@@ -165,6 +166,7 @@ def _build_time_entries_section(
 
         items.append(BriefTimeEntryItem(
             entry_id=entry["id"],
+            version=int(entry.get("version", 1)),
             matter_id=entry.get("matter_id", ""),
             matter_name=matter.get("name", entry.get("matter_id", "")),
             client_id=entry.get("client_id", ""),

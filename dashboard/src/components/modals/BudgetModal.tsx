@@ -7,65 +7,66 @@ interface Props {
 
 export function BudgetModal({ item, onClose }: Props) {
   const pct = item.utilization_pct;
-  const pctDisplay = (pct * 100).toFixed(0);
+  const pctDisplay = pct.toFixed(0);
   const isCritical = item.alert_status === 'CRITICAL';
-  const barColor = pct >= 0.9 ? 'bg-red-500' : 'bg-amber-500';
-  const badgeClass = isCritical ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700';
+  const accentColor = isCritical ? 'var(--color-border-danger)' : 'var(--color-border-warning)';
+  const badgeBg = isCritical ? 'var(--color-ramp-red-400)' : 'var(--color-ramp-amber-200)';
+  const badgeColor = isCritical ? '#FFFFFF' : 'var(--color-ramp-amber-900)';
+  const alertBg = isCritical ? 'var(--color-background-danger)' : 'var(--color-background-warning)';
+  const alertColor = isCritical ? 'var(--color-text-danger)' : 'var(--color-text-warning)';
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="max-w-lg w-full bg-white rounded-xl shadow-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Budget Risk — {item.client_name}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ maxWidth: 540, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>Budget risk — {item.client_name}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
 
-        <div className="px-6 py-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Budget utilization</span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded ${badgeClass}`}>
+        <div style={{ padding: 24 }}>
+          {/* Utilization header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Budget utilization</span>
+            <span style={{ display: 'inline-block', background: badgeBg, color: badgeColor, padding: '3px 10px', borderRadius: 'var(--border-radius-md)', fontSize: 12, fontWeight: isCritical ? 600 : 500 }}>
               {item.alert_status} · {pctDisplay}%
             </span>
           </div>
 
-          <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden mb-5">
-            <div
-              className={`h-full rounded-full transition-all ${barColor}`}
-              style={{ width: `${Math.min(pct * 100, 100)}%` }}
-            />
+          {/* Progress bar */}
+          <div style={{ height: 8, background: 'var(--color-background-secondary)', borderRadius: 4, overflow: 'hidden', marginBottom: 20 }}>
+            <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: accentColor, borderRadius: 4 }} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm mb-5">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-0.5">Budget cap</p>
-              <p className="font-semibold text-gray-900">${item.budget_cap.toLocaleString()}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-0.5">Total committed</p>
-              <p className="font-semibold text-gray-900">${item.total_committed.toLocaleString()}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-0.5">Already billed</p>
-              <p className="font-medium text-gray-700">${item.budget_billed.toLocaleString()}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-0.5">Approved, unbilled</p>
-              <p className="font-medium text-gray-700">${item.approved_unbilled.toLocaleString()}</p>
-            </div>
+          {/* Stats grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            {[
+              { label: 'Budget cap', value: `$${item.budget_cap.toLocaleString()}` },
+              { label: 'Total committed', value: `$${item.total_committed.toLocaleString()}` },
+              { label: 'Already billed', value: `$${item.budget_billed.toLocaleString()}` },
+              { label: 'Approved, unbilled', value: `$${item.approved_unbilled.toLocaleString()}` },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>{label}</div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' }}>{value}</div>
+              </div>
+            ))}
           </div>
 
-          <div className={`rounded-lg p-3 text-sm ${isCritical ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800'}`}>
-            <p className="font-medium">
+          {/* Alert message */}
+          <div style={{ background: alertBg, borderRadius: 'var(--border-radius-md)', padding: '12px 14px', borderLeft: `3px solid ${accentColor}` }}>
+            <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 500, color: alertColor }}>
               {isCritical
                 ? 'Budget nearly exhausted. Notify client before posting additional time.'
                 : 'Budget at warning threshold. Monitor new entries closely.'}
             </p>
-            <p className="text-xs mt-1 opacity-75">Threshold: {(item.threshold_pct * 100).toFixed(0)}%</p>
+            <p style={{ margin: 0, fontSize: 12, color: alertColor, opacity: 0.8 }}>
+              Threshold set at {item.threshold_pct.toFixed(0)}%
+            </p>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100">
+        <div style={{ padding: '14px 24px', borderTop: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-secondary)', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 18px', fontSize: 14, background: 'transparent', border: '0.5px solid var(--color-border-secondary)', borderRadius: 'var(--border-radius-md)', cursor: 'pointer', color: 'var(--color-text-primary)', fontWeight: 400 }}>
             Close
           </button>
         </div>
