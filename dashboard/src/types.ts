@@ -214,6 +214,41 @@ export interface AlertDismissRequest {
   idempotency_key: string;
 }
 
+export interface BillingUpdateNarrativeRequest {
+  firm_id: string;
+  attorney_id: string;
+  entry_id: string;
+  narrative: string;
+  expected_version?: number;
+  idempotency_key?: string;
+}
+
+export interface CommsApproveRequest {
+  firm_id: string;
+  attorney_id: string;
+  draft_id: string;
+  expected_version?: number;
+  idempotency_key?: string;
+}
+
+export interface CommsQueueRequest {
+  firm_id: string;
+  attorney_id: string;
+  draft_id: string;
+  channel?: string;
+  expected_version?: number;
+  idempotency_key?: string;
+}
+
+export interface CommsDismissRequest {
+  firm_id: string;
+  attorney_id: string;
+  draft_id: string;
+  reason: string;
+  expected_version?: number;
+  idempotency_key?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Tool response types
 // ---------------------------------------------------------------------------

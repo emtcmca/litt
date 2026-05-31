@@ -7,14 +7,19 @@ import type {
   ActionResult,
   AlertDismissRequest,
   BillingApproveRequest,
+  BillingUpdateNarrativeRequest,
   BillingWriteDownRequest,
   BillingWriteOffRequest,
   BriefResponse,
+  CommsApproveRequest,
+  CommsDismissRequest,
+  CommsQueueRequest,
   DeadlineConfirmRequest,
   DeadlineDismissRequest,
   DeadlineExtendRequest,
   DemoReadyResponse,
   DemoResetResponse,
+  ScrubberFlag,
   SweepResponse,
 } from "./types";
 
@@ -95,6 +100,34 @@ export function writeOffBilling(req: BillingWriteOffRequest): Promise<ActionResu
 
 export function dismissAlert(req: AlertDismissRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/alert/dismiss", req);
+}
+
+// ---------------------------------------------------------------------------
+// Billing extras
+// ---------------------------------------------------------------------------
+
+export function updateNarrative(req: BillingUpdateNarrativeRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/billing/update-narrative", req);
+}
+
+export function getScrubber(firmId: string, entryId: string): Promise<{ flags: ScrubberFlag[]; has_block: boolean; has_warn: boolean; clean: boolean }> {
+  return get(`/billing/scrubber/${entryId}`, { firm_id: firmId });
+}
+
+// ---------------------------------------------------------------------------
+// Comms actions
+// ---------------------------------------------------------------------------
+
+export function approveComm(req: CommsApproveRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/comms/approve", req);
+}
+
+export function queueComm(req: CommsQueueRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/comms/queue", req);
+}
+
+export function dismissComm(req: CommsDismissRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/comms/dismiss", req);
 }
 
 // ---------------------------------------------------------------------------

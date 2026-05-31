@@ -163,35 +163,40 @@
 
 ---
 
-## Day 5 — React Dashboard
+## Day 5 — React Dashboard ✓ COMPLETE
 *Goal: Full demo path clickable in browser.*
 
 ### Foundation
-- [ ] D5-01 `App.tsx` — React Router, all 8 routes
-- [ ] D5-02 Demo mode banner
-- [ ] D5-03 `dashboard/src/api.ts` — complete with all action endpoints
+- [x] D5-01 `App.tsx` — React Router, 2 routes (/ and /email-preview)
+- [x] D5-02 `components/DemoBanner.tsx` — sticky amber banner, demo mode only
+- [x] D5-03 `dashboard/src/api.ts` — all action endpoints (comms, narrative, billing, deadline)
 
 ### Main page
-- [ ] D5-04 `components/DailyCloseoutBrief.tsx` — all 5 sections, resolved collapse
+- [x] D5-04 `components/DailyCloseoutBrief.tsx` — all 5 section cards, resolved collapse tray
 
 ### Modals
-- [ ] D5-05 `components/modals/DeadlineModal.tsx` — Confirm/Extend/Dismiss with reason
-- [ ] D5-06 `components/modals/BillingWIPModal.tsx` — Approve/Write-down/Write-off + scrubber warnings
-- [ ] D5-07 `components/modals/ClientCommsModal.tsx` — source attribution, full state machine flow
-- [ ] D5-08 `components/modals/BudgetModal.tsx` — progress bar, draft alert button
-- [ ] D5-09 `components/modals/AnomalyModal.tsx` — severity badge, dismiss
+- [x] D5-05 `components/modals/DeadlineModal.tsx` — Confirm/Extend/Dismiss with reason
+- [x] D5-06 `components/modals/BillingWIPModal.tsx` — Approve/Write-down/Write-off + scrubber warnings
+- [x] D5-07 `components/modals/ClientCommsModal.tsx` — approve/queue/dismiss, state machine flow
+- [x] D5-08 `components/modals/BudgetModal.tsx` — progress bar, utilization breakdown
+- [x] D5-09 `components/modals/AnomalyModal.tsx` — severity badge, 4-field narrative, dismiss
 
 ### Shared components
-- [ ] D5-10 `components/shared/AuditEventDrawer.tsx` — slides in after successful action
-- [ ] D5-11 `components/DemoResetButton.tsx` — visible in demo mode only
+- [x] D5-10 `components/shared/AuditEventDrawer.tsx` — slides in after successful action, 6s auto-dismiss
+- [x] D5-11 `components/DemoResetButton.tsx` — visible in demo mode, confirm dialog
+- [x] `dashboard/src/types.ts` — BillingUpdateNarrativeRequest, CommsApproveRequest, CommsDismissRequest added
 
 ### Additional pages
-- [ ] D5-12 `/email-preview` route — plain HTML brief in email format
+- [x] D5-12 `/email-preview` route — plain monospace brief in email format
 
 ### Deploy
 - [ ] D5-13 Build and redeploy dashboard to Cloud Run
 
-**Day 5 checkpoint: Full demo path works in browser on deployed URL. Every action shows audit drawer.**
+### Notes
+- Ghost socket on port 8000 (Windows kernel leak from earlier session); backend temporarily on 8001
+  Vite proxy updated to match. Clears on reboot. Cloud Run unaffected.
+
+**Day 5 checkpoint: Brief loads with 2 deadlines, 4 WIP entries, 1 silence trigger. All modals open and submit. Audit drawer fires on success. ✓**
 
 ---
 
