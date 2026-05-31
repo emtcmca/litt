@@ -20,7 +20,7 @@ import type {
   DemoReadyResponse,
   DemoResetResponse,
   ScrubberFlag,
-  SweepResponse,
+  SweepRunResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -58,8 +58,8 @@ export function getBrief(firmId: string, attorneyId = "dana-strand"): Promise<Br
   return get<BriefResponse>("/brief", { firm_id: firmId, attorney_id: attorneyId });
 }
 
-export function runSweep(firmId: string): Promise<SweepResponse> {
-  return post<SweepResponse>("/sweep", { firm_id: firmId });
+export function runSweep(firmId: string): Promise<SweepRunResponse> {
+  return post<SweepRunResponse>("/sweep", { firm_id: firmId });
 }
 
 // ---------------------------------------------------------------------------

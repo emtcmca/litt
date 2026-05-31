@@ -19,6 +19,12 @@ from typing import Any, Dict, List, Optional
 from app import config
 from app.db import collection_ref
 from app.models import DeadlineEventType, EscalationType
+from app.observability import (
+    AgentObservation,
+    CommitmentLevel,
+    ObservationType,
+    generate_observation_id,
+)
 from app.tools.alerts import log_anomaly
 
 
@@ -290,12 +296,38 @@ class AnomalyAgent:
 
     name = "anomaly_agent"
 
-    def run(self, firm_id: str) -> Dict[str, Any]:
+    def run(self, firm_id: str, run_id: Optional[str] = None) -> Dict[str, Any]:
+        observations: List[AgentObservation] = []
+        obs_counter = 0
+
+        def _obs(**kwargs) -> AgentObservation:
+            nonlocal obs_counter
+            obs_counter += 1
+            work_kind = kwargs.pop("work_kind", "deterministic")
+            return AgentObservation(
+                observation_id=generate_observation_id(self.name, obs_counter),
+                timestamp=config.get_effective_datetime(),
+                agent_name=self.name,
+                run_id=run_id,
+                work_kind=work_kind,
+                **kwargs,
+            )
+
         clients = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "clients").stream()}
         entries = [doc.to_dict() for doc in collection_ref(firm_id, "time_entries").stream()]
         deadlines = [doc.to_dict() for doc in collection_ref(firm_id, "deadlines").stream()]
         deadline_events = [doc.to_dict() for doc in collection_ref(firm_id, "deadline_events").stream()]
         today = config.get_effective_date()
+
+        observations.append(_obs(
+            observation_type=ObservationType.SIGNAL_RECEIVED,
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            description=(
+                f"Pattern scan: {len(entries)} time entries, "
+                f"{len(deadlines)} deadlines for {firm_id}"
+            ),
+            data={"entry_count": len(entries), "deadline_count": len(deadlines)},
+        ))
 
         # Collect all signals from all detectors
         signals: List[AnomalySignal] = []
@@ -307,6 +339,23 @@ class AnomalyAgent:
         # Apply scoring overrides
         for signal in signals:
             apply_scoring_overrides(signal)
+
+        # Emit one focused observation for the first detected signal.
+        if signals:
+            first = signals[0]
+            observations.append(_obs(
+                observation_type=ObservationType.REASONING,
+                commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                description=f"Pattern detected: {first.anomaly_type} — {first.description[:120]}",
+                data={
+                    "anomaly_type": first.anomaly_type,
+                    "entity_id": first.entity_id,
+                    "risk_level": first.risk_level,
+                    "priority": first.priority,
+                    "total_signals": len(signals),
+                },
+                evidence=[first.entity_id],
+            ))
 
         # Log via tool layer (idempotent per entity+type)
         logged: List[str] = []
@@ -325,9 +374,21 @@ class AnomalyAgent:
             if hasattr(result, "entity_id"):
                 logged.append(result.entity_id)
 
+        final_level = CommitmentLevel.REVIEW_REQUIRED if logged else CommitmentLevel.AUTO_SAFE
+        observations.append(_obs(
+            observation_type=ObservationType.RESULT,
+            commitment_level=final_level,
+            description=(
+                f"Pattern scan complete: {len(signals)} signal(s) detected, "
+                f"{len(logged)} anomal{'ies' if len(logged) != 1 else 'y'} logged"
+            ),
+            data={"signals_detected": len(signals), "anomalies_logged": len(logged)},
+        ))
+
         return {
             "agent": self.name,
             "signals_detected": len(signals),
             "anomalies_logged": len(logged),
             "escalation_ids": logged,
+            "observations": observations,
         }

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from datetime import timedelta
 from enum import Enum
 from typing import Dict, List
 
@@ -29,7 +30,15 @@ from app.agents.anomaly_agent import AnomalyAgent
 from app.agents.billing_agent import BillingAgent
 from app.agents.comms_agent import CommsAgent
 from app.agents.deadline_agent import DeadlineAgent
-from app.brief.schemas import SweepResponse
+from app.config import get_effective_datetime
+from app.db import collection_ref
+from app.observability import (
+    AgentObservation,
+    AgentRunTimeline,
+    CommitmentLevel,
+    ObservationType,
+    generate_observation_id,
+)
 
 
 class SignalType(str, Enum):
@@ -85,38 +94,142 @@ class Coordinator:
         self._comms = CommsAgent()
         self._anomaly = AnomalyAgent()
 
-    def execute_sweep(self, firm_id: str) -> SweepResponse:
-        """Run all four sub-agents for the firm and return a sweep summary."""
-        sweep_id = f"sweep-{uuid.uuid4().hex[:12]}"
-        start_ms = time.time()
+    def execute_sweep(self, firm_id: str) -> AgentRunTimeline:
+        """
+        Run all four sub-agents, emit coordinator-level observations, return AgentRunTimeline.
 
-        billing_result = self._billing.run(firm_id)
-        deadline_result = self._deadline.run(firm_id)
-        comms_result = self._comms.run(firm_id)
-        anomaly_result = self._anomaly.run(firm_id)
+        Observation order (for frontend playback):
+          pre-run:   SIGNAL_RECEIVED, ROUTING_DECISION, TOOL_CALL (coordinator)
+          mid-run:   sub-agent observations (Phase 4 adds via result["observations"])
+          post-run:  RESULT, APPROVAL_GATE_APPLIED (coordinator)
+        """
+        run_id = f"sweep-{uuid.uuid4().hex[:12]}"
+        start_wall = time.time()
+        started_at = get_effective_datetime()
+        counter = 0
 
-        duration_ms = int((time.time() - start_ms) * 1000)
+        def _obs(**kwargs) -> AgentObservation:
+            nonlocal counter
+            counter += 1
+            return AgentObservation(
+                observation_id=generate_observation_id("coordinator", counter),
+                timestamp=get_effective_datetime(),
+                agent_name="coordinator",
+                run_id=run_id,
+                work_kind=kwargs.pop("work_kind", "deterministic"),
+                **kwargs,
+            )
 
-        sections_updated: List[str] = []
-        if billing_result["anomalies_logged"] > 0:
-            sections_updated.append("billing")
-        if deadline_result["escalations_created"] > 0:
-            sections_updated.append("deadlines")
-        if comms_result["comms_created"] > 0:
-            sections_updated.append("comms")
-        if anomaly_result["anomalies_logged"] > 0:
-            sections_updated.append("anomalies")
+        # --- Pre-run: 3 coordinator observations ---
+
+        pre_obs: List[AgentObservation] = [
+            _obs(
+                observation_type=ObservationType.SIGNAL_RECEIVED,
+                commitment_level=CommitmentLevel.AUTO_SAFE,
+                description=f"Daily sweep initiated for {firm_id}",
+                data={"firm_id": firm_id, "triggered_by": "api"},
+            ),
+            _obs(
+                observation_type=ObservationType.ROUTING_DECISION,
+                commitment_level=CommitmentLevel.AUTO_SAFE,
+                description="Deterministic routing: all 4 sub-agents scheduled",
+                data={"agents": ["billing_agent", "deadline_agent", "comms_agent", "anomaly_agent"]},
+            ),
+            _obs(
+                observation_type=ObservationType.TOOL_CALL,
+                commitment_level=CommitmentLevel.AUTO_SAFE,
+                description="Dispatching sub-agents — billing, deadline, comms, anomaly",
+            ),
+        ]
+
+        # --- Sub-agent runs ---
+        # Each result dict may include "observations" (Phase 4 adds them).
+        # Collected here so coordinator is unchanged when sub-agents are instrumented.
+
+        sub_obs: List[AgentObservation] = []
+
+        billing_result = self._billing.run(firm_id, run_id=run_id)
+        sub_obs.extend(billing_result.get("observations", []))
+
+        deadline_result = self._deadline.run(firm_id, run_id=run_id)
+        sub_obs.extend(deadline_result.get("observations", []))
+
+        comms_result = self._comms.run(firm_id, run_id=run_id)
+        sub_obs.extend(comms_result.get("observations", []))
+
+        anomaly_result = self._anomaly.run(firm_id, run_id=run_id)
+        sub_obs.extend(anomaly_result.get("observations", []))
+
+        # --- Counts ---
 
         total_anomalies = (
             billing_result["anomalies_logged"] + anomaly_result["anomalies_logged"]
         )
         total_escalations = deadline_result["escalations_created"] + total_anomalies
 
-        return SweepResponse(
-            sweep_id=sweep_id,
-            firm_id=firm_id,
-            duration_ms=duration_ms,
-            sections_updated=sections_updated,
-            escalations_created=total_escalations,
-            anomalies_detected=total_anomalies,
+        # --- Post-run: 2 coordinator observations ---
+
+        gate_level = CommitmentLevel.ESCALATION if total_escalations > 0 else CommitmentLevel.AUTO_SAFE
+        attorney_action = (
+            f"Review {total_escalations} escalation(s) in Daily Closeout Brief before approving any actions."
+            if total_escalations > 0
+            else None
         )
+
+        post_obs: List[AgentObservation] = [
+            _obs(
+                observation_type=ObservationType.RESULT,
+                commitment_level=gate_level,
+                description=(
+                    f"Sub-agents complete: {total_escalations} escalation(s), "
+                    f"{total_anomalies} anomal{'ies' if total_anomalies != 1 else 'y'}"
+                ),
+                data={
+                    "billing_anomalies": billing_result["anomalies_logged"],
+                    "deadline_escalations": deadline_result["escalations_created"],
+                    "comms_created": comms_result["comms_created"],
+                    "anomaly_anomalies": anomaly_result["anomalies_logged"],
+                    "total_escalations": total_escalations,
+                    "total_anomalies": total_anomalies,
+                },
+            ),
+            _obs(
+                observation_type=ObservationType.APPROVAL_GATE_APPLIED,
+                commitment_level=gate_level,
+                description=(
+                    f"Gate: {gate_level.value} — "
+                    f"{'attorney review required' if total_escalations > 0 else 'no action required'}"
+                ),
+                data={"gate": gate_level.value, "escalations_count": total_escalations},
+                attorney_next_action=attorney_action,
+            ),
+        ]
+
+        all_observations = pre_obs + sub_obs + post_obs
+
+        elapsed_s = time.time() - start_wall
+        completed_at = started_at + timedelta(seconds=elapsed_s)
+
+        timeline = AgentRunTimeline(
+            run_id=run_id,
+            firm_id=firm_id,
+            triggered_by="api",
+            started_at=started_at,
+            completed_at=completed_at,
+            elapsed_seconds=elapsed_s,
+            observations=all_observations,
+            brief_items_count=0,  # updated by route after brief assembly
+            escalations_count=total_escalations,
+        )
+
+        # TELEMETRY EXCEPTION: coordinator writes agent_runs directly.
+        # All business-entity writes go through the tool layer (app/tools/).
+        # agent_runs is append-only observability telemetry — never drives business logic.
+        try:
+            collection_ref(firm_id, "agent_runs").document(run_id).set(
+                timeline.model_dump(mode="json")
+            )
+        except Exception:
+            pass  # telemetry write failure never aborts a sweep
+
+        return timeline

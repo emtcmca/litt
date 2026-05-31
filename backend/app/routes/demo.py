@@ -199,6 +199,7 @@ def demo_state():
         "attorneys", "clients", "matters", "time_entries",
         "deadlines", "deadline_events", "client_communications",
         "invoices", "escalations", "audit_log", "ingestion_signals",
+        "source_emails", "agent_runs",
     ]
     try:
         counts = {col: len(list(collection_ref(firm_id, col).stream())) for col in collections}

@@ -23,6 +23,8 @@ def log_audit_event(
     after_state: Optional[Dict[str, Any]] = None,
     idempotency_key: Optional[str] = None,
     notes: Optional[str] = None,
+    observation_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> str:
     """Write a CREATE-only audit event. Returns the new audit event ID."""
     now = get_effective_datetime()
@@ -42,6 +44,8 @@ def log_audit_event(
         "after_state": after_state,
         "idempotency_key": idempotency_key,
         "notes": notes,
+        "observation_id": observation_id,
+        "run_id": run_id,
         "created_at": now,
         "updated_at": now,
     }

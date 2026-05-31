@@ -29,6 +29,8 @@ _COLLECTIONS = [
     "deadlines", "deadline_events", "client_communications",
     "invoices", "escalations", "audit_log", "ingestion_signals",
     "idempotency_keys",
+    "source_emails",  # v1.1 — Rivera opposing-counsel email
+    "agent_runs",     # observability telemetry — cleared on reset so timelines don't accumulate
 ]
 
 
@@ -461,6 +463,24 @@ def seed_firm_data(db=None) -> None:
         "first_seen_at": _dt(2026, 5, 8, 11), "last_seen_at": _dt(2026, 5, 8, 11),
         "created_at": _dt(2026, 5, 8, 11), "updated_at": _dt(2026, 5, 8, 11),
     })
+
+    # -- v1.1 supplemental fixtures (Rivera + Okafor calendar gap) --
+    # Additive only — no existing v1.0 records are modified.
+    _seed_v11_fixtures(db)
+
+
+def _seed_v11_fixtures(db) -> None:
+    """
+    Seed v1.1 supplemental fixtures: Rivera matter + conflict_flagged deadline +
+    source email + Okafor calendar-gap time entry.
+    None of these touch existing v1.0 records.
+    """
+    from app.demo.fixtures_v11 import V11_FIXTURES
+
+    for collection_name, records in V11_FIXTURES.items():
+        for record in records:
+            doc = {**record, "firm_id": FIRM_ID}
+            _col(db, collection_name).document(doc["id"]).set(doc)
 
 
 def run_reset(firm_id: str = FIRM_ID) -> dict:

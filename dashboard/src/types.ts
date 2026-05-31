@@ -139,6 +139,56 @@ export interface BriefResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Agent observability
+// ---------------------------------------------------------------------------
+
+export type ObservationType =
+  | "SIGNAL_RECEIVED"
+  | "REASONING"
+  | "ROUTING_DECISION"
+  | "TOOL_CALL"
+  | "RESULT"
+  | "ESCALATION"
+  | "APPROVAL_GATE_APPLIED";
+
+export type CommitmentLevel =
+  | "AUTO_SAFE"
+  | "REVIEW_REQUIRED"
+  | "ESCALATION"
+  | "BLOCKED";
+
+export interface AgentObservation {
+  observation_id: string;
+  timestamp: string; // ISO datetime
+  agent_name: string;
+  observation_type: ObservationType;
+  commitment_level: CommitmentLevel;
+  description: string;
+  data: Record<string, unknown>;
+  confidence: number | null;
+  evidence: string[];
+  run_id: string | null;
+  parent_observation_id: string | null;
+  audit_log_id: string | null;
+  /** "deterministic" | "llm_assisted" | "tool_write" | "human_gate" */
+  work_kind: string;
+  model_name: string | null;
+  attorney_next_action: string | null;
+}
+
+export interface AgentRunTimeline {
+  run_id: string;
+  firm_id: string;
+  triggered_by: string;
+  started_at: string; // ISO datetime
+  completed_at: string; // ISO datetime
+  elapsed_seconds: number;
+  observations: AgentObservation[];
+  brief_items_count: number;
+  escalations_count: number;
+}
+
+// ---------------------------------------------------------------------------
 // Sweep
 // ---------------------------------------------------------------------------
 
@@ -149,6 +199,11 @@ export interface SweepResponse {
   sections_updated: string[];
   escalations_created: number;
   anomalies_detected: number;
+}
+
+export interface SweepRunResponse {
+  timeline: AgentRunTimeline;
+  brief: BriefResponse;
 }
 
 // ---------------------------------------------------------------------------

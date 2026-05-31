@@ -17,6 +17,12 @@ from typing import Any, Dict, List, Optional
 from app import config
 from app.db import collection_ref
 from app.models import CommTrigger
+from app.observability import (
+    AgentObservation,
+    CommitmentLevel,
+    ObservationType,
+    generate_observation_id,
+)
 from app.tools.comms import create_client_comm
 
 # ---------------------------------------------------------------------------
@@ -175,15 +181,40 @@ class CommsAgent:
 
     name = "comms_agent"
 
-    def run(self, firm_id: str) -> Dict[str, Any]:
+    def run(self, firm_id: str, run_id: Optional[str] = None) -> Dict[str, Any]:
+        observations: List[AgentObservation] = []
+        obs_counter = 0
+
+        def _obs(**kwargs) -> AgentObservation:
+            nonlocal obs_counter
+            obs_counter += 1
+            work_kind = kwargs.pop("work_kind", "deterministic")
+            return AgentObservation(
+                observation_id=generate_observation_id(self.name, obs_counter),
+                timestamp=config.get_effective_datetime(),
+                agent_name=self.name,
+                run_id=run_id,
+                work_kind=work_kind,
+                **kwargs,
+            )
+
         today = config.get_effective_date()
         clients = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "clients").stream()}
         matters = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "matters").stream()}
         attorneys = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "attorneys").stream()}
         entries = [doc.to_dict() for doc in collection_ref(firm_id, "time_entries").stream()]
 
+        active_matters = {k: v for k, v in matters.items() if v.get("status") == "ACTIVE"}
+        observations.append(_obs(
+            observation_type=ObservationType.SIGNAL_RECEIVED,
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            description=f"Client silence scan: {len(active_matters)} active matters for {firm_id}",
+            data={"active_matters": len(active_matters)},
+        ))
+
         comms_created: List[str] = []
         triggers_found = 0
+        draft_obs_emitted = False  # emit one focused draft observation per sweep
 
         for matter_id, matter in matters.items():
             if matter.get("status") != "ACTIVE":
@@ -230,8 +261,29 @@ class CommsAgent:
             matter_name = matter.get("name", matter_id)
             attorney_name = attorneys.get("dana-strand", {}).get("name", "Dana Strand")
 
+            # Emit silence trigger reasoning observation (first trigger only — keeps timeline focused).
+            if not draft_obs_emitted:
+                observations.append(_obs(
+                    observation_type=ObservationType.REASONING,
+                    commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                    description=(
+                        f"Silence trigger: {matter_name} ({client_name}) — "
+                        f"{days_since} days since last contact (threshold: {threshold})"
+                    ),
+                    work_kind="llm_assisted",
+                    data={
+                        "matter_id": matter_id,
+                        "client_name": client_name,
+                        "days_since_contact": days_since,
+                        "threshold_days": threshold,
+                        "last_contact": last_contact_str,
+                    },
+                    evidence=[f"matters/{matter_id}"],
+                ))
+
             prompt = _build_gemini_prompt(packet, client_name, matter_name, attorney_name)
             draft_body = _call_gemini(prompt)
+            used_gemini = draft_body is not None
 
             if not draft_body:
                 # Fallback template when Gemini unavailable
@@ -272,9 +324,53 @@ class CommsAgent:
             if hasattr(result, "entity_id"):
                 comms_created.append(result.entity_id)
 
+                if not draft_obs_emitted:
+                    draft_obs_emitted = True
+                    preview = draft_body[:120].replace("\n", " ").strip()
+
+                    observations.append(_obs(
+                        observation_type=ObservationType.TOOL_CALL,
+                        commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                        description=(
+                            f"Draft {'generated via Gemini' if used_gemini else 'created from template'} "
+                            f"for {client_name}: \"{preview}…\""
+                        ),
+                        work_kind="llm_assisted" if used_gemini else "deterministic",
+                        model_name=config.GEMINI_MODEL if used_gemini else None,
+                        data={
+                            "comm_id": result.entity_id,
+                            "matter_id": matter_id,
+                            "draft_length": len(draft_body),
+                            "citation_issues": len(invalid_cites),
+                            "used_gemini": used_gemini,
+                        },
+                        evidence=[result.entity_id],
+                    ))
+
+                    observations.append(_obs(
+                        observation_type=ObservationType.APPROVAL_GATE_APPLIED,
+                        commitment_level=CommitmentLevel.BLOCKED,
+                        description=(
+                            f"Human gate: draft for {client_name} ({matter_name}) "
+                            f"queued as DRAFT_GENERATED — attorney must approve before sending"
+                        ),
+                        work_kind="human_gate",
+                        data={
+                            "comm_id": result.entity_id,
+                            "status": "DRAFT_GENERATED",
+                            "gate": "BLOCKED",
+                        },
+                        evidence=[result.entity_id],
+                        attorney_next_action=(
+                            f"Review and approve the draft email for {client_name} "
+                            f"re: {matter_name} before it can be sent."
+                        ),
+                    ))
+
         return {
             "agent": self.name,
             "triggers_found": triggers_found,
             "comms_created": len(comms_created),
             "comm_ids": comms_created,
+            "observations": observations,
         }

@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from pydantic import BaseModel
+from app.observability import AgentRunTimeline
 
 
 # ---------------------------------------------------------------------------
@@ -176,3 +177,12 @@ class SweepResponse(BaseModel):
     sections_updated: List[str]
     escalations_created: int
     anomalies_detected: int
+
+
+class SweepRunResponse(BaseModel):
+    """
+    Full sweep result — timeline of agent observations + assembled brief.
+    Returned by POST /api/sweep so the frontend needs only one call.
+    """
+    timeline: AgentRunTimeline
+    brief: BriefResponse
