@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
 import type {
+  AgentRunTimeline as AgentRunTimelineType,
   BriefAnomalyItem,
   BriefBudgetItem,
   BriefClientSilenceItem,
@@ -10,6 +11,7 @@ import type {
   ToolResult,
 } from '../types';
 import { getBrief, runSweep } from '../api';
+import { AgentRunTimeline } from './AgentRunTimeline';
 import { DeadlineModal } from './modals/DeadlineModal';
 import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
@@ -822,6 +824,7 @@ function ResolvedTray({ items }: { items: ResolvedItem[] }) {
 
 export function DailyCloseoutBrief() {
   const [brief, setBrief] = useState<BriefResponse | null>(null);
+  const [timeline, setTimeline] = useState<AgentRunTimelineType | null>(null);
   const [loading, setLoading] = useState(true);
   const [sweeping, setSweeping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -844,10 +847,15 @@ export function DailyCloseoutBrief() {
 
   async function handleSweep() {
     setSweeping(true);
+    setTimeline(null);
     try {
-      await runSweep(FIRM_ID);
+      const result = await runSweep(FIRM_ID);
+      setTimeline(result.timeline);
+      setBrief(result.brief);
+    } catch {
+      // Sweep failed — reload current brief from Firestore
       await load();
-    } catch { /* non-fatal */ } finally {
+    } finally {
       setSweeping(false);
     }
   }
@@ -943,7 +951,7 @@ export function DailyCloseoutBrief() {
                 opacity: sweeping ? 0.6 : 1,
               }}
             >
-              {sweeping ? 'Refreshing...' : 'Refresh brief'}
+              {sweeping ? 'Running…' : 'Run Closeout'}
             </button>
           </div>
         </div>
@@ -965,6 +973,13 @@ export function DailyCloseoutBrief() {
           <TriageMetric label="Client silence" value={String(visibleSilence.length)} tone={visibleSilence.length > 0 ? 'warning' : 'success'} detail="outreach triggers" />
           <TriageMetric label="Audit posture" value="Ready" tone="success" detail={`${resolvedItems.length} logged this session`} />
         </div>
+
+        {/* Agent run timeline — visible after first sweep */}
+        {timeline && (
+          <div style={{ marginBottom: 16 }}>
+            <AgentRunTimeline timeline={timeline} />
+          </div>
+        )}
 
         <div className="closeout-layout" style={{ display: 'grid', gap: 16, alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
