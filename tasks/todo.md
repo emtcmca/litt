@@ -190,38 +190,149 @@
 - [x] D5-12 `/email-preview` route — plain monospace brief in email format
 
 ### Deploy
-- [ ] D5-13 Build and redeploy dashboard to Cloud Run
+- [ ] D5-13 Build and redeploy dashboard to Cloud Run (holding — after agent visibility build)
+
+### Design system (completed Day 5 polish, committed)
+- [x] D5-DS-01 `dashboard/src/index.css` — full Litt design token system (CSS vars, color ramps, dark mode)
+- [x] D5-DS-02 All 10 dashboard components rewritten — inline CSS vars, badge ramp system, 0.5px borders, no shadows
+- [x] D5-DS-03 `backend/app/db.py` lazy import fix — defers `google.cloud.firestore` until first call
+- [x] D5-DS-04 `backend/app/brief/schemas.py` + `assembler.py` — `version` field on deadline and time entry items
 
 ### Notes
 - Ghost socket on port 8000 (Windows kernel leak from earlier session); backend temporarily on 8001
   Vite proxy updated to match. Clears on reboot. Cloud Run unaffected.
+- Design system rewrite committed as `ff51e5f`
 
-**Day 5 checkpoint: Brief loads with 2 deadlines, 4 WIP entries, 1 silence trigger. All modals open and submit. Audit drawer fires on success. ✓**
+**Day 5 checkpoint: Brief loads with 2 deadlines, 4 WIP entries, 1 silence trigger. All modals open and submit. Audit drawer fires on success. Design system applied. ✓**
 
 ---
 
-## Day 6 — Hardening + Demo Recording + Submit
-*Goal: Video recorded. Submitted by 4:30 PM PT.*
+## Day 6 — Agent Visibility Build + Deploy + Record + Submit
+*Goal: Timeline visible. Video recorded. Submitted by 4:30 PM PT.*
 
-### Morning
+### Phase 1 — Observability models (30 min)
+- [ ] D6-VIS-01 `backend/app/observability.py` — `ObservationType`, `CommitmentLevel`, `AgentObservation`, `AgentRunTimeline`
+  - `AgentObservation`: observation_id, timestamp, agent_name, observation_type, commitment_level,
+    description, data, confidence, evidence, run_id, work_kind, model_name, attorney_next_action
+  - `AgentRunTimeline`: run_id, firm_id, triggered_by, started_at, completed_at,
+    elapsed_seconds (float field), observations, brief_items_count, escalations_count
+  - `generate_observation_id(agent_name, counter)` using `get_effective_datetime()`
+- [ ] D6-VIS-02 `backend/app/brief/schemas.py` — add `SweepRunResponse` = `{timeline: AgentRunTimeline, brief: BriefResponse}`
+- [ ] D6-VIS-03 `backend/tests/test_observability_models.py` — models instantiate, enums correct, ID generator works
+
+**Checkpoint: `python -m pytest backend/tests/test_observability_models.py -v` passes**
+
+### Phase 2 — Route update (30 min)
+- [ ] D6-VIS-04 `backend/app/routes/brief.py` — `POST /api/sweep` returns `SweepRunResponse`
+  - Calls `coordinator.execute_sweep()` which now returns `SweepRunResponse`
+  - Frontend gets timeline + brief in one call
+- [ ] D6-VIS-05 `backend/app/routes/timeline.py` — `GET /api/sweep/{run_id}` retrieves past timeline from Firestore
+- [ ] D6-VIS-06 `dashboard/src/types.ts` — add `AgentObservation`, `AgentRunTimeline`, `SweepRunResponse`
+- [ ] D6-VIS-07 `dashboard/src/api.ts` — update `runSweep()` return type to `SweepRunResponse`
+
+**Checkpoint: `POST /api/sweep` returns 200 with `observations` array (may be empty at this stage)**
+
+### Phase 3 — Coordinator instrumentation (1 hour)
+- [ ] D6-VIS-08 `backend/app/agents/coordinator.py` — `Coordinator` collects observations from all sub-agents
+  - `execute_sweep()` now returns `SweepRunResponse` (not `SweepResponse`)
+  - Coordinator emits 5 top-level observations: signal_received, routing_decision ×4, brief assembly summary
+  - Sub-agents return `{"result": ..., "observations": List[AgentObservation]}` (not written to Firestore)
+  - Coordinator writes completed `agent_run` doc to Firestore after all sub-agents finish
+    (deliberate exception: telemetry, not a business entity — document with comment)
+- [ ] D6-VIS-09 `backend/app/tools/audit.py` — extend `log_audit_event()` to accept optional
+  `observation_id`, `commitment_level`, `evidence`, `work_kind` fields on `AuditLogEntry`
+
+**Checkpoint: Coordinator returns >5 observations on sweep**
+
+### Phase 4 — Sub-agent instrumentation (1 hour)
+- [ ] D6-VIS-10 `backend/app/agents/deadline_agent.py` — emit 5 observations per run
+  - `signal_received`: signals inspected
+  - `reasoning`: deterministic date check on Mercer deadline (dl-mercer-001)
+  - `escalation`: HARD_LEGAL unconfirmed → gate ESCALATION
+  - `reasoning`: Gemini-assisted extraction on Rivera email (confidence 0.7, work_kind=llm_assisted)
+  - `escalation`: conflicting source → gate ESCALATION, attorney_next_action set
+- [ ] D6-VIS-11 `backend/app/agents/billing_agent.py` — emit 5 observations per run
+  - `signal_received`: pending entries + calendar events
+  - `tool_call`: scrubber check on te-005 (forbidden phrase, deterministic)
+  - `result`: REVIEW_REQUIRED, attorney_next_action = "Edit narrative before approval"
+  - `reasoning`: calendar reconciliation → Okafor 42-min call, no entry (work_kind=deterministic)
+  - `result`: billing gap → suggested entry, gate REVIEW_REQUIRED
+- [ ] D6-VIS-12 `backend/app/agents/comms_agent.py` — emit 4 observations per run
+  - `signal_received`: silence check
+  - `reasoning`: Whitmore 16 days since contact (deterministic threshold check)
+  - `result`: draft generated, work_kind=llm_assisted, gate REVIEW_REQUIRED
+  - `approval_gate_applied`: gate BLOCKED — cannot send without attorney approval
+- [ ] D6-VIS-13 `backend/app/agents/anomaly_agent.py` — emit 3 observations per run
+  - `tool_call`: anomaly scoring on te-001 (missing narrative, reconstruction risk)
+  - `escalation`: ESCALATION gate, attorney_next_action set
+  - `result`: Acme budget 78% → gate REVIEW_REQUIRED (deterministic)
+- [ ] D6-VIS-14 `backend/tests/test_agent_observations.py` — each sub-agent returns expected observation types
+
+**Checkpoint: `POST /api/sweep` returns 20+ observations with all 4 gate types**
+
+### Phase 5 — Fixture extension (45 min)
+- [ ] D6-VIS-15 `backend/app/ingestion/demo_fixtures.py` — add Rivera and Okafor supplemental fixtures
+  - `email-rivera-001`: opposing counsel "tomorrow (Friday)" deadline, conflict_flag=True, confidence=0.7
+  - `cal-okafor-call`: 42-min client call with no corresponding time entry
+  - Rivera matter: `rivera-v-northline` (supplemental, not a v1.0 readiness anchor)
+  - Okafor matter: `okafor-contract-review` (supplemental)
+  - All use `dana-strand` or omit attorney_id — do not introduce `attorney_001`
+- [ ] D6-VIS-16 `backend/app/demo/seeder.py` — seed new supplemental matters on reset
+  - Preserve existing v1.0 anchors: `dl-mercer-001`, `te-005`, `te-001`, `acme-commercial`, `whitmore-employment-2026`
+  - `GET /api/demo/ready` must still pass all 5 checks after reset
+
+**Checkpoint: `POST /api/demo/reset` + `POST /api/sweep` produces deterministic timeline with Rivera escalation and Okafor billing gap**
+
+### Phase 6 — React timeline component (1.5 hours)
+- [ ] D6-VIS-17 `dashboard/src/components/AgentRunTimeline.tsx` — full TypeScript component
+  - Props: `observations: AgentObservation[]`, `elapsedSeconds: number`, `isComplete: boolean`
+  - Progressive playback: 250ms between observations (not streaming — drip-feeds pre-loaded array)
+  - Gate badge colors: teal (AUTO_SAFE), blue (REVIEW_REQUIRED), amber (ESCALATION), red (BLOCKED)
+  - `work_kind` chips: "det" (deterministic), "gemini", "tool write", "human gate"
+  - `attorney_next_action` line for ESCALATION and BLOCKED observations
+  - Empty state: "Run Closeout to begin" placeholder
+  - Completion state: "Completed in Xs — N observations, M escalations"
+- [ ] D6-VIS-18 `dashboard/src/components/AgentRunTimeline.css` — animation-only CSS
+  - Fade-in keyframe for each timeline row
+  - Stagger via `animation-delay`
+  - No color values — all colors via CSS vars from `index.css`
+- [ ] D6-VIS-19 `dashboard/src/components/DailyCloseoutBrief.tsx` — integrate timeline
+  - Add "Run Closeout" button in page header
+  - Show `AgentRunTimeline` above section cards after sweep fires
+  - `runSweep()` call populates both timeline observations and refreshes brief
+
+**Checkpoint: Timeline renders and auto-scrolls in browser after clicking "Run Closeout"**
+
+### Phase 7 — Demo script + final wiring (30 min)
+- [ ] D6-VIS-20 `docs/HACKATHON-DEMO-SCRIPT.md` — 90-second narration with timing marks
+  - 0:00–0:08 intro, 0:08–0:12 click, 0:12–0:48 timeline auto-scroll, 0:48–1:05 brief,
+    1:05–1:35 safety model, 1:35–1:55 attorney outcome, 1:55–2:00 final frame
+- [ ] D6-VIS-21 `docs/architecture.png` — architecture diagram (shows coordinator, 4 sub-agents, MCP toolset, Firestore, Gemini)
+- [ ] D6-VIS-22 `dashboard/src/pages/EmailPreview.tsx` — verify still renders correctly after timeline integration
+
+---
+
+### Deploy + Hardening (after visibility build)
 - [ ] D6-01 Final Cloud Run deployment — both services, all env vars confirmed
-- [ ] D6-02 CORS verified on deployed URL
+  - Backend: `GEMINI_MODEL=gemini-2.5-pro`, `VERTEX_AI_LOCATION=us-central1`, `LITT_DEMO_MODE=true`
+  - Dashboard: env vars set, Vite build with correct proxy
+- [ ] D6-02 CORS: change `CORS_ORIGINS` from `*` to deployed Cloud Run dashboard URL
 - [ ] D6-03 `GET /api/demo/ready` passes all 5 on deployed URL
 - [ ] D6-04 `POST /api/demo/reset` works on deployed URL
-- [ ] D6-05 `docs/architecture.png` — architecture diagram (shows MCP connection)
+- [ ] D6-05 `POST /api/sweep` returns 20+ observations on deployed URL
 
 ### Devpost description
 - [ ] D6-06 Business case section written
-- [ ] D6-07 Technical section written (ADK + MCP + state machine + audit log)
-- [ ] D6-08 Findings and learnings written
-- [ ] D6-09 Third-party disclosures listed
+- [ ] D6-07 Technical section (ADK coordinator + 4 sub-agents + MCP toolset + state machine + audit log + observation timeline)
+- [ ] D6-08 Findings and learnings (deterministic/probabilistic boundary, gate design, audit trail)
+- [ ] D6-09 Third-party disclosures (Gemini 2.5 Pro via Vertex AI, Google ADK, Firestore, Cloud Run)
 - [ ] D6-10 Agent Engine migration path noted
 - [ ] D6-11 Architecture diagram embedded
 
-### Demo
-- [ ] D6-12 Demo rehearsal ×3 against deployed URL — all under 2 minutes
-- [ ] D6-13 Fix any demo-breaking bugs only
-- [ ] D6-14 `POST /api/demo/reset` + `GET /api/demo/ready` confirms all 5 before recording
+### Demo recording
+- [ ] D6-12 `POST /api/demo/reset` + `GET /api/demo/ready` confirms all 5 before each take
+- [ ] D6-13 Demo rehearsal ×3 against deployed URL — all under 2 minutes
+- [ ] D6-14 Fix demo-breaking bugs only (no new features after this point)
 - [ ] D6-15 Record final 2-minute demo video against live deployed URL
 - [ ] D6-16 Export MP4, verify audio, upload to YouTube unlisted or Vimeo
 
@@ -240,6 +351,6 @@
 | 2 | 22 | State machine tests pass |
 | 3 | 14 | Brief assembles from live Firestore |
 | 4 | 13 | demo/ready all passing |
-| 5 | 13 | Full demo path in browser |
-| 6 | 19 | Submitted by 4:30 PM PT |
-| **Total** | **101** | |
+| 5 | 17 | Full demo path in browser + design system |
+| 6 | 41 | Agent visibility + deploy + video + submitted |
+| **Total** | **127** | |
