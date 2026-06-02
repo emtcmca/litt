@@ -180,6 +180,9 @@ def _build_time_entries_section(
             scrubber_flags=flags,
             has_block=result.has_block,
             has_warn=result.has_warn,
+            task_code=entry.get("task_code"),
+            activity_code=entry.get("activity_code"),
+            session_minutes_actual=entry.get("session_minutes_actual"),
         ))
 
     # BLOCKs first, then WARNs, then clean

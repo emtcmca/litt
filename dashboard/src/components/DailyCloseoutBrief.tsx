@@ -16,6 +16,14 @@ import { DeadlineModal } from './modals/DeadlineModal';
 import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
 import type { BillingAction } from './modals/BillingWIPModal';
+
+// UTBMS task code labels (subset — enough for demo data)
+const UTBMS_TASK_SHORT: Record<string, string> = {
+  L100: 'Case Assessment', L110: 'Fact Investigation', L120: 'Analysis/Strategy',
+  L200: 'Pre-Trial Pleadings', L300: 'Discovery',
+  A100: 'Project Admin', A104: 'Research', A106: 'Document Review',
+  A107: 'Drafting', A200: 'Negotiation', A201: 'Deal Strategy',
+};
 import { ClientCommsModal } from './modals/ClientCommsModal';
 import { BudgetModal } from './modals/BudgetModal';
 import { AnomalyModal } from './modals/AnomalyModal';
@@ -74,6 +82,7 @@ interface ResolvedItem {
 interface DecisionRow {
   id:                  string;
   gate:                GateLevel;
+  section:             'deadline' | 'billing' | 'budget' | 'silence' | 'anomaly';
   title:               string;
   description:         string;
   matterRisk:          string;
@@ -82,6 +91,7 @@ interface DecisionRow {
   actionLabel:         string;
   onAction:            () => void;
   isEscalationDeadline?: boolean;
+  extraTags?:          string[];
 }
 
 interface PressureData {
@@ -179,6 +189,7 @@ function buildDecisionRows(
     const isEsc = d.classification === 'HARD_LEGAL' && d.is_unconfirmed;
     rows.push({
       id:          d.deadline_id,
+      section:     'deadline',
       gate:        isEsc ? 'ESCALATION'
                  : (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
                    ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
@@ -204,9 +215,18 @@ function buildDecisionRows(
 
   for (const e of time_entries.items) {
     const blockFlag = e.scrubber_flags.find(f => f.severity === 'BLOCK');
+    const needsEdit = e.has_block || !e.narrative;
+    const tags: string[] = [];
+    if (e.task_code) tags.push(e.task_code + (UTBMS_TASK_SHORT[e.task_code] ? ` · ${UTBMS_TASK_SHORT[e.task_code]}` : ''));
+    if (e.session_minutes_actual != null) {
+      const h = Math.floor(e.session_minutes_actual / 60);
+      const m = e.session_minutes_actual % 60;
+      tags.push(`⏱ ${h > 0 ? `${h}h ` : ''}${m}m tracked`);
+    }
     rows.push({
-      id:   e.entry_id,
-      gate: e.has_block ? 'BLOCKED' : 'REVIEW_REQUIRED',
+      id:      e.entry_id,
+      section: 'billing',
+      gate:    e.has_block ? 'BLOCKED' : 'REVIEW_REQUIRED',
       title: blockFlag
         ? `Billing scrubber hit: "${blockFlag.matched_text ?? 'blocked phrase'}"`
         : !e.narrative
@@ -227,13 +247,15 @@ function buildDecisionRows(
         extra: 'tool=scrub_time_entry',
       },
       actionLabel: 'Resolve',
-      onAction:    () => openModal({ type: 'billing', item: e, action: e.has_block ? 'write-down' : 'approve' }),
+      onAction:    () => openModal({ type: 'billing', item: e, action: needsEdit ? 'edit' : 'approve' }),
+      extraTags:   tags.length ? tags : undefined,
     });
   }
 
   for (const b of budget_risks.items) {
     rows.push({
       id:          b.client_id,
+      section:     'budget',
       gate:        b.alert_status === 'CRITICAL' ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
       title:       `${b.client_name} budget pressure logged`,
       description: `Utilization at ${b.utilization_pct.toFixed(0)}% of $${b.budget_cap.toLocaleString()} retainer.${b.alert_status === 'CRITICAL' ? ' Overrun risk.' : ' Warning threshold crossed.'}`,
@@ -253,6 +275,7 @@ function buildDecisionRows(
     const hasDraft = !!s.comm_draft_id;
     rows.push({
       id:          s.matter_id,
+      section:     'silence',
       gate:        hasDraft ? 'BLOCKED' : 'REVIEW_REQUIRED',
       title:       `${s.client_name} quiet for ${s.days_since_contact} days`,
       description: hasDraft
@@ -273,6 +296,7 @@ function buildDecisionRows(
   for (const a of anomalies.items) {
     rows.push({
       id:          a.escalation_id,
+      section:     'anomaly',
       gate:        a.risk_level === 'CRITICAL' ? 'ESCALATION'
                  : a.risk_level === 'ELEVATED'  ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
       title:       a.what_is_happening,
@@ -294,10 +318,19 @@ function buildDecisionRows(
 
 // ─── NavPanel ─────────────────────────────────────────────────────────────────
 
-function NavPanel({ brief }: { brief: BriefResponse }) {
+type ActiveView = 'docket' | 'deadlines' | 'billing' | 'silence';
+
+interface NavPanelProps {
+  brief: BriefResponse;
+  decisionCount: number;
+  activeView: ActiveView;
+  onViewChange: (v: ActiveView) => void;
+  firmName: string;
+  attorneyName: string;
+}
+
+function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName, attorneyName }: NavPanelProps) {
   const { deadlines, time_entries, client_silence } = brief.sections;
-  const totalDecisions =
-    deadlines.count + time_entries.count + client_silence.count + brief.sections.anomalies.count;
 
   const labelStyle: CSSProperties = {
     fontFamily: 'var(--font-mono)',
@@ -306,6 +339,13 @@ function NavPanel({ brief }: { brief: BriefResponse }) {
     color: C.muted,
     fontSize: 10,
   };
+
+  const navItems: { label: string; count: number; view: ActiveView }[] = [
+    { label: 'Decision docket', count: decisionCount,        view: 'docket'    },
+    { label: 'Deadline risk',   count: deadlines.count,      view: 'deadlines' },
+    { label: 'Billing WIP',     count: time_entries.count,   view: 'billing'   },
+    { label: 'Client silence',  count: client_silence.count, view: 'silence'   },
+  ];
 
   return (
     <nav style={{
@@ -317,13 +357,16 @@ function NavPanel({ brief }: { brief: BriefResponse }) {
       gap:            15,
       overflowY:      'auto',
     }}>
-      {/* Ops card */}
+      {/* Firm + attorney identity card */}
       <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 12, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
         <img src="/icons-logo/prepare-icon.png" alt="" style={{ width: 44, height: 44, objectFit: 'contain', mixBlendMode: 'multiply', flexShrink: 0 }} />
-        <div>
-          <strong style={{ display: 'block', fontSize: 13, color: C.ink }}>Ops control</strong>
-          <span style={{ display: 'block', marginTop: 3, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Prepared layer
+        <div style={{ minWidth: 0 }}>
+          <strong style={{ display: 'block', fontSize: 12, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firmName}</strong>
+          <span style={{ display: 'block', marginTop: 2, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {attorneyName}
+          </span>
+          <span style={{ display: 'block', marginTop: 1, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Ops control layer
           </span>
         </div>
       </div>
@@ -331,26 +374,32 @@ function NavPanel({ brief }: { brief: BriefResponse }) {
       {/* Nav items */}
       <div style={{ display: 'grid', gap: 6 }}>
         <span style={labelStyle}>Closeout</span>
-        {([
-          { label: 'Decision docket', count: totalDecisions,         active: true  },
-          { label: 'Deadline risk',   count: deadlines.count,        active: false },
-          { label: 'Billing WIP',     count: time_entries.count,     active: false },
-          { label: 'Client silence',  count: client_silence.count,   active: false },
-        ] as { label: string; count: number; active: boolean }[]).map(({ label, count, active }) => (
-          <div key={label} style={{
-            display:        'flex',
-            justifyContent: 'space-between',
-            gap:            14,
-            padding:        '9px 10px',
-            borderRadius:   6,
-            background:     active ? C.forest : 'transparent',
-            color:          active ? C.brass  : C.ink,
-            fontSize:       13,
-          }}>
-            <span>{label}</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, opacity: 0.8 }}>{count}</span>
-          </div>
-        ))}
+        {navItems.map(({ label, count, view }) => {
+          const active = activeView === view;
+          return (
+            <button
+              key={view}
+              onClick={() => onViewChange(view)}
+              style={{
+                display:        'flex',
+                justifyContent: 'space-between',
+                gap:            14,
+                padding:        '9px 10px',
+                borderRadius:   6,
+                background:     active ? C.forest : 'transparent',
+                color:          active ? C.brass  : C.ink,
+                fontSize:       13,
+                border:         'none',
+                cursor:         'pointer',
+                textAlign:      'left',
+                width:          '100%',
+              }}
+            >
+              <span>{label}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, opacity: 0.8 }}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Architecture mini-map */}
@@ -404,7 +453,7 @@ const CELL_COLORS: Record<string, string> = {
   hot: '#9B2D23', gold: '#A98435', on: '#1D9E75', '': '#D8D0BE',
 };
 
-function PressureSection({ pressure, brief }: { pressure: PressureData; brief: BriefResponse }) {
+function PressureSection({ pressure }: { pressure: PressureData }) {
   const [tab, setTab] = useState<'pressure' | 'audit' | 'agents'>('pressure');
 
   const preset = pressure.score >= 60 ? 'high' : pressure.score >= 40 ? 'medium' : 'low';
@@ -569,6 +618,16 @@ function DecisionRowItem({
         <div style={{ marginTop: 8, color: isReceipted ? C.auditMuted : C.danger, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
           {row.matterRisk}
         </div>
+        {row.extraTags && !isReceipted && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+            {row.extraTags.map(tag => (
+              <span key={tag} style={{
+                background: C.tealSoft, color: C.teal, border: `1px solid rgba(29,158,117,.2)`,
+                borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)', fontSize: 10,
+              }}>{tag}</span>
+            ))}
+          </div>
+        )}
         {row.confidence && !isReceipted && (
           <>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
@@ -673,11 +732,13 @@ interface ProofRailProps {
   displayed:       AgentObservation[];
   gateCounts:      Record<string, number>;
   decisionCount:   number;
-  traceRef:        RefObject<HTMLDivElement>;
+  traceRef:        RefObject<HTMLDivElement | null>;
   sweepError?:     string | null;
+  isOpen:          boolean;
+  onToggle:        () => void;
 }
 
-function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef, sweepError }: ProofRailProps) {
+function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef, sweepError, isOpen, onToggle }: ProofRailProps) {
   const agentNames = ['deadline_agent', 'billing_agent', 'comms_agent', 'anomaly_agent'];
   const lastAgent  = displayed[displayed.length - 1]?.agent_name ?? '';
 
@@ -704,6 +765,29 @@ function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decision
     ? `${displayed.length} / 22`
     : isSweepComplete ? 'complete' : 'pending';
 
+  if (!isOpen) {
+    return (
+      <aside style={{
+        background: C.audit, borderLeft: `1px solid ${C.auditLine}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 16, gap: 12,
+        cursor: 'pointer',
+      }} onClick={onToggle}>
+        <button
+          title="Expand audit trail"
+          style={{ background: 'none', border: `1px solid ${C.auditLine}`, borderRadius: 999, color: C.auditAccent, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+        >◀</button>
+        <span style={{
+          writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+          fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase',
+          letterSpacing: '0.12em', color: C.auditMuted, userSelect: 'none',
+        }}>Audit trail</span>
+        {isPlaying && (
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: C.auditAccent, animation: 'litt-rail-pulse 1s ease-in-out infinite' }} />
+        )}
+      </aside>
+    );
+  }
+
   return (
     <aside
       className={isPlaying ? 'litt-rail-running' : undefined}
@@ -727,9 +811,16 @@ function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decision
           <h3 style={{ margin: 0, color: '#F5F0DC', fontSize: 22 }}>{railTitle}</h3>
           <p style={{ margin: '6px 0 0', color: C.auditMuted, lineHeight: 1.45, fontSize: 13 }}>{railCopy}</p>
         </div>
-        <span style={{ border: `1px solid ${C.auditLine}`, borderRadius: 999, padding: '5px 8px', color: C.auditAccent, fontFamily: 'var(--font-mono)', fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>
-          {railState}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <span style={{ border: `1px solid ${C.auditLine}`, borderRadius: 999, padding: '5px 8px', color: C.auditAccent, fontFamily: 'var(--font-mono)', fontSize: 10, whiteSpace: 'nowrap' }}>
+            {railState}
+          </span>
+          <button
+            onClick={onToggle}
+            title="Collapse audit trail"
+            style={{ background: 'none', border: `1px solid ${C.auditLine}`, borderRadius: 999, color: C.auditMuted, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}
+          >▶</button>
+        </div>
       </div>
 
       {/* Agent grid */}
@@ -807,10 +898,11 @@ function SourceDrawer({
   onConfirm: () => void;
 }) {
   const isOpen = !!item;
+  if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: isOpen ? 'auto' : 'none', zIndex: 20 }} aria-hidden={!isOpen}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,23,19,.24)', opacity: isOpen ? 1 : 0, transition: 'opacity 0.22s ease' }} />
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 20 }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,23,19,.24)', opacity: 1, transition: 'opacity 0.22s ease' }} />
       <aside style={{
         position:   'absolute',
         top:        0,
@@ -820,7 +912,7 @@ function SourceDrawer({
         background: C.paper,
         borderLeft: `1px solid ${C.line}`,
         boxShadow:  '-22px 0 54px rgba(20,27,23,.18)',
-        transform:  isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transform:  'translateX(0)',
         transition: 'transform 0.28s ease',
         padding:    22,
         display:    'grid',
@@ -885,6 +977,8 @@ export function DailyCloseoutBrief() {
   const [displayed,      setDisplayed]     = useState<AgentObservation[]>([]);
   const [isPlaying,      setIsPlaying]     = useState(false);
   const [isSweepComplete, setIsSweepComplete] = useState(false);
+  const [activeView,     setActiveView]    = useState<ActiveView>('docket');
+  const [railOpen,       setRailOpen]      = useState(true);
   const timerRefs    = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const traceBottomRef = useRef<HTMLDivElement>(null);
 
@@ -1033,42 +1127,68 @@ export function DailyCloseoutBrief() {
     );
   }
 
-  const visibleRows    = decisionRows.filter(r => !resolved.has(r.id));
-  const criticalCount  = visibleRows.filter(r => r.gate === 'ESCALATION').length;
+  const VIEW_META: Record<ActiveView, { title: string; desc: string }> = {
+    docket:    { title: 'Closeout docket',  desc: 'Attorney decisions ranked by operational pressure. Each row exposes gate, confidence, architecture boundary, and action path.' },
+    deadlines: { title: 'Deadline risk',    desc: 'Court-filed, contractual, and internal deadlines requiring attorney confirmation before closeout.' },
+    billing:   { title: 'Billing WIP',      desc: 'Pending time entries — scrubber results, UTBMS codes, session data, and approval paths.' },
+    silence:   { title: 'Client silence',   desc: 'Matters past the contact threshold. Comms agent drafts are gated behind attorney approval.' },
+  };
+
+  const VIEW_SECTION: Record<ActiveView, DecisionRow['section'] | null> = {
+    docket: null, deadlines: 'deadline', billing: 'billing', silence: 'silence',
+  };
+
+  const allVisible     = decisionRows.filter(r => !resolved.has(r.id));
+  const sectionFilter  = VIEW_SECTION[activeView];
+  const visibleRows    = sectionFilter ? allVisible.filter(r => r.section === sectionFilter) : allVisible;
+  const criticalCount  = allVisible.filter(r => r.gate === 'ESCALATION').length;
   const wipUsd         = brief.sections.time_entries.total_wip_usd;
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <DemoBanner firmName={brief.firm_name} demoDate={brief.generated_at.slice(0, 10)} />
 
-      <div style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
+      <div className="litt-shell-padding" style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
 
           {/* ── Topbar ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
-            <span
-              role="img"
-              aria-label="Litt"
-              style={{
-                display:         'block',
-                width:           214,
-                height:          62,
-                backgroundImage: 'url("/icons-logo/litt_logo_main_no_tagline.png")',
-                backgroundSize:  '258px auto',
-                backgroundRepeat:'no-repeat',
-                backgroundPosition:'center',
-                mixBlendMode:    'multiply',
-              }}
-            />
+          <div className="litt-topbar" style={{ display: 'grid', gridTemplateColumns: '286px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
+            {/* Logo + firm identity */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span
+                className="litt-logo"
+                role="img"
+                aria-label="Litt"
+                style={{
+                  display:          'block',
+                  width:            180,
+                  height:           48,
+                  backgroundImage:  'url("/icons-logo/litt_logo_main_no_tagline.png")',
+                  backgroundSize:   '220px auto',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'left center',
+                  mixBlendMode:     'multiply',
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.forest, letterSpacing: '-0.01em' }}>
+                  {brief.firm_name}
+                </span>
+                <span style={{ color: C.line, fontSize: 14 }}>·</span>
+                <span style={{ fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)' }}>
+                  {brief.attorney_name}
+                </span>
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="litt-status-pills" style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
               {criticalCount > 0 && (
                 <span style={{ border: '1px solid rgba(155,45,35,.35)', borderRadius: 999, padding: '5px 8px', color: C.danger, background: C.dangerSoft, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap' }}>
                   {criticalCount} critical
                 </span>
               )}
               <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                {visibleRows.length} decisions
+                {allVisible.length} decisions
               </span>
               {wipUsd > 0 && (
                 <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
@@ -1083,7 +1203,7 @@ export function DailyCloseoutBrief() {
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
               <button
                 onClick={handleSweep}
@@ -1107,12 +1227,19 @@ export function DailyCloseoutBrief() {
           </div>
 
           {/* ── 3-column body ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '286px 1fr 392px', minHeight: 860 }}>
+          <div className="litt-body-grid" style={{ display: 'grid', gridTemplateColumns: `286px 1fr ${railOpen ? '392px' : '40px'}`, minHeight: 860, transition: 'grid-template-columns 0.25s ease' }}>
 
-            <NavPanel brief={brief} />
+            <NavPanel
+              brief={brief}
+              decisionCount={allVisible.length}
+              activeView={activeView}
+              onViewChange={setActiveView}
+              firmName={brief.firm_name}
+              attorneyName={brief.attorney_name}
+            />
 
             {/* Main workbench */}
-            <main style={{
+            <main className="litt-main" style={{
               padding:      18,
               display:      'grid',
               gap:          16,
@@ -1120,23 +1247,23 @@ export function DailyCloseoutBrief() {
               background:   `linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 260px), ${C.bg}`,
             }}>
               {/* Work header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'end', borderBottom: `1px solid ${C.line}`, paddingBottom: 15 }}>
+              <div className="litt-work-header" style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'end', borderBottom: `1px solid ${C.line}`, paddingBottom: 15 }}>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1, letterSpacing: '-0.02em', color: C.ink }}>
-                    Closeout docket
+                  <h2 className="litt-work-title" style={{ margin: 0, fontSize: 34, lineHeight: 1, letterSpacing: '-0.02em', color: C.ink }}>
+                    {VIEW_META[activeView].title}
                   </h2>
                   <p style={{ margin: '7px 0 0', color: C.muted, maxWidth: 720, lineHeight: 1.45, fontSize: 14 }}>
-                    Attorney decisions ranked by operational pressure. Each row exposes Litt's gate, source confidence, architecture boundary, matter impact, and action path.
+                    {VIEW_META[activeView].desc}
                   </p>
                 </div>
                 <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {brief.firm_id} / {brief.generated_at.slice(0, 10)}
+                  {brief.generated_at.slice(0, 10)}
                 </span>
               </div>
 
-              <PressureSection pressure={pressure} brief={brief} />
+              {activeView === 'docket' && <PressureSection pressure={pressure} />}
 
-              {/* Decision docket */}
+              {/* Decision docket / filtered view */}
               <section style={{ border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
                 {visibleRows.length === 0 ? (
                   <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 14, color: C.muted }}>
@@ -1184,6 +1311,8 @@ export function DailyCloseoutBrief() {
               gateCounts={gateCounts}
               decisionCount={resolvedItems.length}
               traceRef={traceBottomRef}
+              isOpen={railOpen}
+              onToggle={() => setRailOpen(o => !o)}
             />
           </div>
         </div>

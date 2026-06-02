@@ -71,6 +71,9 @@ class BriefTimeEntryItem(BaseModel):
     scrubber_flags: List[BriefScrubberFlag]
     has_block: bool
     has_warn: bool
+    task_code: Optional[str] = None
+    activity_code: Optional[str] = None
+    session_minutes_actual: Optional[int] = None
 
 
 class TimeEntrySection(BaseModel):

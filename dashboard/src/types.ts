@@ -59,6 +59,9 @@ export interface BriefTimeEntryItem {
   scrubber_flags: ScrubberFlag[];
   has_block: boolean;
   has_warn: boolean;
+  task_code: string | null;
+  activity_code: string | null;
+  session_minutes_actual: number | null;
 }
 
 export interface TimeEntrySection {
