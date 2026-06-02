@@ -43,7 +43,8 @@ function inputStyle(focused: boolean) {
   };
 }
 
-export function DeadlineModal({ item, action, firmId, attorneyId, onClose, onSuccess }: Props) {
+export function DeadlineModal({ item, action: initialAction, firmId, attorneyId, onClose, onSuccess }: Props) {
+  const [activeAction, setActiveAction] = useState<DeadlineAction>(initialAction);
   const [newDueDate, setNewDueDate] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,7 @@ export function DeadlineModal({ item, action, firmId, attorneyId, onClose, onSuc
   const [focusDate, setFocusDate] = useState(false);
   const [focusReason, setFocusReason] = useState(false);
 
+  const action = activeAction;
   const title = { confirm: 'Confirm deadline', extend: 'Extend deadline', dismiss: 'Dismiss deadline' }[action];
   const badge = CLASS_BADGE_STYLE[item.classification] ?? { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 };
 
@@ -86,6 +88,38 @@ export function DeadlineModal({ item, action, firmId, attorneyId, onClose, onSuc
 
         {/* Body */}
         <div style={{ padding: 24 }}>
+          {/* Action tabs */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {(['confirm', 'extend', 'dismiss'] as DeadlineAction[]).map(a => (
+              <button
+                key={a}
+                onClick={() => { setActiveAction(a); setError(null); setNewDueDate(''); setReason(''); }}
+                style={{
+                  flex: 1,
+                  padding: '7px 4px',
+                  fontSize: 12,
+                  fontWeight: activeAction === a ? 600 : 400,
+                  fontFamily: 'var(--font-mono)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  border: `1px solid ${activeAction === a
+                    ? (a === 'dismiss' ? 'var(--color-border-danger)' : 'var(--color-border-info)')
+                    : 'var(--color-border-tertiary)'}`,
+                  borderRadius: 'var(--border-radius-md)',
+                  background: activeAction === a
+                    ? (a === 'dismiss' ? 'var(--color-background-danger)' : 'var(--color-background-info)')
+                    : 'transparent',
+                  color: activeAction === a
+                    ? (a === 'dismiss' ? 'var(--color-text-danger)' : 'var(--color-text-info)')
+                    : 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+
           {/* Item summary */}
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: 14, marginBottom: 20 }}>
             <div style={{ marginBottom: 8 }}>

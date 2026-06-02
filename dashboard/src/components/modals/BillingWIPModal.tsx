@@ -36,7 +36,8 @@ function inputStyle(focused: boolean) {
   };
 }
 
-export function BillingWIPModal({ item, action, firmId, attorneyId, onClose, onSuccess }: Props) {
+export function BillingWIPModal({ item, action: initialAction, firmId, attorneyId, onClose, onSuccess }: Props) {
+  const [activeAction, setActiveAction] = useState<BillingAction>(initialAction);
   const [newHours, setNewHours] = useState(String(item.hours));
   const [reason, setReason] = useState('');
   const [narrative, setNarrative] = useState(item.narrative ?? '');
@@ -46,6 +47,7 @@ export function BillingWIPModal({ item, action, firmId, attorneyId, onClose, onS
   const [focusReason, setFocusReason] = useState(false);
   const [focusNarrative, setFocusNarrative] = useState(false);
 
+  const action = activeAction;
   const title = ACTION_TITLE[action];
 
   async function handleSubmit() {
@@ -84,6 +86,55 @@ export function BillingWIPModal({ item, action, firmId, attorneyId, onClose, onS
         </div>
 
         <div style={{ padding: 24 }}>
+          {/* Action tabs */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {(['approve', 'write-down', 'write-off', 'narrative'] as BillingAction[]).map(a => {
+              const isDanger = a === 'write-off';
+              const isWarn   = a === 'write-down';
+              const isActive = activeAction === a;
+              return (
+                <button
+                  key={a}
+                  onClick={() => {
+                    setActiveAction(a);
+                    setError(null);
+                    setReason('');
+                    setNewHours(String(item.hours));
+                    setNarrative(item.narrative ?? '');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '7px 4px',
+                    fontSize: 12,
+                    fontWeight: isActive ? 600 : 400,
+                    fontFamily: 'var(--font-mono)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    border: `1px solid ${isActive
+                      ? isDanger ? 'var(--color-border-danger)'
+                      : isWarn  ? 'var(--color-border-warning)'
+                      : 'var(--color-border-info)'
+                      : 'var(--color-border-tertiary)'}`,
+                    borderRadius: 'var(--border-radius-md)',
+                    background: isActive
+                      ? isDanger ? 'var(--color-background-danger)'
+                      : isWarn  ? 'var(--color-background-warning)'
+                      : 'var(--color-background-info)'
+                      : 'transparent',
+                    color: isActive
+                      ? isDanger ? 'var(--color-text-danger)'
+                      : isWarn  ? 'var(--color-text-warning)'
+                      : 'var(--color-text-info)'
+                      : 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {a}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Entry summary */}
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: 14, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>

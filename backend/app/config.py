@@ -1,5 +1,17 @@
 import os
 from datetime import date, datetime
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env from repo root (backend/app/config.py → backend/app → backend → repo root)
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path, override=False)
+
+# Empty GOOGLE_APPLICATION_CREDENTIALS breaks ADC fallback — remove it so Google auth
+# can find the well-known ADC file at %APPDATA%/gcloud/application_default_credentials.json
+if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+    os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
 DEMO_MODE: bool = os.getenv("LITT_DEMO_MODE", "false").lower() == "true"
 DEMO_DATE_STR: str = os.getenv("LITT_DEMO_DATE", "")

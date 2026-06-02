@@ -674,9 +674,10 @@ interface ProofRailProps {
   gateCounts:      Record<string, number>;
   decisionCount:   number;
   traceRef:        RefObject<HTMLDivElement>;
+  sweepError?:     string | null;
 }
 
-function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef }: ProofRailProps) {
+function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef, sweepError }: ProofRailProps) {
   const agentNames = ['deadline_agent', 'billing_agent', 'comms_agent', 'anomaly_agent'];
   const lastAgent  = displayed[displayed.length - 1]?.agent_name ?? '';
 
@@ -686,11 +687,14 @@ function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decision
     return 'ready';
   };
 
-  const railTitle = isSweepComplete ? 'Sweep complete'
+  const railTitle = sweepError    ? 'Sweep failed'
+                  : isSweepComplete ? 'Sweep complete'
                   : isPlaying       ? 'Sweep trace running'
                   : 'Sweep trace ready';
 
-  const railCopy = isSweepComplete
+  const railCopy = sweepError
+    ? sweepError
+    : isSweepComplete
     ? 'The rail settles into audit proof after the agent work. Receipts are ready for every consequential action.'
     : isPlaying
     ? 'Observations are emitting from the agent layer. Gate badges appear as Litt decides what it can and cannot do.'
@@ -869,6 +873,7 @@ export function DailyCloseoutBrief() {
   const [timeline,       setTimeline]      = useState<AgentRunTimelineType | null>(null);
   const [loading,        setLoading]       = useState(true);
   const [sweeping,       setSweeping]      = useState(false);
+  const [sweepError,     setSweepError]    = useState<string | null>(null);
   const [error,          setError]         = useState<string | null>(null);
   const [modal,          setModal]         = useState<OpenModal | null>(null);
   const [resolved,       setResolved]      = useState<Set<string>>(new Set());
@@ -897,15 +902,21 @@ export function DailyCloseoutBrief() {
 
   async function handleSweep() {
     setSweeping(true);
+    setSweepError(null);
     setTimeline(null);
     setDisplayed([]);
     setIsPlaying(false);
     setIsSweepComplete(false);
     try {
       const result = await runSweep(FIRM_ID);
-      setTimeline(result.timeline);
+      if (result.timeline?.observations?.length) {
+        setTimeline(result.timeline);
+      } else {
+        setIsSweepComplete(true);
+      }
       setBrief(result.brief);
-    } catch {
+    } catch (e) {
+      setSweepError(e instanceof Error ? e.message : 'Sweep failed');
       await loadBrief();
     } finally {
       setSweeping(false);
@@ -917,15 +928,17 @@ export function DailyCloseoutBrief() {
 
   // Feed timeline observations into rail at 250ms/obs
   useEffect(() => {
-    if (!timeline) return;
+    if (!timeline?.observations?.length) return;
     setDisplayed([]);
     setIsPlaying(true);
     setIsSweepComplete(false);
     let i = 0;
+    const obs = timeline.observations;
     const interval = setInterval(() => {
-      setDisplayed(prev => [...prev, timeline.observations[i]]);
+      const next = obs[i];
+      if (next) setDisplayed(prev => [...prev, next]);
       i++;
-      if (i >= timeline.observations.length) {
+      if (i >= obs.length) {
         clearInterval(interval);
         setIsPlaying(false);
         setIsSweepComplete(true);
@@ -1166,6 +1179,7 @@ export function DailyCloseoutBrief() {
             <ProofRail
               isPlaying={isPlaying}
               isSweepComplete={isSweepComplete}
+              sweepError={sweepError}
               displayed={displayed}
               gateCounts={gateCounts}
               decisionCount={resolvedItems.length}

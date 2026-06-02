@@ -25,7 +25,7 @@ pip install -r requirements.txt
 # DO NOT run from repo root; DO NOT use bare `uvicorn` (picks up hermes-agent venv)
 cd backend
 .venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8002
 
 # Run all tests
 cd backend && pytest
