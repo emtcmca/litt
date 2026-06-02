@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Judge Demo Journey</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    :root {
+      --bg:#f3efe6; --paper:#fffdf8; --surface:#fff; --rail:#e8e1d2; --line:#cfd5c9; --soft:#e6e2d8;
+      --ink:#17201c; --muted:#5f6a61; --forest:#14221f; --brass:#d6c181; --teal:#207c68; --teal-soft:rgba(32,124,104,.1);
+      --danger:#9b2d23; --danger-soft:#f3ded7; --gold:#a98435; --gold-soft:#f3ead2; --audit:#101713; --audit-line:rgba(214,193,129,.28);
+      --audit-muted:#aeb8a4; --audit-accent:#9ee1c7;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",system-ui,sans-serif; }
+    button { font:inherit; }
+    .mono { font-family:"IBM Plex Mono",monospace; }
+    .page { max-width:1720px; margin:0 auto; padding:26px; }
+    .platform { border:1px solid var(--line); border-radius:20px; overflow:hidden; background:var(--paper); box-shadow:0 28px 78px rgba(32,35,31,.13); }
+    .top { display:grid; grid-template-columns:250px minmax(0,1fr) auto; align-items:center; gap:18px; padding:12px 18px; background:var(--paper); border-bottom:1px solid var(--line); }
+    .logo { display:block; width:214px; height:62px; background:url("/icons-logo/litt_logo_main_no_tagline.png") center/258px auto no-repeat; mix-blend-mode:multiply; }
+    .status { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:5px 8px; color:var(--muted); background:var(--surface); font-family:"IBM Plex Mono",monospace; font-size:11px; white-space:nowrap; }
+    .pill.hot { color:var(--danger); background:var(--danger-soft); border-color:rgba(155,45,35,.35); }
+    .run { border:0; border-radius:8px; background:var(--forest); color:white; padding:11px 15px; font-weight:700; cursor:pointer; }
+    .run:disabled { opacity:.82; cursor:default; }
+    .body { display:grid; grid-template-columns:286px minmax(0,1fr) 392px; min-height:860px; }
+    .nav { background:var(--rail); border-right:1px solid var(--line); padding:16px; display:grid; align-content:start; gap:15px; }
+    .ops-card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px; display:flex; gap:10px; align-items:center; }
+    .ops-card img { width:44px; height:44px; object-fit:contain; mix-blend-mode:multiply; }
+    .ops-card strong { display:block; font-size:13px; }
+    .ops-card span { display:block; margin-top:3px; color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+    .label, .nav-title { font-family:"IBM Plex Mono",monospace; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-size:10px; }
+    .nav-item { display:flex; justify-content:space-between; gap:14px; padding:9px 10px; border-radius:6px; color:var(--ink); }
+    .nav-item.active { background:var(--forest); color:var(--brass); }
+    .mini-map, .gate-strip { background:rgba(255,253,248,.72); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px; }
+    .flow { display:grid; gap:7px; }
+    .flow-line { display:grid; grid-template-columns:18px 1fr; gap:8px; align-items:start; color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .flow-dot { width:18px; height:18px; border-radius:999px; background:var(--forest); color:var(--brass); display:grid; place-items:center; font-size:9px; font-weight:700; }
+    .gate-key { display:grid; grid-template-columns:10px 1fr; gap:8px; align-items:start; }
+    .swatch { width:10px; height:10px; border-radius:3px; margin-top:3px; }
+    .swatch.escalation { background:var(--danger); } .swatch.review { background:var(--gold); } .swatch.blocked { background:var(--forest); } .swatch.safe { background:var(--teal); }
+    .gate-key b { display:block; font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .gate-key span { display:block; color:var(--muted); font-size:11px; line-height:1.25; }
+    .main { padding:18px; display:grid; gap:16px; align-content:start; background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 260px), var(--bg); }
+    .work-header { display:flex; justify-content:space-between; gap:18px; align-items:end; border-bottom:1px solid var(--line); padding-bottom:15px; }
+    .work-header h2 { margin:0; font-size:34px; line-height:1; letter-spacing:-.02em; }
+    .work-header p { margin:7px 0 0; color:var(--muted); max-width:760px; line-height:1.45; }
+    .pressure { display:grid; grid-template-columns:176px 1fr; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--surface); }
+    .score { background:var(--forest); color:var(--brass); padding:18px; display:grid; gap:10px; align-content:center; }
+    .score b { font-size:68px; line-height:.82; }
+    .score span { color:var(--audit-muted); font-size:12px; }
+    .matrix { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; }
+    .cell { height:9px; border-radius:3px; background:#d8d0be; }
+    .cell.on { background:var(--teal); } .cell.hot { background:var(--danger); } .cell.gold { background:var(--gold); }
+    .intel { padding:15px; display:grid; gap:13px; }
+    .tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+    .tab { border:1px solid var(--line); border-radius:999px; padding:8px; text-align:center; font-family:"IBM Plex Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); background:var(--paper); cursor:pointer; }
+    .tab.active { background:var(--forest); color:var(--brass); border-color:var(--forest); }
+    .panel { display:none; }
+    .panel.active { display:grid; }
+    .factors { grid-template-columns:repeat(4,1fr); gap:10px; }
+    .factor, .audit-metric { display:grid; gap:6px; }
+    .factor b, .audit-metric b { font-size:18px; }
+    .factor p, .audit-metric p { margin:0; color:var(--muted); font-size:12px; line-height:1.35; }
+    .bar { height:7px; border-radius:999px; background:#dfe5dc; overflow:hidden; }
+    .bar span { display:block; height:100%; background:var(--teal); }
+    .bar.hot span { background:var(--danger); } .bar.gold span { background:var(--gold); }
+    .audit-panel, .agents-panel { grid-template-columns:repeat(3,1fr); gap:10px; }
+    .audit-metric { border:1px solid var(--soft); border-radius:10px; padding:10px; background:#fbf8f0; }
+    .decisions { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--surface); }
+    .row { position:relative; display:grid; grid-template-columns:132px 1fr 225px 104px; gap:14px; align-items:center; padding:14px; border-bottom:1px solid var(--soft); transition:background .35s ease, color .35s ease, opacity .35s ease, max-height .55s ease, padding .55s ease, border-width .55s ease; max-height:210px; overflow:hidden; }
+    .row:last-child { border-bottom:0; }
+    .row.receipted { background:var(--forest); color:#f5f0dc; }
+    .row.receipted p, .row.receipted .confidence, .row.receipted .boundary, .row.receipted .matter-risk { color:var(--audit-muted); }
+    .row.collapsing { max-height:0; padding-top:0; padding-bottom:0; opacity:0; border-width:0; }
+    .receipt-flash { display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:linear-gradient(90deg, rgba(32,124,104,.18), rgba(20,34,31,.96)); color:var(--audit-accent); font-weight:700; font-size:17px; letter-spacing:.01em; opacity:0; }
+    .row.receipted .receipt-flash { display:flex; animation:flashIn .38s ease forwards; }
+    @keyframes flashIn { to { opacity:1; } }
+    .gate { display:inline-flex; width:fit-content; border-radius:6px; padding:5px 7px; font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:700; letter-spacing:.03em; white-space:nowrap; }
+    .escalation { background:var(--danger); color:#fff; } .review { background:var(--gold); color:#fff7e4; } .blocked { background:var(--forest); color:var(--brass); } .safe { background:var(--teal-soft); color:var(--teal); border:1px solid rgba(32,124,104,.26); }
+    .row h3 { margin:0; font-size:16px; line-height:1.2; }
+    .row p { margin:5px 0 0; color:var(--muted); font-size:13px; line-height:1.35; }
+    .matter-risk { margin-top:8px; color:var(--danger); font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .confidence { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .confidence-button { margin-top:8px; border:1px solid rgba(32,124,104,.3); background:var(--teal-soft); color:var(--teal); border-radius:999px; padding:5px 8px; font-family:"IBM Plex Mono",monospace; font-size:10px; cursor:pointer; }
+    .boundary { display:grid; gap:4px; color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .boundary strong { color:var(--ink); font-family:"IBM Plex Sans",sans-serif; font-size:12px; }
+    .action { border:0; border-radius:7px; background:var(--forest); color:#fff; padding:8px 10px; font-weight:700; cursor:pointer; }
+    .rail { background:var(--audit); color:#e9e0c7; border-left:1px solid var(--audit-line); padding:16px; display:grid; gap:14px; align-content:start; }
+    .rail.running { animation:railPulse 1.2s ease-in-out infinite; }
+    @keyframes railPulse { 0%,100% { box-shadow:inset 0 0 0 1px rgba(158,225,199,.02); } 50% { box-shadow:inset 0 0 0 1px rgba(158,225,199,.28), 0 0 34px rgba(158,225,199,.08); } }
+    .rail h3 { margin:0; color:#f5f0dc; font-size:22px; }
+    .rail p { margin:0; color:var(--audit-muted); line-height:1.45; font-size:13px; }
+    .rail-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+    .rail-state { border:1px solid var(--audit-line); border-radius:999px; padding:5px 8px; color:var(--audit-accent); font-family:"IBM Plex Mono",monospace; font-size:10px; white-space:nowrap; }
+    .agent-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .agent { border:1px solid var(--audit-line); border-radius:10px; padding:10px; background:rgba(255,255,255,.045); display:grid; gap:6px; }
+    .agent.active { border-color:rgba(158,225,199,.65); box-shadow:0 0 0 2px rgba(158,225,199,.1); }
+    .agent span { color:var(--audit-muted); font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+    .agent b { color:#f5f0dc; font-size:14px; }
+    .trace { display:grid; gap:8px; max-height:386px; overflow:auto; padding-right:2px; scroll-behavior:smooth; }
+    .observation { display:grid; gap:6px; border:1px solid var(--audit-line); border-radius:10px; padding:10px; background:rgba(255,255,255,.045); animation:drip .22s ease-out both; }
+    @keyframes drip { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .obs-top { display:flex; justify-content:space-between; gap:10px; color:var(--audit-accent); font-family:"IBM Plex Mono",monospace; font-size:10px; }
+    .obs-main { color:#f5f0dc; font-size:13px; }
+    .obs-gate { display:inline-flex; width:fit-content; border-radius:6px; padding:4px 6px; font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:700; }
+    .rail .obs-gate.safe { background:rgba(32,124,104,.24); color:var(--audit-accent); border-color:rgba(158,225,199,.34); }
+    .receipts { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+    .receipt { border:1px solid var(--audit-line); border-radius:10px; padding:10px; background:rgba(158,225,199,.08); }
+    .receipt span { display:block; color:var(--audit-muted); font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+    .receipt b { display:block; margin-top:5px; color:var(--audit-accent); font-size:18px; }
+    .drawer { position:fixed; inset:0; pointer-events:none; z-index:20; }
+    .drawer.open { pointer-events:auto; }
+    .drawer-scrim { position:absolute; inset:0; background:rgba(16,23,19,.24); opacity:0; transition:opacity .22s ease; }
+    .drawer.open .drawer-scrim { opacity:1; }
+    .drawer-panel { position:absolute; top:0; right:0; height:100%; width:min(460px,92vw); background:var(--paper); border-left:1px solid var(--line); box-shadow:-22px 0 54px rgba(20,27,23,.18); transform:translateX(100%); transition:transform .28s ease; padding:22px; display:grid; align-content:start; gap:16px; }
+    .drawer.open .drawer-panel { transform:translateX(0); }
+    .drawer-header { display:flex; justify-content:space-between; align-items:start; gap:14px; border-bottom:1px solid var(--line); padding-bottom:14px; }
+    .drawer-header h3 { margin:4px 0 0; font-size:24px; }
+    .drawer-close { border:1px solid var(--line); background:var(--surface); border-radius:8px; width:34px; height:34px; cursor:pointer; }
+    .reason-card { border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px; display:grid; gap:6px; }
+    .reason-card span { color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
+    .reason-card b { font-size:16px; }
+    .reason-card p { margin:0; color:var(--muted); line-height:1.42; font-size:13px; }
+    .drawer-action { border:0; border-radius:8px; background:var(--forest); color:white; padding:12px 14px; font-weight:700; cursor:pointer; }
+    @media (max-width:1300px) { .body { grid-template-columns:1fr; } .rail { border-left:0; border-top:1px solid var(--audit-line); } }
+    @media (max-width:900px) { .top,.row,.pressure { grid-template-columns:1fr; } .factors,.audit-panel,.agents-panel { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="platform">
+      <div class="top">
+        <span class="logo" role="img" aria-label="Litt"></span>
+        <div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div>
+        <button id="runSweep" class="run">Run closeout sweep</button>
+      </div>
+      <div class="body">
+        <nav class="nav">
+          <div class="ops-card"><img src="/icons-logo/prepare-icon.png" alt=""><div><strong>Ops control</strong><span>Prepared layer</span></div></div>
+          <div><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span class="mono">8</span></div><div class="nav-item"><span>Deadline risk</span><span class="mono">2</span></div><div class="nav-item"><span>Billing WIP</span><span class="mono">2</span></div><div class="nav-item"><span>Client silence</span><span class="mono">1</span></div></div>
+          <section class="mini-map"><div class="nav-title">Agent architecture</div><div class="flow"><div class="flow-line"><span class="flow-dot">1</span><span>Signals</span></div><div class="flow-line"><span class="flow-dot">2</span><span>Python router</span></div><div class="flow-line"><span class="flow-dot">3</span><span>Domain agents</span></div><div class="flow-line"><span class="flow-dot">4</span><span>Tool write path</span></div><div class="flow-line"><span class="flow-dot">5</span><span>Append-only audit log</span></div></div></section>
+          <section class="gate-strip"><div class="nav-title">Gate model</div><div class="gate-key"><span class="swatch escalation"></span><div><b>ESCALATION</b><span>Cannot resolve alone.</span></div></div><div class="gate-key"><span class="swatch review"></span><div><b>REVIEW_REQUIRED</b><span>Attorney judgment needed.</span></div></div><div class="gate-key"><span class="swatch blocked"></span><div><b>BLOCKED</b><span>Prepared, not sent.</span></div></div><div class="gate-key"><span class="swatch safe"></span><div><b>AUTO_SAFE</b><span>Safe to log or monitor.</span></div></div></section>
+        </nav>
+        <main class="main">
+          <div class="work-header"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure. Each row exposes Litt's gate, source confidence, architecture boundary, matter impact, and action path.</p></div><span class="pill">Strand & Okafor / 2026-05-29</span></div>
+          <section class="pressure">
+            <div class="score"><div class="label">Operational pressure</div><div><b>72</b><span> / 100 elevated</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell on"></span><span class="cell on"></span><span class="cell"></span></div></div>
+            <div class="intel">
+              <div class="tabs"><button class="tab active" data-panel="pressurePanel">Pressure</button><button class="tab" data-panel="auditPanel">Audit</button><button class="tab" data-panel="agentsPanel">Agents</button></div>
+              <div id="pressurePanel" class="panel factors active"><div class="factor"><div class="label">Deadline horizon</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">Budget pressure</div><b>78%</b><p>ACME warning threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">WIP exposure</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">Client silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div>
+              <div id="auditPanel" class="panel audit-panel"><div class="audit-metric"><div class="label">Write path</div><b>tools only</b><p>Agents never write Firestore.</p></div><div class="audit-metric"><div class="label">Receipts</div><b>12</b><p>Actor, entity, timestamp, before/after.</p></div><div class="audit-metric"><div class="label">Lock</div><b>expected</b><p>Optimistic status checked.</p></div></div>
+              <div id="agentsPanel" class="panel agents-panel"><div class="audit-metric"><div class="label">Python</div><b>31 checks</b><p>Routing, state, math, scoring.</p></div><div class="audit-metric"><div class="label">Gemini</div><b>drafts only</b><p>Narrative for human review.</p></div><div class="audit-metric"><div class="label">Coordinator</div><b>router</b><p>No LLM routing decisions.</p></div></div>
+            </div>
+          </section>
+          <section class="decisions">
+            <div class="row" id="mercerRow"><span class="gate escalation">ESCALATION</span><div><h3>Mercer opposition deadline unresolved</h3><p>Rivera email suggests the response is due tomorrow, but no court order exists in firm sources. Litt escalates instead of pretending certainty.</p><div class="matter-risk">risk: malpractice exposure / missed dispositive deadline</div><div class="confidence"><span>confidence=70%</span><span>source=opposing counsel email</span><span>missing=court order</span></div><button class="confidence-button" id="openSourceDrawer">Open source transparency</button></div><div class="boundary"><strong>Transparent Confidence</strong><span>route=deadline_agent</span><span>llm=none</span><span>decision=ESCALATION</span></div><button id="reviewAction" class="action">Review</button><div class="receipt-flash">Attorney decision logged / audit_8f12</div></div>
+            <div class="row"><span class="gate blocked">BLOCKED</span><div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft but Litt will not send without attorney approval.</p><div class="matter-risk">risk: client churn / silent matter perception</div></div><div class="boundary"><strong>Comms agent</strong><span>route=comms_agent</span><span>llm=draft_narrative</span><span>write=tool_layer</span></div><button class="action">Draft</button></div>
+            <div class="row"><span class="gate blocked">BLOCKED</span><div><h3>Billing scrubber hit: "review documents"</h3><p>Likely LEDES rejection with write-down and narrative repair paths.</p><div class="matter-risk">risk: invoice rejection / delayed cash collection</div></div><div class="boundary"><strong>Python boundary</strong><span>route=billing_agent</span><span>llm=none</span><span>tool=scrub_time_entry</span></div><button class="action">Resolve</button></div>
+            <div class="row"><span class="gate safe">AUTO_SAFE</span><div><h3>ACME budget pressure logged</h3><p>Budget utilization crossed 78 percent warning threshold. No write action required yet.</p><div class="matter-risk">risk: budget surprise / client trust erosion</div></div><div class="boundary"><strong>Python boundary</strong><span>route=anomaly_agent</span><span>llm=none</span><span>math=deterministic</span></div><button class="action">Inspect</button></div>
+          </section>
+        </main>
+        <aside class="rail" id="proofRail">
+          <div class="rail-head"><div><div class="label">Defensible audit trail</div><h3 id="railTitle">Sweep trace ready</h3><p id="railCopy">Click Run closeout sweep to watch agents emit observations and gate decisions in real time.</p></div><span id="railState" class="rail-state">pending</span></div>
+          <div class="agent-grid"><div class="agent" data-agent="deadline_agent"><span>deadline_agent</span><b>ready</b></div><div class="agent" data-agent="billing_agent"><span>billing_agent</span><b>ready</b></div><div class="agent" data-agent="comms_agent"><span>comms_agent</span><b>ready</b></div><div class="agent" data-agent="anomaly_agent"><span>anomaly_agent</span><b>ready</b></div></div>
+          <div id="trace" class="trace"><div class="observation"><div class="obs-top"><span>pending</span><span>0 / 22</span></div><div class="obs-main">Sweep observations will appear here every 250ms.</div></div></div>
+          <div id="receipts" class="receipts" hidden><div class="receipt"><span>escalation</span><b>1</b></div><div class="receipt"><span>review</span><b>5</b></div><div class="receipt"><span>blocked</span><b>7</b></div><div class="receipt"><span>auto safe</span><b>9</b></div><div class="receipt"><span>decisions</span><b id="decisionCount">pending</b></div></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <div class="drawer" id="sourceDrawer" aria-hidden="true">
+    <div class="drawer-scrim" data-close-drawer></div>
+    <aside class="drawer-panel" aria-label="Source transparency drawer">
+      <div class="drawer-header"><div><div class="label">Transparent Confidence</div><h3>Rivera source reasoning</h3></div><button class="drawer-close" data-close-drawer>×</button></div>
+      <div class="reason-card"><span>source_found</span><b>"Due tomorrow, Friday"</b><p>Rivera opposing counsel email received 2026-05-28. Useful signal, but not an authoritative deadline source.</p></div>
+      <div class="reason-card"><span>source_missing</span><b>Court order not found</b><p>No court notice, docket entry, or attorney confirmation exists in firm sources.</p></div>
+      <div class="reason-card"><span>gate_decision</span><b>ESCALATION</b><p>Litt cannot confirm this autonomously. It surfaces the risk and refuses to resolve without attorney review.</p></div>
+      <div class="reason-card"><span>confidence</span><b>70%</b><p>Basis: email language and matter timing. Confidence is capped because no court document was found.</p></div>
+      <button id="confirmAction" class="drawer-action">Log attorney decision</button>
+    </aside>
+  </div>
+  <script>
+    const observations = [
+      ["deadline_agent","Rivera source is opposing counsel email","REVIEW_REQUIRED"],["deadline_agent","no court order found in firm sources","ESCALATION"],["deadline_agent","Mercer HARD_LEGAL deadline is 6 days out","REVIEW_REQUIRED"],["billing_agent","te-005 narrative contains scrubber phrase","BLOCKED"],["billing_agent","$4.2k WIP exposure added to pressure index","REVIEW_REQUIRED"],["comms_agent","Whitmore matter quiet for 16 days","BLOCKED"],["comms_agent","Gemini drafted outreach narrative only","BLOCKED"],["comms_agent","send action blocked pending attorney approval","BLOCKED"],["anomaly_agent","empty narrative anomaly scored","REVIEW_REQUIRED"],["anomaly_agent","budget pressure ACME at 78 percent","AUTO_SAFE"],["deadline_agent","deadline packets returned to coordinator","REVIEW_REQUIRED"],["billing_agent","billing packets returned to coordinator","BLOCKED"],["comms_agent","comms packet returned to coordinator","BLOCKED"],["anomaly_agent","pressure index assembled","AUTO_SAFE"],["coordinator","brief ready with audit posture","AUTO_SAFE"],["deadline_agent","expected_status checks available","AUTO_SAFE"],["billing_agent","LEDES checks completed","AUTO_SAFE"],["comms_agent","draft marked attorney-editable","BLOCKED"],["anomaly_agent","dedupe complete","AUTO_SAFE"],["coordinator","4 gates mapped to decision rows","AUTO_SAFE"],["coordinator","tool write paths prepared","AUTO_SAFE"],["coordinator","closeout sweep complete","AUTO_SAFE"]
+    ];
+    const gateClass = { ESCALATION:"escalation", REVIEW_REQUIRED:"review", BLOCKED:"blocked", AUTO_SAFE:"safe" };
+    const button = document.getElementById("runSweep");
+    const confirmButton = document.getElementById("confirmAction");
+    const trace = document.getElementById("trace");
+    const receipts = document.getElementById("receipts");
+    const railTitle = document.getElementById("railTitle");
+    const railCopy = document.getElementById("railCopy");
+    const railState = document.getElementById("railState");
+    const proofRail = document.getElementById("proofRail");
+    const decisionCount = document.getElementById("decisionCount");
+    const agents = [...document.querySelectorAll(".agent")];
+    function setActiveAgent(agent){
+      if (agent === "coordinator") return;
+      agents.forEach(el=>{
+        const isDomainAgent = el.dataset.agent === agent;
+        el.classList.toggle("active", isDomainAgent);
+        if (isDomainAgent) el.querySelector("b").textContent = "running";
+      });
+    }
+    function finishAgents(){
+      agents.forEach(el=>{
+        el.classList.remove("active");
+        el.querySelector("b").textContent = "done";
+      });
+    }
+    document.querySelectorAll(".tab").forEach(tab=>{
+      tab.addEventListener("click",()=>{
+        document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.panel).classList.add("active");
+      });
+    });
+    button.addEventListener("click",()=>{
+      button.disabled = true;
+      button.textContent = "Sweep running...";
+      railTitle.textContent = "Sweep trace running";
+      railCopy.textContent = "Observations are emitting from the agent layer. Gate badges appear as Litt decides what it can and cannot do.";
+      railState.textContent = "running";
+      proofRail.classList.add("running");
+      receipts.hidden = true;
+      trace.innerHTML = "";
+      observations.forEach((obs,index)=>setTimeout(()=>{
+        const [agent,text,gate] = obs;
+        setActiveAgent(agent);
+        railState.textContent = `${index + 1} / ${observations.length}`;
+        const card = document.createElement("div");
+        card.className = "observation";
+        card.innerHTML = `<div class="obs-top"><span>${agent}</span><span>${index+1} / ${observations.length}</span></div><div class="obs-main">${text}</div><span class="obs-gate ${gateClass[gate]}">${gate}</span>`;
+        trace.appendChild(card);
+        trace.scrollTop = trace.scrollHeight;
+        if (index === observations.length - 1) {
+          setTimeout(()=>{
+            finishAgents();
+            railTitle.textContent = "Sweep complete";
+            railCopy.textContent = "The rail settles into audit proof after showing the agent work. Receipts are ready for every consequential action.";
+            railState.textContent = "complete";
+            proofRail.classList.remove("running");
+            button.textContent = "Sweep complete";
+            receipts.hidden = false;
+          },300);
+        }
+      },index*250));
+    });
+    confirmButton.addEventListener("click",()=>{
+      const row = document.getElementById("mercerRow");
+      confirmButton.disabled = true;
+      drawer.classList.remove("open");
+      drawer.setAttribute("aria-hidden","true");
+      row.classList.add("receipted");
+      confirmButton.textContent = "Logged";
+      railTitle.textContent = "Attorney decision logged";
+      railCopy.textContent = "Mercer deadline review wrote an append-only audit receipt with actor, entity, timestamp, and before/after state.";
+      railState.textContent = "receipt";
+      const card = document.createElement("div");
+      card.className = "observation";
+      card.innerHTML = `<div class="obs-top"><span>tool_layer</span><span>audit_8f12</span></div><div class="obs-main">log_escalation_review wrote receipt for dl-mercer-001</div><span class="obs-gate safe">AUTO_SAFE</span>`;
+      trace.appendChild(card);
+      trace.scrollTop = trace.scrollHeight;
+      receipts.hidden = false;
+      decisionCount.textContent = decisionCount.textContent === "pending" ? "1" : String(Number(decisionCount.textContent) + 1);
+      setTimeout(()=>row.classList.add("collapsing"),1250);
+      setTimeout(()=>row.remove(),1900);
+    });
+    const drawer = document.getElementById("sourceDrawer");
+    document.getElementById("openSourceDrawer").addEventListener("click",()=>{
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden","false");
+    });
+    document.getElementById("reviewAction").addEventListener("click",()=>{
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden","false");
+    });
+    document.querySelectorAll("[data-close-drawer]").forEach(el=>el.addEventListener("click",()=>{
+      drawer.classList.remove("open");
+      drawer.setAttribute("aria-hidden","true");
+    }));
+  </script>
+</body>
+</html>

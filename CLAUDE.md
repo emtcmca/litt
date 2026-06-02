@@ -15,11 +15,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend (Python / FastAPI)
 
 ```bash
-# Install dependencies
-pip install -r backend/requirements.txt
+# First-time setup — create project venv (run once)
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1   # Windows PowerShell
+pip install -r requirements.txt
 
-# Run locally (from repo root)
-uvicorn backend.app.main:app --reload --port 8000
+# Run locally — ALWAYS from backend/ dir with project venv active
+# DO NOT run from repo root; DO NOT use bare `uvicorn` (picks up hermes-agent venv)
+cd backend
+.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8001
 
 # Run all tests
 cd backend && pytest

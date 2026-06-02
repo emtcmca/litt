@@ -1,0 +1,72 @@
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#0f172a", "primaryTextColor": "#f8fafc", "primaryBorderColor": "#334155", "lineColor": "#64748b", "secondaryColor": "#1e293b", "tertiaryColor": "#0f172a", "background": "#0f172a", "mainBkg": "#1e293b", "nodeBorder": "#334155", "clusterBkg": "#1e293b", "titleColor": "#f8fafc", "edgeLabelBackground": "#1e293b", "fontFamily": "ui-monospace, monospace"}}}%%
+graph TD
+    subgraph INPUTS["Data Sources · OAuth adapters"]
+        GM["Gmail\nCourt orders · Opposing counsel email"]
+        CAL["Google Calendar\nMeeting events"]
+        FS_IN["Firestore seed\nMatters · Clients · Time entries"]
+    end
+
+    subgraph CORE["Litt Backend — Cloud Run · Python · FastAPI"]
+        COORD["Coordinator\nPython router · SIGNAL_ROUTING dict\nNo LLM routing"]
+
+        subgraph AGENTS["Sub-Agents · Google ADK"]
+            BA["billing_agent\nCalendar gap detection\nPre-bill scrubber · Budget utilization"]
+            DA["deadline_agent\nDate extraction\nSource conflict detection\nAttorney verification gate"]
+            CA["comms_agent\nClient silence detection\nDraft generation · Delivery gate"]
+            AA["anomaly_agent\nReconstruction risk scoring\nRound-hours detection"]
+        end
+
+        subgraph TOOLS["Tool Layer — only Firestore write path"]
+            AT["audit.py\nlog_audit_event\ncalled on every write"]
+            TL["billing tools\ndeadline tools\ncomms tools\nanomaly tools"]
+        end
+
+        BRIEF["Brief Assembler\nassembler.py"]
+    end
+
+    subgraph AI["Gemini 2.5 Pro · Vertex AI"]
+        GEM["Probabilistic only\nDeadline extraction · Billing narrative drafts\nClient update drafts · Escalation explanations"]
+    end
+
+    subgraph FIRESTORE["Firestore · firms/strand-okafor"]
+        COL["deadlines · time_entries · matters · clients\nagent_runs · audit_log\nclient_communications · escalations"]
+    end
+
+    subgraph FRONTEND["Dashboard — Cloud Run · React"]
+        AGT["AgentRunTimeline\n250ms progressive playback\n4-gate badge model"]
+        DCB["DailyCloseoutBrief\nApproval actions · Audit drawer"]
+    end
+
+    GM --> COORD
+    CAL --> COORD
+    FS_IN --> COORD
+
+    COORD -->|routes| BA
+    COORD -->|routes| DA
+    COORD -->|routes| CA
+    COORD -->|routes| AA
+
+    BA -->|tool calls| TL
+    DA -->|tool calls| TL
+    CA -->|tool calls| TL
+    AA -->|tool calls| TL
+
+    DA -->|natural language| GEM
+    CA -->|natural language| GEM
+    BA -->|narrative draft| GEM
+
+    TL --> AT
+    AT --> FIRESTORE
+    TL --> FIRESTORE
+
+    COORD --> BRIEF
+    BRIEF -->|GET api/brief| DCB
+    COORD -->|POST api/sweep| AGT
+
+    style INPUTS fill:#1e293b,stroke:#334155,color:#94a3b8
+    style CORE fill:#0f172a,stroke:#334155,color:#f8fafc
+    style AGENTS fill:#1e293b,stroke:#334155,color:#f8fafc
+    style TOOLS fill:#1e293b,stroke:#475569,color:#f8fafc
+    style AI fill:#172033,stroke:#3b82f6,color:#93c5fd
+    style FIRESTORE fill:#172a1e,stroke:#16a34a,color:#86efac
+    style FRONTEND fill:#1e1a2e,stroke:#7c3aed,color:#c4b5fd

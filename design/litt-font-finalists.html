@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Font Finalists</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #ece6da; color: #17201c; font-family: "IBM Plex Sans", Inter, system-ui, sans-serif; }
+    .page { max-width: 1680px; margin: 0 auto; padding: 26px; }
+    .intro { max-width: 980px; margin-bottom: 18px; }
+    .intro h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: -.02em; }
+    .intro p { margin: 0; color: #625c50; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    @media (max-width: 1160px) { .grid { grid-template-columns: 1fr; } }
+    .option { border: 1px solid #cfd5c9; border-radius: 18px; overflow: hidden; background: #fffdf8; box-shadow: 0 18px 54px rgba(28,31,27,.11); }
+    .mock { min-height: 540px; background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0) 220px), #f3efe6; display: grid; grid-template-rows: auto 1fr; font-family: var(--ui); }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #fff; border-bottom: 1px solid #cfd5c9; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 820; letter-spacing: .035em; }
+    .mark { width: 27px; height: 27px; display: grid; place-items: center; background: #14221f; color: #d6c181; border-radius: 5px; font-size: 12px; }
+    .mono { font-family: var(--mono); }
+    .pill { border: 1px solid #cfd5c9; border-radius: 999px; padding: 5px 8px; color: #5f6a61; font-size: 10px; background: #fffdf8; }
+    .pill.hot { color: #9b2d23; background: #f3ded7; border-color: #cc9b90; }
+    .body { display: grid; grid-template-columns: 154px 1fr 220px; min-height: 480px; }
+    .nav { background: #e8e1d2; border-right: 1px solid #cfd5c9; padding: 13px; display: grid; align-content: start; gap: 8px; }
+    .nav-title, .label { font-family: var(--mono); text-transform: uppercase; letter-spacing: .09em; font-size: 9px; color: #655f52; }
+    .nav-item { display: flex; justify-content: space-between; gap: 10px; padding: 8px 9px; border-radius: 6px; font-size: 12px; }
+    .nav-item.active { background: #14221f; color: #d6c181; }
+    .main { padding: 15px; display: grid; gap: 13px; align-content: start; }
+    .headline { border-bottom: 1px solid #cfd5c9; padding-bottom: 12px; }
+    .headline h2 { margin: 0; font-family: var(--display); font-size: 32px; line-height: 1; letter-spacing: var(--track); font-weight: var(--headWeight); }
+    .headline p { margin: 7px 0 0; color: #5f6a61; line-height: 1.45; font-size: 13px; }
+    .pressure { display: grid; grid-template-columns: 132px 1fr; border: 1px solid #cfd5c9; border-radius: 11px; overflow: hidden; background: #fff; }
+    .score { background: #14221f; color: #d6c181; padding: 13px; display: grid; align-content: center; gap: 8px; }
+    .score b { font-family: var(--numeric); font-size: 54px; line-height: .82; font-weight: 720; }
+    .score span { color: #aeb8a4; font-size: 11px; }
+    .factors { padding: 13px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .factor { display: grid; gap: 5px; }
+    .factor b { font-family: var(--numeric); font-size: 18px; }
+    .factor p { margin: 0; font-size: 11px; color: #5f6a61; line-height: 1.3; }
+    .bar { height: 6px; border-radius: 999px; background: #dfe5dc; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: #207c68; }
+    .bar.hot span { background: #9b2d23; }
+    .bar.gold span { background: #a98435; }
+    .rows { border: 1px solid #cfd5c9; border-radius: 11px; overflow: hidden; background: #fff; }
+    .row { display: grid; grid-template-columns: 58px 1fr 92px; gap: 10px; padding: 11px; border-bottom: 1px solid #e6e2d8; align-items: center; }
+    .row:last-child { border-bottom: 0; }
+    .chip { font-family: var(--mono); font-size: 9px; padding: 5px 6px; border-radius: 4px; text-align: center; background: #9b2d23; color: white; font-weight: 780; letter-spacing: .04em; }
+    .chip.gold { background: #a98435; }
+    .row h3 { margin: 0; font-size: 14px; line-height: 1.2; font-weight: 680; }
+    .row p { margin: 4px 0 0; color: #5f6a61; font-size: 11px; line-height: 1.32; }
+    .meta { display: grid; gap: 3px; color: #5f6a61; font-size: 9px; }
+    .audit { background: #101713; color: #e9e0c7; border-left: 1px solid rgba(214,193,129,.28); padding: 14px; display: grid; gap: 11px; align-content: start; }
+    .audit h3 { margin: 0; color: #f5f0dc; font-family: var(--display); font-size: 20px; letter-spacing: var(--track); }
+    .audit p { margin: 0; color: #aeb8a4; font-size: 12px; line-height: 1.4; }
+    .audit-stat { border: 1px solid rgba(214,193,129,.28); border-radius: 7px; padding: 9px; background: rgba(158,225,199,.08); }
+    .audit-stat span { display: block; color: #aeb8a4; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .audit-stat b { display: block; margin-top: 5px; color: #9ee1c7; font-family: var(--numeric); font-size: 18px; }
+    .event { border: 1px solid rgba(214,193,129,.28); border-radius: 7px; padding: 9px; background: rgba(255,255,255,.045); display: grid; gap: 5px; }
+    .event-top { display: flex; justify-content: space-between; gap: 8px; color: #9ee1c7; font-size: 9px; }
+    .event-main { color: #f5f0dc; font-size: 12px; }
+    .caption { padding: 15px 16px; border-top: 1px solid #d8d0be; background: #fffdf8; }
+    .caption h2 { margin: 0 0 6px; font-size: 20px; }
+    .caption p { margin: 0; color: #625c50; font-size: 13px; line-height: 1.45; }
+    .traits { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+    .trait { border: 1px solid #d8d0be; border-radius: 999px; padding: 4px 7px; font-size: 11px; color: #4f4a42; background: #fbfaf4; }
+    .plex { --ui: "IBM Plex Sans", Inter, system-ui, sans-serif; --display: "IBM Plex Sans", Inter, system-ui, sans-serif; --numeric: "IBM Plex Sans", Inter, system-ui, sans-serif; --mono: "IBM Plex Mono", "SF Mono", "Cascadia Mono", monospace; --track: -.018em; --headWeight: 720; }
+    .geist { --ui: Geist, Inter, system-ui, sans-serif; --display: Geist, Inter, system-ui, sans-serif; --numeric: Geist, Inter, system-ui, sans-serif; --mono: "SF Mono", "Cascadia Mono", monospace; --track: -.024em; --headWeight: 760; }
+    .suisse { --ui: "Suisse Int'l", "Helvetica Neue", Arial, system-ui, sans-serif; --display: "Suisse Int'l", "Helvetica Neue", Arial, system-ui, sans-serif; --numeric: "Helvetica Neue", Arial, system-ui, sans-serif; --mono: "SF Mono", "Cascadia Mono", monospace; --track: -.018em; --headWeight: 720; }
+    .avenir { --ui: "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif; --display: "Avenir Next", Avenir, "Nunito Sans", "Segoe UI", system-ui, sans-serif; --numeric: "Avenir Next", Avenir, system-ui, sans-serif; --mono: "SF Mono", "Cascadia Mono", monospace; --track: -.02em; --headWeight: 760; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>Font Finalists</h1>
+      <p>Focused comparison: IBM Plex Sans against Geist, Suisse Int’l style, and Avenir Next style. Suisse and Avenir are shown as local/font-stack approximations if the exact fonts are not installed.</p>
+    </section>
+    <section class="grid">
+      <article class="option plex">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div><span class="pill hot mono">3 critical</span> <span class="pill mono">12 receipts</span></div></div>
+          <div class="body"><nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div></nav><main class="main"><div class="headline"><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, deterministic checks, and audit-ready proof.</p></div><section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar"><span style="width:54%"></span></div></div></div></section><section class="rows"><div class="row"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Tool path: confirm_deadline.</p></div><div class="meta mono"><span>+34 pressure</span><span>expected=UNCONFIRMED</span></div></div><div class="row"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection.</p></div><div class="meta mono"><span>+18 pressure</span><span>entity=te-005</span></div></div></section></main><aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Persistent evidence of the tool-only write path.</p></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="event"><div class="event-top mono"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></aside></div>
+        </div>
+        <div class="caption"><h2>1. IBM Plex Sans</h2><p>Strongest blend of institutional and technical. It feels serious, structured, and a little less generic than Inter or system UI.</p><div class="traits"><span class="trait">recommended</span><span class="trait">technical institution</span><span class="trait">credible</span></div></div>
+      </article>
+      <article class="option geist">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div><span class="pill hot mono">3 critical</span> <span class="pill mono">12 receipts</span></div></div>
+          <div class="body"><nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div></nav><main class="main"><div class="headline"><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, deterministic checks, and audit-ready proof.</p></div><section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar"><span style="width:54%"></span></div></div></div></section><section class="rows"><div class="row"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Tool path: confirm_deadline.</p></div><div class="meta mono"><span>+34 pressure</span><span>expected=UNCONFIRMED</span></div></div><div class="row"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection.</p></div><div class="meta mono"><span>+18 pressure</span><span>entity=te-005</span></div></div></section></main><aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Persistent evidence of the tool-only write path.</p></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="event"><div class="event-top mono"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></aside></div>
+        </div>
+        <div class="caption"><h2>2. Geist</h2><p>Very crisp and modern. Excellent for data UI, but it may pull Litt closer to Vercel/SaaS aesthetics than legal operations.</p><div class="traits"><span class="trait">crisp</span><span class="trait">modern SaaS</span><span class="trait">high legibility</span></div></div>
+      </article>
+      <article class="option suisse">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div><span class="pill hot mono">3 critical</span> <span class="pill mono">12 receipts</span></div></div>
+          <div class="body"><nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div></nav><main class="main"><div class="headline"><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, deterministic checks, and audit-ready proof.</p></div><section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar"><span style="width:54%"></span></div></div></div></section><section class="rows"><div class="row"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Tool path: confirm_deadline.</p></div><div class="meta mono"><span>+34 pressure</span><span>expected=UNCONFIRMED</span></div></div><div class="row"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection.</p></div><div class="meta mono"><span>+18 pressure</span><span>entity=te-005</span></div></div></section></main><aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Persistent evidence of the tool-only write path.</p></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="event"><div class="event-top mono"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></aside></div>
+        </div>
+        <div class="caption"><h2>3. Suisse Int’l Style</h2><p>Polished, editorial-modern, and premium. Shown as a stack approximation unless the commercial font is available.</p><div class="traits"><span class="trait">premium</span><span class="trait">polished</span><span class="trait">less technical</span></div></div>
+      </article>
+      <article class="option avenir">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div><span class="pill hot mono">3 critical</span> <span class="pill mono">12 receipts</span></div></div>
+          <div class="body"><nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div></nav><main class="main"><div class="headline"><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, deterministic checks, and audit-ready proof.</p></div><section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar"><span style="width:54%"></span></div></div></div></section><section class="rows"><div class="row"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Tool path: confirm_deadline.</p></div><div class="meta mono"><span>+34 pressure</span><span>expected=UNCONFIRMED</span></div></div><div class="row"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection.</p></div><div class="meta mono"><span>+18 pressure</span><span>entity=te-005</span></div></div></section></main><aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Persistent evidence of the tool-only write path.</p></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="event"><div class="event-top mono"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></aside></div>
+        </div>
+        <div class="caption"><h2>4. Avenir Next Style</h2><p>Warm, human, and polished. It softens the interface nicely, though it may reduce the operational/agentic edge.</p><div class="traits"><span class="trait">warm</span><span class="trait">approachable</span><span class="trait">less severe</span></div></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

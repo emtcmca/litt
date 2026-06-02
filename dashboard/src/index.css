@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ─── Litt design tokens ───────────────────────────────────────────────────── */
@@ -83,8 +84,8 @@
   --color-audit-success: #5DCAA5;
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
-  --font-mono: "SF Mono", "Monaco", "Inconsolata", monospace;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", "Monaco", "Inconsolata", monospace;
 
   /* Spacing */
   --spacing-2xs: 4px;
@@ -160,6 +161,51 @@ button {
 
 .closeout-layout {
   grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+/* ─── DailyCloseoutBrief redesign — animations ─────────────────────────────── */
+
+@keyframes litt-flash-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes litt-obs-drip {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes litt-rail-pulse {
+  0%,100% { box-shadow: inset 0 0 0 1px rgba(158,225,199,.02); }
+  50%     { box-shadow: inset 0 0 0 1px rgba(158,225,199,.28), 0 0 34px rgba(158,225,199,.08); }
+}
+
+.litt-obs-drip {
+  animation: litt-obs-drip 0.22s ease-out both;
+}
+
+.litt-receipt-flash {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(32,124,104,.18), rgba(20,34,31,.96));
+  color: #9ee1c7;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.litt-receipt-flash.active {
+  display: flex;
+  animation: litt-flash-in 0.38s ease forwards;
+}
+
+.litt-rail-running {
+  animation: litt-rail-pulse 1.2s ease-in-out infinite;
 }
 
 .product-story-grid {

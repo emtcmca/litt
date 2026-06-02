@@ -1,0 +1,166 @@
+# Litt — Hackathon Demo Script
+
+**Target duration:** 90 seconds  
+**Hard cap:** 2:00 (contest rule)  
+**Demo firm:** Strand & Okafor LLP (`strand-okafor`)  
+**Demo date anchor:** May 29, 2026, 4:29 PM
+
+---
+
+## Pre-Recording Checklist
+
+Run these before every take:
+
+```
+1. POST /api/demo/reset   {"firm_id": "strand-okafor", "confirm": true}
+2. GET  /api/demo/ready   → all 5 checks must show "pass": true
+3. Hard-refresh browser   → timeline is empty, brief shows loading state
+4. Audio check            → no background noise
+```
+
+---
+
+## Scene Layout
+
+| Screen region | What judge sees |
+|---|---|
+| Top half | Agent Run Timeline (empty, "Run Closeout" button visible) |
+| Bottom half | Daily Closeout Brief (loading state) |
+| Banner | `DEMO MODE — strand-okafor — 2026-05-29` |
+
+---
+
+## Script with Timing Marks
+
+### 0:00–0:10 — Hook
+
+**NARRATOR:**
+> "Small law firms don't lose time in one system. They lose it between systems — email, calendar, billing, client updates, and deadlines.
+>
+> Litt is an autonomous operations agent for that gap. It watches the firm's operational surface, finds what needs attorney attention, and produces a source-backed Daily Closeout Brief with an audit trail.
+>
+> Sarah Strand at Strand & Okafor LLP. 4:29 PM. She clicks Run Closeout."
+
+**ACTION:** Click the "Run Closeout" button.
+
+---
+
+### 0:10–0:50 — Agent Run Timeline Plays
+
+The timeline auto-scrolls. 22 observations drip in at 250 ms each (~5.5 seconds total playback). **Do not skip ahead — let it play.**
+
+**Key observations to highlight with narration:**
+
+| Approx time | Observation | What to say |
+|---|---|---|
+| 0:14 | `deadline_agent` / ESCALATION — Rivera deadline | **"Here. Litt extracted 'due tomorrow, Friday.' Source: opposing counsel. No court order in firm sources. Confidence: 70%. Litt refuses to verify it."** |
+| 0:22 | `billing_agent` / REVIEW_REQUIRED — 42-min gap | "Same run: 42-minute client call on calendar, no time entry." |
+| 0:28 | `billing_agent` / REVIEW_REQUIRED — scrubber hit | "Forbidden billing phrase caught before invoice review." |
+| 0:34 | `comms_agent` / BLOCKED — Whitmore draft | "Client update drafted. Delivery blocked until attorney approval." |
+| 0:40 | `anomaly_agent` / ESCALATION — reconstruction | "Reconstruction risk flagged on a time entry with no session provenance." |
+
+**NARRATOR (while timeline plays):**
+> "That is the product: autonomy with professional boundaries. The backend completed the sweep in about two seconds. The interface replays the trace slowly enough to inspect.
+>
+> Notice the gate labels. AUTO_SAFE is informational. REVIEW_REQUIRED means Litt prepared work but needs approval. ESCALATION means professional judgment is required. BLOCKED means Litt cannot proceed."
+
+---
+
+### 0:50–1:15 — Brief Appears
+
+Timeline shows `complete`. Daily Closeout Brief populates below.
+
+**NARRATOR:**
+> "Now Sarah gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
+>
+> The hero item is the Rivera deadline. It says 'tomorrow' — from opposing counsel, with no court order in the firm's sources. Litt escalates because guessing creates liability.
+>
+> Gemini helps with extraction, drafting, and explanation. Python controls routing, budget math, scrubber checks, state transitions, and gates. That boundary is enforced in code, not in a prompt."
+
+**ACTION:** Scroll brief to show: Rivera ESCALATION → Okafor billing gap → Whitmore BLOCKED send → Acme budget warning.
+
+---
+
+### 1:15–1:30 — Audit Trail
+
+**ACTION:** Click Rivera deadline item to expand audit detail (or show AuditEventDrawer if wired).
+
+**NARRATOR:**
+> "The audit trail shows what Litt observed, which source it used, why it escalated, what confidence it had, and what Sarah decided. That is how an attorney can rely on this system without turning it into an unreviewed black box."
+
+**Show:** Audit entry with `observation_id`, `source_excerpt`, `commitment_level: ESCALATION`, `confidence: 0.70`.
+
+---
+
+### 1:30–1:45 — Close
+
+**NARRATOR:**
+> "Sarah did not search her inbox, compare calendars to billing records, remember which client went quiet, or reconstruct why an entry looked risky.
+>
+> Litt brought her the decisions, the evidence, and the guardrails: deadline risk surfaced, billing leakage caught, client relationship maintained, budget pressure visible, every action documented.
+>
+> That's Litt — autonomous operations with legal-grade safety."
+
+**ACTION:** Zoom out to show full dashboard. Fade or cut to black.
+
+---
+
+### 1:45–2:00 — Title card (optional — use remaining time)
+
+```
+Litt
+Autonomous Operations for Small Law Firms
+
+Gemini 2.5 Pro · Google Cloud Run · Firestore
+github.com/emtcmca/litt
+```
+
+---
+
+## Pacing Notes
+
+- **Do not rush the timeline.** 22 observations at 250 ms = ~5.5 seconds backend playback. Narration fills the gap.
+- **Pause on Rivera.** The ESCALATION observation with amber badge is the clearest proof-of-safety moment. Hold 2–3 seconds.
+- **Don't narrate every observation.** Let the labels speak. Call out only Rivera (deadline conflict), Okafor (billing gap), Whitmore (BLOCKED).
+- **Brief scroll should be slow.** Judges need to read the section headers.
+
+---
+
+## Recording Settings
+
+| Setting | Value |
+|---|---|
+| Resolution | 1920 × 1080 |
+| Frame rate | 30 FPS |
+| Audio | Clear voiceover, no background noise |
+| Format | H.264 MP4 |
+| Hard cap | 2:00 |
+
+---
+
+## Key Shots Checklist
+
+- [ ] Empty dashboard + "Run Closeout" button visible
+- [ ] Timeline starts (`signal_received` first observation)
+- [ ] Rivera deadline ESCALATION (amber badge, 70% confidence visible)
+- [ ] BLOCKED observation for Whitmore comms
+- [ ] Timeline shows `complete` status pill
+- [ ] Brief fully populated (all 4–5 sections visible)
+- [ ] Audit trail entry (observation_id + source_excerpt)
+- [ ] Final frame or title card
+
+---
+
+## Q&A Backup (if judges ask)
+
+**"How is this different from a rules engine?"**
+Routing and gates are deterministic Python — but sub-agents reason about context (deadline sources, billing narrative, anomalies). Gemini drafts and extracts; Python decides and gates.
+
+**"What prevents auto-sending client emails?"**
+The `comms_agent` gate is `BLOCKED`. That is a Python enum value returned by deterministic code, not a prompt instruction. The attorney must approve before delivery. Logged in the audit trail.
+
+**"How do you prevent hallucination?"**
+Three ways: (1) routing is a Python dict, not LLM routing; (2) Gemini drafts are sourced from structured `FactPacket` data, not open-ended generation; (3) anomaly detection is rule-based, not inferred.
+
+**"What's the stack?"**
+Python (FastAPI), Google ADK, Gemini 2.5 Pro via Vertex AI, Firestore, React, Cloud Run. Firestore is the only write path — all writes go through the tool layer, every write calls `log_audit_event()`.

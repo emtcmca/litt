@@ -1,0 +1,8 @@
+litt-project-specs-accounts-logins
+
+Backend live: https://litt-backend-1073532050878.us-central1.run.app
+
+Dashboard: https://litt-dashboard-1073532050878.us-central1.run.app
+
+Jam login:
+	Sign-in with Google: emtcmca@gmail.com

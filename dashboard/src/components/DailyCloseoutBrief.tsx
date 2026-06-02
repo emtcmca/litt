@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { ReactNode, CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, RefObject } from 'react';
 import type {
+  AgentObservation,
   AgentRunTimeline as AgentRunTimelineType,
   BriefAnomalyItem,
   BriefBudgetItem,
@@ -11,7 +12,6 @@ import type {
   ToolResult,
 } from '../types';
 import { getBrief, runSweep } from '../api';
-import { AgentRunTimeline } from './AgentRunTimeline';
 import { DeadlineModal } from './modals/DeadlineModal';
 import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
@@ -23,799 +23,841 @@ import { AuditEventDrawer } from './shared/AuditEventDrawer';
 import { DemoBanner } from './DemoBanner';
 import { DemoResetButton } from './DemoResetButton';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const FIRM_ID = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
 
-// ─── Modal union ─────────────────────────────────────────────────────────────
+// ─── Palette tokens (mockup-aligned) ─────────────────────────────────────────
+
+const C = {
+  bg:          'var(--color-background-tertiary)',
+  paper:       'var(--color-background-primary)',
+  surface:     '#FFFFFF',
+  navRail:     '#EAE3D5',
+  line:        'var(--color-border-tertiary)',
+  soft:        'rgba(0,0,0,0.07)',
+  ink:         'var(--color-text-primary)',
+  muted:       'var(--color-text-secondary)',
+  forest:      '#14221F',
+  brass:       '#D6C181',
+  teal:        '#1D9E75',
+  tealSoft:    'rgba(29,158,117,.1)',
+  danger:      '#9B2D23',
+  dangerSoft:  '#F3DED7',
+  gold:        '#A98435',
+  audit:       '#101713',
+  auditLine:   'rgba(214,193,129,.28)',
+  auditMuted:  '#AEB8A4',
+  auditAccent: '#9EE1C7',
+} as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type GateLevel = 'ESCALATION' | 'REVIEW_REQUIRED' | 'BLOCKED' | 'AUTO_SAFE';
 
 type OpenModal =
-  | { type: 'deadline'; item: BriefDeadlineItem; action: DeadlineAction }
-  | { type: 'billing'; item: BriefTimeEntryItem; action: BillingAction }
-  | { type: 'comms'; item: BriefClientSilenceItem }
-  | { type: 'budget'; item: BriefBudgetItem }
-  | { type: 'anomaly'; item: BriefAnomalyItem };
+  | { type: 'deadline'; item: BriefDeadlineItem;      action: DeadlineAction }
+  | { type: 'billing';  item: BriefTimeEntryItem;     action: BillingAction  }
+  | { type: 'comms';    item: BriefClientSilenceItem               }
+  | { type: 'budget';   item: BriefBudgetItem                      }
+  | { type: 'anomaly';  item: BriefAnomalyItem                     };
 
 interface ResolvedItem {
-  sectionId: string;
-  entityId: string;
-  entityType: string;
+  sectionId:    string;
+  entityId:     string;
+  entityType:   string;
   auditEventId: string;
-  resolvedAt: string;
+  resolvedAt:   string;
 }
 
-interface StoryStep {
-  label: string;
-  headline: string;
-  detail: string;
-  proof: string;
-  tone: 'critical' | 'warning' | 'success' | 'neutral';
+interface DecisionRow {
+  id:                  string;
+  gate:                GateLevel;
+  title:               string;
+  description:         string;
+  matterRisk:          string;
+  confidence?:         { pct: number; source: string; missing?: string };
+  boundary:            { label: string; route: string; llm: string; extra: string };
+  actionLabel:         string;
+  onAction:            () => void;
+  isEscalationDeadline?: boolean;
 }
 
-// ─── Design system badge ──────────────────────────────────────────────────────
-
-interface BadgeSpec {
-  bg: string;
-  color: string;
-  weight: number;
+interface PressureData {
+  score:        number;
+  deadlineDays: number | null;
+  budgetPct:    number | null;
+  wipUsd:       number;
+  silenceDays:  number | null;
 }
 
-const BADGE_SPECS: Record<string, BadgeSpec> = {
-  // Red critical (400 stop + white, weight 600)
-  HARD_LEGAL:   { bg: 'var(--color-ramp-red-400)', color: '#FFFFFF', weight: 600 },
-  CRITICAL:     { bg: 'var(--color-ramp-red-400)', color: '#FFFFFF', weight: 600 },
-  BLOCK:        { bg: 'var(--color-ramp-red-400)', color: '#FFFFFF', weight: 600 },
-  // Amber warning (200 stop)
-  HARD_CONTRACTUAL: { bg: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', weight: 500 },
-  WARN:         { bg: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', weight: 500 },
-  ELEVATED:     { bg: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', weight: 500 },
-  SILENCE:      { bg: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', weight: 500 },
-  // Blue pending (200 stop)
-  SOFT_INTERNAL: { bg: 'var(--color-ramp-blue-200)', color: 'var(--color-ramp-blue-900)', weight: 500 },
-  PENDING:      { bg: 'var(--color-ramp-blue-200)', color: 'var(--color-ramp-blue-900)', weight: 500 },
-  // Teal approved (200 stop)
-  APPROVED:     { bg: 'var(--color-ramp-teal-200)', color: 'var(--color-ramp-teal-900)', weight: 500 },
-  CONFIRMED:    { bg: 'var(--color-ramp-teal-200)', color: 'var(--color-ramp-teal-900)', weight: 500 },
-  // Gray neutral (200 stop)
-  ADMINISTRATIVE: { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 },
-  ROUTINE:      { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 },
+// ─── Gate badge ───────────────────────────────────────────────────────────────
+
+const GATE_SPEC: Record<GateLevel, CSSProperties> = {
+  ESCALATION:      { background: '#9B2D23', color: '#FFFFFF' },
+  REVIEW_REQUIRED: { background: '#A98435', color: '#FFF7E4' },
+  BLOCKED:         { background: '#14221F', color: '#D6C181' },
+  AUTO_SAFE:       { background: 'rgba(29,158,117,.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,.26)' },
 };
 
-function Badge({ level }: { level: string }) {
-  const spec = BADGE_SPECS[level] ?? { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 };
+function GateBadge({ gate }: { gate: GateLevel }) {
   return (
     <span style={{
-      display: 'inline-block',
-      background: spec.bg,
-      color: spec.color,
-      padding: '3px 8px',
-      borderRadius: 'var(--border-radius-md)',
+      display: 'inline-flex',
+      width: 'fit-content',
+      borderRadius: 6,
+      padding: '5px 7px',
+      fontFamily: 'var(--font-mono)',
       fontSize: 11,
-      fontWeight: spec.weight,
-      lineHeight: 1.4,
+      fontWeight: 700,
+      letterSpacing: '0.03em',
+      whiteSpace: 'nowrap',
       flexShrink: 0,
+      alignSelf: 'start',
+      ...GATE_SPEC[gate],
     }}>
-      {level}
+      {gate}
     </span>
   );
 }
 
-// ─── Left accent border by severity ──────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function accentBorder(severity: 'critical' | 'warning' | 'info' | 'neutral'): CSSProperties {
-  const map = {
-    critical: { borderLeft: '4px solid var(--color-border-danger)' },
-    warning:  { borderLeft: '3px solid var(--color-border-warning)' },
-    info:     { borderLeft: '3px solid var(--color-border-info)' },
-    neutral:  { borderLeft: '3px solid var(--color-ramp-gray-200)' },
+function computePressureIndex(brief: BriefResponse): PressureData {
+  const { deadlines, budget_risks, client_silence, time_entries, anomalies } = brief.sections;
+
+  const nearest = [...deadlines.items]
+    .filter(d => d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
+    .sort((a, b) => a.days_out - b.days_out)[0];
+
+  const maxBudget = budget_risks.items.length > 0
+    ? Math.max(...budget_risks.items.map(b => b.utilization_pct))
+    : 0;
+
+  const maxSilence = client_silence.items.length > 0
+    ? Math.max(...client_silence.items.map(s => s.days_since_contact))
+    : 0;
+
+  const wip = time_entries.total_wip_usd;
+
+  let score = 0;
+  if (nearest) {
+    if (nearest.days_out <= 7)       score += 34;
+    else if (nearest.days_out <= 14) score += 18;
+    else if (nearest.days_out <= 30) score += 8;
+  }
+  if (maxBudget >= 75)     score += 22;
+  else if (maxBudget >= 50) score += 10;
+  if (wip >= 3000)         score += 12;
+  else if (wip >= 1000)    score += 6;
+  if (maxSilence >= 14)    score += 10;
+  else if (maxSilence >= 7) score += 5;
+  score += anomalies.items.filter(a => a.risk_level === 'CRITICAL').length * 4;
+
+  return {
+    score:        Math.min(score, 100),
+    deadlineDays: nearest?.days_out ?? null,
+    budgetPct:    maxBudget || null,
+    wipUsd:       wip,
+    silenceDays:  maxSilence || null,
   };
-  return map[severity];
 }
 
-// ─── Shared button component ──────────────────────────────────────────────────
+const GATE_PRIORITY: Record<GateLevel, number> = {
+  ESCALATION: 0, BLOCKED: 1, REVIEW_REQUIRED: 2, AUTO_SAFE: 3,
+};
 
-function ActionBtn({
-  label, onClick, variant = 'secondary',
-}: { label: string; onClick: () => void; variant?: 'primary' | 'secondary' | 'danger' }) {
-  const styles: Record<string, CSSProperties> = {
-    primary: {
-      background: 'var(--color-action-primary)',
-      color: 'var(--color-action-primary-text)',
-      border: 'none',
-      padding: '6px 12px',
-      borderRadius: 'var(--border-radius-md)',
-      fontSize: 13,
-      fontWeight: 500,
-      cursor: 'pointer',
-      transition: 'background 0.15s',
-    },
-    secondary: {
-      background: 'transparent',
-      color: 'var(--color-text-primary)',
-      border: '0.5px solid var(--color-border-secondary)',
-      padding: '6px 12px',
-      borderRadius: 'var(--border-radius-md)',
-      fontSize: 13,
-      fontWeight: 400,
-      cursor: 'pointer',
-      transition: 'background 0.15s',
-    },
-    danger: {
-      background: 'transparent',
-      color: 'var(--color-text-danger)',
-      border: '0.5px solid var(--color-border-danger)',
-      padding: '6px 12px',
-      borderRadius: 'var(--border-radius-md)',
-      fontSize: 13,
-      fontWeight: 400,
-      cursor: 'pointer',
-      transition: 'background 0.15s',
-    },
-  };
-  return <button onClick={onClick} style={styles[variant]}>{label}</button>;
+function buildDecisionRows(
+  brief: BriefResponse,
+  openModal: (m: OpenModal) => void,
+): DecisionRow[] {
+  const rows: DecisionRow[] = [];
+  const { deadlines, time_entries, budget_risks, client_silence, anomalies } = brief.sections;
+
+  for (const d of deadlines.items) {
+    const isEsc = d.classification === 'HARD_LEGAL' && d.is_unconfirmed;
+    rows.push({
+      id:          d.deadline_id,
+      gate:        isEsc ? 'ESCALATION'
+                 : (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
+                   ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
+      title:       isEsc
+                 ? `${d.matter_name} deadline unresolved`
+                 : `${d.matter_name} — ${d.days_out}d deadline${d.is_unconfirmed ? ' unconfirmed' : ''}`,
+      description: isEsc
+                 ? `Opposing counsel email indicates response due, but no court order found in firm sources. Litt escalates rather than guessing.`
+                 : `${d.description}. ${d.days_out} days until ${d.due_date}. Attorney confirmation required before closeout.`,
+      matterRisk:  'risk: malpractice exposure / missed filing deadline',
+      ...(isEsc && { confidence: { pct: 70, source: 'opposing counsel email', missing: 'court order' } }),
+      boundary: {
+        label: isEsc ? 'Transparent Confidence' : 'Python boundary',
+        route: 'deadline_agent',
+        llm:   'none',
+        extra: isEsc ? 'decision=ESCALATION' : 'tool=confirm_deadline',
+      },
+      actionLabel:         isEsc ? 'Review' : 'Confirm',
+      onAction:            () => openModal({ type: 'deadline', item: d, action: 'confirm' }),
+      isEscalationDeadline: isEsc,
+    });
+  }
+
+  for (const e of time_entries.items) {
+    const blockFlag = e.scrubber_flags.find(f => f.severity === 'BLOCK');
+    rows.push({
+      id:   e.entry_id,
+      gate: e.has_block ? 'BLOCKED' : 'REVIEW_REQUIRED',
+      title: blockFlag
+        ? `Billing scrubber hit: "${blockFlag.matched_text ?? 'blocked phrase'}"`
+        : !e.narrative
+        ? `Time entry missing narrative — ${e.matter_name}`
+        : `Billing entry pending approval — ${e.matter_name}`,
+      description: e.has_block
+        ? 'Likely LEDES rejection with write-down and narrative repair paths available.'
+        : !e.narrative
+        ? 'No narrative — reconstruction risk. Add before approving.'
+        : `${e.hours}h · ${e.matter_name} · $${e.amount.toFixed(0)}`,
+      matterRisk: e.has_block
+        ? 'risk: invoice rejection / delayed cash collection'
+        : 'risk: reconstruction risk / billing anomaly',
+      boundary: {
+        label: 'Python boundary',
+        route: 'billing_agent',
+        llm:   'none',
+        extra: 'tool=scrub_time_entry',
+      },
+      actionLabel: 'Resolve',
+      onAction:    () => openModal({ type: 'billing', item: e, action: e.has_block ? 'write-down' : 'approve' }),
+    });
+  }
+
+  for (const b of budget_risks.items) {
+    rows.push({
+      id:          b.client_id,
+      gate:        b.alert_status === 'CRITICAL' ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
+      title:       `${b.client_name} budget pressure logged`,
+      description: `Utilization at ${b.utilization_pct.toFixed(0)}% of $${b.budget_cap.toLocaleString()} retainer.${b.alert_status === 'CRITICAL' ? ' Overrun risk.' : ' Warning threshold crossed.'}`,
+      matterRisk:  'risk: budget surprise / client trust erosion',
+      boundary: {
+        label: 'Python boundary',
+        route: 'anomaly_agent',
+        llm:   'none',
+        extra: 'math=deterministic',
+      },
+      actionLabel: 'Inspect',
+      onAction:    () => openModal({ type: 'budget', item: b }),
+    });
+  }
+
+  for (const s of client_silence.items) {
+    const hasDraft = !!s.comm_draft_id;
+    rows.push({
+      id:          s.matter_id,
+      gate:        hasDraft ? 'BLOCKED' : 'REVIEW_REQUIRED',
+      title:       `${s.client_name} quiet for ${s.days_since_contact} days`,
+      description: hasDraft
+        ? 'Comms agent prepared outreach draft. Litt will not send without attorney approval.'
+        : `Client has not been contacted in ${s.days_since_contact} days. Threshold: ${s.threshold_days} days.`,
+      matterRisk:  'risk: client churn / silent matter perception',
+      boundary: {
+        label: 'Comms agent',
+        route: 'comms_agent',
+        llm:   hasDraft ? 'draft_narrative' : 'none',
+        extra: hasDraft ? 'write=tool_layer' : 'gate=silence_check',
+      },
+      actionLabel: hasDraft ? 'Draft' : 'View',
+      onAction:    () => openModal({ type: 'comms', item: s }),
+    });
+  }
+
+  for (const a of anomalies.items) {
+    rows.push({
+      id:          a.escalation_id,
+      gate:        a.risk_level === 'CRITICAL' ? 'ESCALATION'
+                 : a.risk_level === 'ELEVATED'  ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
+      title:       a.what_is_happening,
+      description: a.why_it_matters,
+      matterRisk:  `decision needed: ${a.what_attorney_must_decide}`,
+      boundary: {
+        label: 'Python boundary',
+        route: 'anomaly_agent',
+        llm:   'none',
+        extra: `risk=${a.risk_level.toLowerCase()}`,
+      },
+      actionLabel: 'Review',
+      onAction:    () => openModal({ type: 'anomaly', item: a }),
+    });
+  }
+
+  return rows.sort((a, b) => GATE_PRIORITY[a.gate] - GATE_PRIORITY[b.gate]);
 }
 
-// ─── Section card container ───────────────────────────────────────────────────
+// ─── NavPanel ─────────────────────────────────────────────────────────────────
 
-function SectionCard({ title, count, critical, empty, children }: {
-  title: string;
-  count: number;
-  critical?: boolean;
-  empty: string;
-  children?: ReactNode;
-}) {
-  const countBadge: CSSProperties = {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 500,
-    background: critical ? 'var(--color-ramp-red-400)' : 'var(--color-background-secondary)',
-    color: critical ? '#FFFFFF' : 'var(--color-text-secondary)',
+function NavPanel({ brief }: { brief: BriefResponse }) {
+  const { deadlines, time_entries, client_silence } = brief.sections;
+  const totalDecisions =
+    deadlines.count + time_entries.count + client_silence.count + brief.sections.anomalies.count;
+
+  const labelStyle: CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    color: C.muted,
+    fontSize: 10,
   };
 
   return (
-    <div style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-lg)',
-      overflow: 'hidden',
+    <nav style={{
+      background:     C.navRail,
+      borderRight:    `1px solid ${C.line}`,
+      padding:        16,
+      display:        'grid',
+      alignContent:   'start',
+      gap:            15,
+      overflowY:      'auto',
     }}>
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: '0.5px solid var(--color-border-tertiary)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
-        {count > 0
-          ? <span style={countBadge}>{count}</span>
-          : <span style={{ ...countBadge, background: 'var(--color-background-success)', color: 'var(--color-text-success)' }}>Clear</span>
-        }
-      </div>
-      {count === 0
-        ? <div style={{ padding: '20px 16px', textAlign: 'center', fontSize: 13, color: 'var(--color-text-tertiary)' }}>{empty}</div>
-        : <div>{children}</div>
-      }
-    </div>
-  );
-}
-
-// ─── Metadata row helper ──────────────────────────────────────────────────────
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-      <span>{label}:</span>{' '}
-      <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{value}</span>
-    </span>
-  );
-}
-
-function Divider() {
-  return <div style={{ height: '0.5px', background: 'var(--color-border-tertiary)', margin: '10px 0' }} />;
-}
-
-function TriageMetric({ label, value, tone = 'neutral', detail }: {
-  label: string;
-  value: string;
-  tone?: 'critical' | 'warning' | 'success' | 'neutral';
-  detail?: string;
-}) {
-  const toneStyle: Record<string, CSSProperties> = {
-    critical: { color: 'var(--color-text-danger)', background: 'var(--color-background-danger)', borderColor: 'var(--color-border-danger)' },
-    warning: { color: 'var(--color-text-warning)', background: 'var(--color-background-warning)', borderColor: 'var(--color-border-warning)' },
-    success: { color: 'var(--color-text-success)', background: 'var(--color-background-success)', borderColor: 'var(--color-border-success)' },
-    neutral: { color: 'var(--color-text-primary)', background: 'var(--color-background-primary)', borderColor: 'var(--color-border-tertiary)' },
-  };
-  const style = toneStyle[tone];
-  return (
-    <div style={{
-      background: style.background,
-      border: `0.5px solid ${style.borderColor}`,
-      borderRadius: 'var(--border-radius-lg)',
-      padding: '14px 16px',
-      minHeight: 82,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-    }}>
-      <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{label}</span>
-      <strong style={{ fontSize: 24, fontWeight: 500, color: style.color, lineHeight: 1 }}>{value}</strong>
-      {detail && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{detail}</span>}
-    </div>
-  );
-}
-
-function CommandSummary({ criticalCount, decisionCount, totalWip }: {
-  criticalCount: number;
-  decisionCount: number;
-  totalWip: number;
-}) {
-  const summary = criticalCount > 0
-    ? `${criticalCount} critical ${criticalCount === 1 ? 'item requires' : 'items require'} attorney judgment before closeout.`
-    : 'No critical items are currently blocking closeout.';
-
-  return (
-    <section style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-lg)',
-      padding: 18,
-      display: 'grid',
-      gap: 8,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-          Operational closeout
-        </h2>
-        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-text-success)', background: 'var(--color-background-success)', padding: '4px 8px', borderRadius: 'var(--border-radius-md)' }}>
-          audit-ready
-        </span>
-      </div>
-      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>
-        {summary} Litt has assembled {decisionCount} attorney decision{decisionCount === 1 ? '' : 's'} across deadlines, billing, budgets, communications, and anomalies.
-      </p>
-      <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--color-text-tertiary)' }}>
-        Confirm, approve, dismiss, or write down items from this brief. Each consequential action writes an audit event with actor, entity, timestamp, and before/after state.
-      </p>
-      <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-        closeout.wip_usd={totalWip.toLocaleString()} / route=deterministic / ai=brief_narrative_only
-      </div>
-    </section>
-  );
-}
-
-// ─── Section: Deadlines ───────────────────────────────────────────────────────
-
-function storyToneStyle(tone: StoryStep['tone']): CSSProperties {
-  const styles: Record<StoryStep['tone'], CSSProperties> = {
-    critical: { color: 'var(--color-text-danger)', background: 'var(--color-background-danger)', borderColor: 'var(--color-border-danger)' },
-    warning: { color: 'var(--color-text-warning)', background: 'var(--color-background-warning)', borderColor: 'var(--color-border-warning)' },
-    success: { color: 'var(--color-text-success)', background: 'var(--color-background-success)', borderColor: 'var(--color-border-success)' },
-    neutral: { color: 'var(--color-text-info)', background: 'var(--color-background-info)', borderColor: 'var(--color-border-info)' },
-  };
-  return styles[tone];
-}
-
-function ProductStoryPanel({ criticalCount, decisionCount, resolvedItems, totalWip, blockCount, silenceCount, budgetCount }: {
-  criticalCount: number;
-  decisionCount: number;
-  resolvedItems: ResolvedItem[];
-  totalWip: number;
-  blockCount: number;
-  silenceCount: number;
-  budgetCount: number;
-}) {
-  const latestAuditId = resolvedItems[resolvedItems.length - 1]?.auditEventId;
-  const steps: StoryStep[] = [
-    {
-      label: '01',
-      headline: 'Find risk',
-      detail: 'Litt watches deadlines, billing blocks, budget pressure, client silence, and anomalies across the firm.',
-      proof: `${criticalCount} critical / ${blockCount} billing block${blockCount === 1 ? '' : 's'} / $${totalWip.toLocaleString()} WIP`,
-      tone: criticalCount > 0 ? 'critical' : 'success',
-    },
-    {
-      label: '02',
-      headline: 'Ask for judgment',
-      detail: 'The dashboard turns operational noise into attorney decision packets with the exact action needed.',
-      proof: `${decisionCount} decision${decisionCount === 1 ? '' : 's'} pending across ${budgetCount + silenceCount > 0 ? 'risk and comms' : 'active sections'}`,
-      tone: decisionCount > 0 ? 'warning' : 'success',
-    },
-    {
-      label: '03',
-      headline: 'Record decision',
-      detail: 'Confirming, approving, writing down, or dismissing runs through Litt tools with expected-state checks.',
-      proof: `${resolvedItems.length} audit event${resolvedItems.length === 1 ? '' : 's'} logged this session`,
-      tone: resolvedItems.length > 0 ? 'success' : 'neutral',
-    },
-    {
-      label: '04',
-      headline: 'Prove what happened',
-      detail: 'Every consequential action produces a receipt: actor, entity, timestamp, state change, and audit ID.',
-      proof: latestAuditId ? `latest=${latestAuditId.slice(0, 10)}` : 'ready for first attorney action',
-      tone: latestAuditId ? 'success' : 'neutral',
-    },
-  ];
-
-  return (
-    <section style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-xl)',
-      padding: 18,
-      marginBottom: 16,
-      overflow: 'hidden',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* Ops card */}
+      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 12, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <img src="/icons-logo/prepare-icon.png" alt="" style={{ width: 44, height: 44, objectFit: 'contain', mixBlendMode: 'multiply', flexShrink: 0 }} />
         <div>
-          <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-text-info)', marginBottom: 7 }}>
-            PRODUCT STORY / WHY LITT MATTERS
-          </div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: 0 }}>
-            Find risk. Get attorney judgment. Write proof.
-          </h2>
+          <strong style={{ display: 'block', fontSize: 13, color: C.ink }}>Ops control</strong>
+          <span style={{ display: 'block', marginTop: 3, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Prepared layer
+          </span>
         </div>
-        <p style={{ margin: 0, maxWidth: 360, fontSize: 13, lineHeight: 1.55, color: 'var(--color-text-secondary)' }}>
-          Litt is not a chatbot. It is an operational control layer that closes the loop between firm signals, human decisions, and defensible records.
-        </p>
       </div>
 
-      <div className="product-story-grid" style={{ display: 'grid', gap: 10 }}>
-        {steps.map((step) => {
-          const tone = storyToneStyle(step.tone);
-          return (
-            <div
-              key={step.label}
-              style={{
-                border: `0.5px solid ${tone.borderColor}`,
-                background: tone.background,
-                borderRadius: 'var(--border-radius-lg)',
-                padding: 14,
-                minHeight: 172,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: tone.color }}>{step.label}</span>
-                <span style={{ width: 8, height: 8, borderRadius: 8, background: tone.color, flexShrink: 0 }} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' }}>{step.headline}</h3>
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--color-text-secondary)', flex: 1 }}>{step.detail}</p>
-              <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: tone.color, lineHeight: 1.4 }}>
-                {step.proof}
-              </div>
-            </div>
-          );
-        })}
+      {/* Nav items */}
+      <div style={{ display: 'grid', gap: 6 }}>
+        <span style={labelStyle}>Closeout</span>
+        {([
+          { label: 'Decision docket', count: totalDecisions,         active: true  },
+          { label: 'Deadline risk',   count: deadlines.count,        active: false },
+          { label: 'Billing WIP',     count: time_entries.count,     active: false },
+          { label: 'Client silence',  count: client_silence.count,   active: false },
+        ] as { label: string; count: number; active: boolean }[]).map(({ label, count, active }) => (
+          <div key={label} style={{
+            display:        'flex',
+            justifyContent: 'space-between',
+            gap:            14,
+            padding:        '9px 10px',
+            borderRadius:   6,
+            background:     active ? C.forest : 'transparent',
+            color:          active ? C.brass  : C.ink,
+            fontSize:       13,
+          }}>
+            <span>{label}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, opacity: 0.8 }}>{count}</span>
+          </div>
+        ))}
       </div>
-    </section>
-  );
-}
 
-function CloseoutTimeline({ deadlines, entries, budgets, silence, anomalies, resolvedItems }: {
-  deadlines: number;
-  entries: number;
-  budgets: number;
-  silence: number;
-  anomalies: number;
-  resolvedItems: ResolvedItem[];
-}) {
-  const stages: Array<{ label: string; detail: string; tone: StoryStep['tone'] }> = [
-    { label: 'Detect deadlines', detail: `${deadlines} deadline${deadlines === 1 ? '' : 's'} routed`, tone: deadlines > 0 ? 'critical' : 'success' },
-    { label: 'Scrub billing', detail: `${entries} WIP entr${entries === 1 ? 'y' : 'ies'} checked`, tone: entries > 0 ? 'warning' : 'success' },
-    { label: 'Watch budgets', detail: `${budgets} budget risk${budgets === 1 ? '' : 's'}`, tone: budgets > 0 ? 'warning' : 'success' },
-    { label: 'Monitor silence', detail: `${silence} client trigger${silence === 1 ? '' : 's'}`, tone: silence > 0 ? 'warning' : 'success' },
-    { label: 'Review anomalies', detail: `${anomalies} escalation${anomalies === 1 ? '' : 's'}`, tone: anomalies > 0 ? 'critical' : 'success' },
-    { label: 'Append audit log', detail: `${resolvedItems.length} session event${resolvedItems.length === 1 ? '' : 's'}`, tone: resolvedItems.length > 0 ? 'success' : 'neutral' },
-  ];
-
-  return (
-    <section style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-lg)',
-      padding: 16,
-    }}>
-      <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-text-info)', marginBottom: 12 }}>
-        CLOSEOUT BRIEF TIMELINE
-      </div>
-      <div style={{ display: 'grid' }}>
-        {stages.map((stage, index) => {
-          const tone = storyToneStyle(stage.tone);
-          const isLast = index === stages.length - 1;
-          return (
-            <div key={stage.label} style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 10 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 9, background: tone.color, marginTop: 4 }} />
-                {!isLast && <span style={{ width: 1, minHeight: 34, background: 'var(--color-border-tertiary)', flex: 1 }} />}
-              </div>
-              <div style={{ paddingBottom: isLast ? 0 : 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.35 }}>{stage.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>{stage.detail}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function DeadlinesSection({ items, resolved, onModal }: {
-  items: BriefDeadlineItem[];
-  resolved: Set<string>;
-  onModal: (m: OpenModal) => void;
-}) {
-  const visible = items.filter(i => !resolved.has(i.deadline_id));
-  const hasCritical = visible.some(i => i.classification === 'HARD_LEGAL');
-
-  return (
-    <SectionCard title="Deadlines" count={visible.length} critical={hasCritical} empty="No pending deadlines">
-      {visible.map((item, idx) => {
-        const isHardLegal = item.classification === 'HARD_LEGAL';
-        const accent = isHardLegal ? accentBorder('critical')
-          : item.classification === 'HARD_CONTRACTUAL' ? accentBorder('warning')
-          : accentBorder('info');
-        const isLast = idx === visible.length - 1;
-
-        return (
-          <div
-            key={item.deadline_id}
-            style={{
-              ...accent,
-              padding: '14px 16px',
-              borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            {/* Header row */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <Badge level={item.classification} />
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.deadline_id}</span>
-                {item.is_unconfirmed && (
-                  <span style={{ fontSize: 12, color: 'var(--color-border-warning)', fontWeight: 500 }}>Attorney confirmation required</span>
-                )}
-              </div>
-              {/* Days countdown — large + red for critical */}
+      {/* Architecture mini-map */}
+      <div style={{ background: 'rgba(255,253,248,.72)', border: `1px solid ${C.line}`, borderRadius: 12, padding: 12, display: 'grid', gap: 10 }}>
+        <span style={labelStyle}>Agent architecture</span>
+        <div style={{ display: 'grid', gap: 7 }}>
+          {(['Signals', 'Python router', 'Domain agents', 'Tool write path', 'Append-only audit log'] as string[]).map((step, i) => (
+            <div key={step} style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 8, alignItems: 'start' }}>
               <span style={{
-                fontSize: isHardLegal ? 24 : 18,
-                fontWeight: 500,
-                color: item.days_out <= 3 ? 'var(--color-border-danger)' : item.days_out <= 7 ? 'var(--color-border-warning)' : 'var(--color-text-secondary)',
-                flexShrink: 0,
-                marginLeft: 12,
-              }}>
-                {item.days_out}d
-              </span>
+                width: 18, height: 18, borderRadius: 999,
+                background: C.forest, color: C.brass,
+                display: 'grid', placeItems: 'center',
+                fontSize: 9, fontWeight: 700, flexShrink: 0,
+              }}>{i + 1}</span>
+              <span style={{ paddingTop: 2, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 10 }}>{step}</span>
             </div>
-            {/* Description */}
-            <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
-              {item.description}
-            </p>
-            {isHardLegal && (
-              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--color-text-danger)', lineHeight: 1.4 }}>
-                Hard legal deadline. Confirmation will be written to the audit trail.
-              </p>
+          ))}
+        </div>
+      </div>
+
+      {/* Gate legend */}
+      <div style={{ background: 'rgba(255,253,248,.72)', border: `1px solid ${C.line}`, borderRadius: 12, padding: 12, display: 'grid', gap: 10 }}>
+        <span style={labelStyle}>Gate model</span>
+        {([
+          ['ESCALATION',      C.danger,  'Cannot resolve alone.'],
+          ['REVIEW_REQUIRED', C.gold,    'Attorney judgment needed.'],
+          ['BLOCKED',         C.forest,  'Prepared, not sent.'],
+          ['AUTO_SAFE',       C.teal,    'Safe to log or monitor.'],
+        ] as [string, string, string][]).map(([gate, color, desc]) => (
+          <div key={gate} style={{ display: 'grid', gridTemplateColumns: '10px 1fr', gap: 8, alignItems: 'start' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: color, marginTop: 3, flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, color: C.ink }}>{gate}</strong>
+              <span style={{ display: 'block', color: C.muted, fontSize: 11, lineHeight: 1.25 }}>{desc}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// ─── PressureSection ──────────────────────────────────────────────────────────
+
+const MATRIX_PRESETS: Record<string, string[]> = {
+  high:   ['hot','hot','hot','gold','gold','on','on',''],
+  medium: ['gold','gold','gold','on','on','on','',''],
+  low:    ['on','on','on','on','','','',''],
+};
+const CELL_COLORS: Record<string, string> = {
+  hot: '#9B2D23', gold: '#A98435', on: '#1D9E75', '': '#D8D0BE',
+};
+
+function PressureSection({ pressure, brief }: { pressure: PressureData; brief: BriefResponse }) {
+  const [tab, setTab] = useState<'pressure' | 'audit' | 'agents'>('pressure');
+
+  const preset = pressure.score >= 60 ? 'high' : pressure.score >= 40 ? 'medium' : 'low';
+  const cells = MATRIX_PRESETS[preset];
+
+  const tabBtn = (t: typeof tab): CSSProperties => ({
+    border:        `1px solid ${t === tab ? C.forest : C.line}`,
+    borderRadius:  999,
+    padding:       8,
+    textAlign:     'center',
+    fontFamily:    'var(--font-mono)',
+    fontSize:      10,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color:         t === tab ? C.brass   : C.muted,
+    background:    t === tab ? C.forest  : C.paper,
+    cursor:        'pointer',
+  });
+
+  const metricCard = (label: string, value: string, hint: string) => (
+    <div key={label} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, padding: 10, background: '#fbf8f0', display: 'grid', gap: 6 }}>
+      <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 10 }}>{label}</span>
+      <strong style={{ fontSize: 18, color: C.ink }}>{value}</strong>
+      <p style={{ margin: 0, color: C.muted, fontSize: 12, lineHeight: 1.35 }}>{hint}</p>
+    </div>
+  );
+
+  return (
+    <section style={{ display: 'grid', gridTemplateColumns: '176px 1fr', border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
+      {/* Score */}
+      <div style={{ background: C.forest, color: C.brass, padding: 18, display: 'grid', gap: 10, alignContent: 'center' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 10, color: C.auditMuted }}>
+          Operational pressure
+        </span>
+        <div>
+          <b style={{ fontSize: 68, lineHeight: 0.82, color: C.brass }}>{pressure.score}</b>
+          <span style={{ color: C.auditMuted, fontSize: 12 }}> / 100 elevated</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 3 }}>
+          {cells.map((type, i) => (
+            <span key={i} style={{ height: 9, borderRadius: 3, background: CELL_COLORS[type] }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Intel tabs */}
+      <div style={{ padding: 15, display: 'grid', gap: 13 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 7 }}>
+          {(['pressure', 'audit', 'agents'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} style={tabBtn(t)}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'pressure' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+            {[
+              {
+                label: 'Deadline horizon',
+                value: pressure.deadlineDays != null ? `${pressure.deadlineDays} days` : '—',
+                hint:  'Hard legal date unconfirmed.',
+                pct:   pressure.deadlineDays != null ? Math.max(0, 100 - pressure.deadlineDays * 5) : 0,
+                barType: 'hot',
+              },
+              {
+                label: 'Budget pressure',
+                value: pressure.budgetPct != null ? `${pressure.budgetPct.toFixed(0)}%` : '—',
+                hint:  'Retainer utilization.',
+                pct:   pressure.budgetPct ?? 0,
+                barType: 'gold',
+              },
+              {
+                label: 'WIP exposure',
+                value: pressure.wipUsd > 0 ? `$${pressure.wipUsd.toLocaleString()}` : '—',
+                hint:  'Pending approval.',
+                pct:   Math.min((pressure.wipUsd / 6000) * 100, 100),
+                barType: 'gold',
+              },
+              {
+                label: 'Client silence',
+                value: pressure.silenceDays != null ? `${pressure.silenceDays} days` : '—',
+                hint:  'Outreach staged.',
+                pct:   pressure.silenceDays != null ? Math.min((pressure.silenceDays / 30) * 100, 100) : 0,
+                barType: 'teal',
+              },
+            ].map(({ label, value, hint, pct, barType }) => (
+              <div key={label} style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, fontSize: 10 }}>{label}</span>
+                <strong style={{ fontSize: 18, color: C.ink }}>{value}</strong>
+                <p style={{ margin: 0, color: C.muted, fontSize: 12, lineHeight: 1.35 }}>{hint}</p>
+                <div style={{ height: 7, borderRadius: 999, background: '#DFE5DC', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: barType === 'hot' ? C.danger : barType === 'gold' ? C.gold : C.teal }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === 'audit' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+            {metricCard('Write path', 'tools only', 'Agents never write Firestore.')}
+            {metricCard('Receipts',   '12',         'Actor, entity, timestamp, before/after.')}
+            {metricCard('Lock',       'expected',   'Optimistic status checked on every write.')}
+          </div>
+        )}
+
+        {tab === 'agents' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+            {metricCard('Python',      '31 checks',   'Routing, state, math, scoring.')}
+            {metricCard('Gemini',      'drafts only', 'Narrative for human review.')}
+            {metricCard('Coordinator', 'router',      'No LLM routing decisions.')}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── DecisionRowItem ──────────────────────────────────────────────────────────
+
+interface DecisionRowItemProps {
+  row:                DecisionRow;
+  isReceipted:        boolean;
+  isCollapsing:       boolean;
+  isLast:             boolean;
+  auditEventId?:      string;
+  onOpenSourceDrawer?: () => void;
+  onActionClick:      () => void;
+}
+
+function DecisionRowItem({
+  row, isReceipted, isCollapsing, isLast, auditEventId, onOpenSourceDrawer, onActionClick,
+}: DecisionRowItemProps) {
+  const rowStyle: CSSProperties = {
+    position:    'relative',
+    display:     'grid',
+    gridTemplateColumns: '128px 1fr 220px 100px',
+    gap:         14,
+    alignItems:  'center',
+    padding:     isCollapsing ? '0 14px' : 14,
+    borderBottom: (isLast || isCollapsing) ? 'none' : `1px solid ${C.soft}`,
+    transition:  'background 0.35s ease, color 0.35s ease, opacity 0.55s ease, max-height 0.55s ease, padding 0.55s ease',
+    maxHeight:   isCollapsing ? 0 : 320,
+    overflow:    'hidden',
+    background:  isReceipted ? C.forest : 'transparent',
+    color:       isReceipted ? '#F5F0DC' : C.ink,
+    opacity:     isCollapsing ? 0 : 1,
+  };
+
+  return (
+    <div style={rowStyle}>
+      <GateBadge gate={row.gate} />
+
+      <div>
+        <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.2, color: isReceipted ? '#F5F0DC' : C.ink }}>
+          {row.title}
+        </h3>
+        <p style={{ margin: '5px 0 0', color: isReceipted ? C.auditMuted : C.muted, fontSize: 13, lineHeight: 1.35 }}>
+          {row.description}
+        </p>
+        <div style={{ marginTop: 8, color: isReceipted ? C.auditMuted : C.danger, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+          {row.matterRisk}
+        </div>
+        {row.confidence && !isReceipted && (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+              <span>confidence={row.confidence.pct}%</span>
+              <span>source={row.confidence.source}</span>
+              {row.confidence.missing && <span>missing={row.confidence.missing}</span>}
+            </div>
+            {onOpenSourceDrawer && (
+              <button
+                onClick={onOpenSourceDrawer}
+                style={{
+                  marginTop:    8,
+                  border:       '1px solid rgba(29,158,117,.3)',
+                  background:   C.tealSoft,
+                  color:        C.teal,
+                  borderRadius: 999,
+                  padding:      '5px 8px',
+                  fontFamily:   'var(--font-mono)',
+                  fontSize:     10,
+                  cursor:       'pointer',
+                }}
+              >
+                Open source transparency
+              </button>
             )}
-            <Divider />
-            {/* Metadata */}
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
-              <Meta label="Due" value={item.due_date} />
-              <Meta label="Matter" value={item.matter_name} />
-              <Meta label="Client" value={item.client_name} />
-            </div>
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionBtn variant="primary" label="Confirm deadline" onClick={() => onModal({ type: 'deadline', item, action: 'confirm' })} />
-              <ActionBtn label="Extend" onClick={() => onModal({ type: 'deadline', item, action: 'extend' })} />
-              <ActionBtn variant="danger" label="Dismiss" onClick={() => onModal({ type: 'deadline', item, action: 'dismiss' })} />
-            </div>
-          </div>
-        );
-      })}
-    </SectionCard>
-  );
-}
+          </>
+        )}
+      </div>
 
-// ─── Section: WIP Entries ─────────────────────────────────────────────────────
+      <div style={{ display: 'grid', gap: 4, color: isReceipted ? C.auditMuted : C.muted, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+        <strong style={{ color: isReceipted ? '#F5F0DC' : C.ink, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+          {row.boundary.label}
+        </strong>
+        <span>route={row.boundary.route}</span>
+        <span>llm={row.boundary.llm}</span>
+        <span>{row.boundary.extra}</span>
+      </div>
 
-function WIPSection({ items, resolved, onModal }: {
-  items: BriefTimeEntryItem[];
-  resolved: Set<string>;
-  onModal: (m: OpenModal) => void;
-}) {
-  const visible = items.filter(i => !resolved.has(i.entry_id));
-
-  return (
-    <SectionCard title="Work in progress" count={visible.length} critical={visible.some(i => i.has_block)} empty="No pending WIP entries">
-      {visible.map((item, idx) => {
-        const accent = item.has_block ? accentBorder('critical')
-          : item.has_warn ? accentBorder('warning')
-          : accentBorder('info');
-        const isLast = idx === visible.length - 1;
-        const statusLevel = item.has_block ? 'BLOCK' : item.has_warn ? 'WARN' : 'PENDING';
-
-        return (
-          <div
-            key={item.entry_id}
-            style={{
-              ...accent,
-              padding: '14px 16px',
-              borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <Badge level={statusLevel} />
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.entry_id}</span>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{item.status}</span>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', flexShrink: 0, marginLeft: 12 }}>
-                ${item.amount.toFixed(2)}
-              </span>
-            </div>
-            <p style={{ margin: '0 0 6px', fontSize: 14, color: item.narrative ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)', lineHeight: 1.4, fontStyle: item.narrative ? 'normal' : 'italic' }}>
-              {item.narrative ?? 'No narrative — add one before approving'}
-            </p>
-            {item.scrubber_flags.length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                {item.scrubber_flags.slice(0, 2).map((f, i) => (
-                  <div key={i} style={{ fontSize: 12, color: f.severity === 'BLOCK' ? 'var(--color-border-danger)' : 'var(--color-border-warning)', marginBottom: 2 }}>
-                    {f.severity}: {f.message}{f.matched_text ? ` ("${f.matched_text}")` : ''}
-                  </div>
-                ))}
-              </div>
-            )}
-            <Divider />
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
-              <Meta label="Hours" value={`${item.hours}h`} />
-              <Meta label="Matter" value={item.matter_name} />
-              <Meta label="Date" value={item.entry_date} />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionBtn variant="primary" label="Approve" onClick={() => onModal({ type: 'billing', item, action: 'approve' })} />
-              <ActionBtn label="Write down" onClick={() => onModal({ type: 'billing', item, action: 'write-down' })} />
-              <ActionBtn variant="danger" label="Write off" onClick={() => onModal({ type: 'billing', item, action: 'write-off' })} />
-              {!item.narrative && (
-                <ActionBtn label="Add narrative" onClick={() => onModal({ type: 'billing', item, action: 'narrative' })} />
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </SectionCard>
-  );
-}
-
-// ─── Section: Budget risks ────────────────────────────────────────────────────
-
-function BudgetSection({ items, resolved, onModal }: {
-  items: BriefBudgetItem[];
-  resolved: Set<string>;
-  onModal: (m: OpenModal) => void;
-}) {
-  const visible = items.filter(i => !resolved.has(i.client_id));
-
-  return (
-    <SectionCard title="Budget risks" count={visible.length} critical={visible.some(i => i.alert_status === 'CRITICAL')} empty="No budget risks">
-      {visible.map((item, idx) => {
-        const accent = item.alert_status === 'CRITICAL' ? accentBorder('critical') : accentBorder('warning');
-        const isLast = idx === visible.length - 1;
-        const pctDisplay = item.utilization_pct.toFixed(0);
-        const barColor = item.alert_status === 'CRITICAL' ? 'var(--color-border-danger)' : 'var(--color-border-warning)';
-
-        return (
-          <div
-            key={item.client_id}
-            style={{
-              ...accent,
-              padding: '14px 16px',
-              borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Badge level={item.alert_status} />
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.client_id}</span>
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 500, color: barColor, flexShrink: 0, marginLeft: 12 }}>
-                {pctDisplay}%
-              </span>
-            </div>
-            <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.client_name}</p>
-            {/* Progress bar */}
-            <div style={{ height: 5, background: 'var(--color-background-secondary)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{ height: '100%', width: `${Math.min(item.utilization_pct, 100)}%`, background: barColor, borderRadius: 3 }} />
-            </div>
-            <Divider />
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
-              <Meta label="Committed" value={`$${item.total_committed.toLocaleString()}`} />
-              <Meta label="Cap" value={`$${item.budget_cap.toLocaleString()}`} />
-              <Meta label="Unbilled" value={`$${item.approved_unbilled.toLocaleString()}`} />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionBtn variant="primary" label="View details" onClick={() => onModal({ type: 'budget', item })} />
-            </div>
-          </div>
-        );
-      })}
-    </SectionCard>
-  );
-}
-
-// ─── Section: Client silence ──────────────────────────────────────────────────
-
-function SilenceSection({ items, resolved, onModal }: {
-  items: BriefClientSilenceItem[];
-  resolved: Set<string>;
-  onModal: (m: OpenModal) => void;
-}) {
-  const visible = items.filter(i => !resolved.has(i.matter_id));
-
-  return (
-    <SectionCard title="Client silence" count={visible.length} empty="No silence triggers">
-      {visible.map((item, idx) => {
-        const isLast = idx === visible.length - 1;
-        return (
-          <div
-            key={item.matter_id}
-            style={{
-              ...accentBorder('warning'),
-              padding: '14px 16px',
-              borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Badge level="SILENCE" />
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.matter_id}</span>
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 500, color: 'var(--color-border-warning)', flexShrink: 0, marginLeft: 12 }}>
-                {item.days_since_contact}d
-              </span>
-            </div>
-            <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.matter_name}</p>
-            <Divider />
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
-              <Meta label="Client" value={item.client_name} />
-              <Meta label="Threshold" value={`${item.threshold_days} days`} />
-              {item.last_contact_date && <Meta label="Last contact" value={item.last_contact_date} />}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionBtn
-                variant={item.comm_draft_id ? 'primary' : 'secondary'}
-                label={item.comm_draft_id ? 'Review draft' : 'View'}
-                onClick={() => onModal({ type: 'comms', item })}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </SectionCard>
-  );
-}
-
-// ─── Section: Anomalies ───────────────────────────────────────────────────────
-
-function AnomaliesSection({ items, resolved, onModal }: {
-  items: BriefAnomalyItem[];
-  resolved: Set<string>;
-  onModal: (m: OpenModal) => void;
-}) {
-  const visible = items.filter(i => !resolved.has(i.escalation_id));
-
-  return (
-    <SectionCard title="Anomalies" count={visible.length} critical={visible.some(i => i.risk_level === 'CRITICAL')} empty="No anomalies detected">
-      {visible.map((item, idx) => {
-        const accent = item.risk_level === 'CRITICAL' ? accentBorder('critical')
-          : item.risk_level === 'ELEVATED' ? accentBorder('warning')
-          : accentBorder('neutral');
-        const isLast = idx === visible.length - 1;
-
-        return (
-          <div
-            key={item.escalation_id}
-            style={{
-              ...accent,
-              padding: '14px 16px',
-              borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Badge level={item.risk_level} />
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.entity_id}</span>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>P{item.priority}/5</span>
-              </div>
-            </div>
-            <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
-              {item.what_is_happening}
-            </p>
-            <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-              {item.why_it_matters}
-            </p>
-            <Divider />
-            <div style={{ marginBottom: 10 }}>
-              <Meta label="Decision needed" value={item.what_attorney_must_decide} />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionBtn variant="primary" label="Review" onClick={() => onModal({ type: 'anomaly', item })} />
-            </div>
-          </div>
-        );
-      })}
-    </SectionCard>
-  );
-}
-
-// ─── Resolved tray ────────────────────────────────────────────────────────────
-
-function ResolvedTray({ items }: { items: ResolvedItem[] }) {
-  const [expanded, setExpanded] = useState(true);
-
-  return (
-    <div style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-lg)',
-      overflow: 'hidden',
-    }}>
       <button
-        onClick={() => setExpanded(e => !e)}
+        onClick={onActionClick}
+        disabled={isReceipted}
         style={{
-          width: '100%',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: 14,
-          color: 'var(--color-text-secondary)',
-          textAlign: 'left',
+          border:       0,
+          borderRadius: 7,
+          background:   isReceipted ? 'rgba(255,255,255,.12)' : C.forest,
+          color:        isReceipted ? C.auditMuted : '#FFFFFF',
+          padding:      '8px 10px',
+          fontWeight:   700,
+          fontSize:     13,
+          cursor:       isReceipted ? 'default' : 'pointer',
+          alignSelf:    'start',
+          whiteSpace:   'nowrap',
         }}
       >
-        <span>
-          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Session audit log</span>
-          <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)' }}>
-            {items.length} event{items.length === 1 ? '' : 's'}
-          </span>
-        </span>
-        <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
-          audit trail {expanded ? '▲' : '▾'}
-        </span>
+        {isReceipted ? 'Logged' : row.actionLabel}
       </button>
-      {expanded && (
-        <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-          {items.length === 0 && (
-            <p style={{ margin: 0, padding: '12px 16px', fontSize: 12, lineHeight: 1.5, color: 'var(--color-text-secondary)' }}>
-              No decisions logged yet. Confirm or approve an item to append the first audit event.
-            </p>
-          )}
-          {items.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                padding: '8px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: i < items.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none',
-                fontSize: 12,
-                fontFamily: 'var(--font-mono)',
-              }}
-            >
-              <span style={{ color: 'var(--color-text-primary)' }}>{r.entityType} / {r.entityId}</span>
-              <span style={{ color: 'var(--color-ramp-teal-400)', marginLeft: 16 }}>{r.auditEventId.slice(0, 8)}…</span>
-              <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 'auto', paddingLeft: 16 }}>{r.resolvedAt.slice(11, 19)} UTC</span>
+
+      {isReceipted && (
+        <div className="litt-receipt-flash active">
+          Attorney decision logged{auditEventId ? ` / ${auditEventId.slice(0, 10)}` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ProofRail ────────────────────────────────────────────────────────────────
+
+const OBS_GATE_STYLE: Record<string, CSSProperties> = {
+  ESCALATION:      { background: '#9B2D23',                    color: '#FFFFFF'  },
+  REVIEW_REQUIRED: { background: 'rgba(169,132,53,.7)',         color: '#FFF7E4'  },
+  BLOCKED:         { background: 'rgba(214,193,129,.14)',       color: '#D6C181', border: '1px solid rgba(214,193,129,.35)' },
+  AUTO_SAFE:       { background: 'rgba(158,225,199,.22)',       color: '#9EE1C7', border: '1px solid rgba(158,225,199,.3)'  },
+};
+
+function RailObservation({ obs }: { obs: AgentObservation }) {
+  const gStyle = OBS_GATE_STYLE[obs.commitment_level] ?? OBS_GATE_STYLE.AUTO_SAFE;
+  return (
+    <div className="litt-obs-drip" style={{
+      display:    'grid',
+      gap:        6,
+      border:     `1px solid rgba(214,193,129,.28)`,
+      borderRadius: 10,
+      padding:    10,
+      background: 'rgba(255,255,255,.045)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, color: C.auditAccent, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+        <span>{obs.agent_name}</span>
+        <span>{obs.confidence != null ? `${Math.round(obs.confidence * 100)}%` : obs.observation_type.toLowerCase()}</span>
+      </div>
+      <div style={{ color: '#F5F0DC', fontSize: 13, lineHeight: 1.3 }}>{obs.description}</div>
+      <span style={{ display: 'inline-flex', width: 'fit-content', borderRadius: 6, padding: '4px 6px', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, ...gStyle }}>
+        {obs.commitment_level}
+      </span>
+    </div>
+  );
+}
+
+interface ProofRailProps {
+  isPlaying:       boolean;
+  isSweepComplete: boolean;
+  displayed:       AgentObservation[];
+  gateCounts:      Record<string, number>;
+  decisionCount:   number;
+  traceRef:        RefObject<HTMLDivElement>;
+}
+
+function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef }: ProofRailProps) {
+  const agentNames = ['deadline_agent', 'billing_agent', 'comms_agent', 'anomaly_agent'];
+  const lastAgent  = displayed[displayed.length - 1]?.agent_name ?? '';
+
+  const agentStatus = (name: string): 'ready' | 'running' | 'done' => {
+    if (isSweepComplete) return 'done';
+    if (isPlaying && lastAgent === name) return 'running';
+    return 'ready';
+  };
+
+  const railTitle = isSweepComplete ? 'Sweep complete'
+                  : isPlaying       ? 'Sweep trace running'
+                  : 'Sweep trace ready';
+
+  const railCopy = isSweepComplete
+    ? 'The rail settles into audit proof after the agent work. Receipts are ready for every consequential action.'
+    : isPlaying
+    ? 'Observations are emitting from the agent layer. Gate badges appear as Litt decides what it can and cannot do.'
+    : 'Click Run closeout sweep to watch agents emit observations and gate decisions in real time.';
+
+  const railState = isPlaying
+    ? `${displayed.length} / 22`
+    : isSweepComplete ? 'complete' : 'pending';
+
+  return (
+    <aside
+      className={isPlaying ? 'litt-rail-running' : undefined}
+      style={{
+        background:   C.audit,
+        color:        '#E9E0C7',
+        borderLeft:   `1px solid ${C.auditLine}`,
+        padding:      16,
+        display:      'grid',
+        gap:          14,
+        alignContent: 'start',
+        overflowY:    'auto',
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: C.auditMuted, fontSize: 10, marginBottom: 6 }}>
+            Defensible audit trail
+          </div>
+          <h3 style={{ margin: 0, color: '#F5F0DC', fontSize: 22 }}>{railTitle}</h3>
+          <p style={{ margin: '6px 0 0', color: C.auditMuted, lineHeight: 1.45, fontSize: 13 }}>{railCopy}</p>
+        </div>
+        <span style={{ border: `1px solid ${C.auditLine}`, borderRadius: 999, padding: '5px 8px', color: C.auditAccent, fontFamily: 'var(--font-mono)', fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {railState}
+        </span>
+      </div>
+
+      {/* Agent grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
+        {agentNames.map(name => {
+          const status   = agentStatus(name);
+          const isActive = status === 'running';
+          return (
+            <div key={name} style={{
+              border:       `1px solid ${isActive ? 'rgba(158,225,199,.65)' : C.auditLine}`,
+              borderRadius: 10,
+              padding:      10,
+              background:   'rgba(255,255,255,.045)',
+              display:      'grid',
+              gap:          6,
+              boxShadow:    isActive ? '0 0 0 2px rgba(158,225,199,.1)' : undefined,
+              transition:   'border-color 0.2s ease, box-shadow 0.2s ease',
+            }}>
+              <span style={{ color: C.auditMuted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {name}
+              </span>
+              <strong style={{ color: '#F5F0DC', fontSize: 14 }}>{status}</strong>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Trace */}
+      <div style={{ display: 'grid', gap: 8, maxHeight: 386, overflowY: 'auto', paddingRight: 2 }}>
+        {displayed.length === 0 ? (
+          <div style={{ border: `1px solid ${C.auditLine}`, borderRadius: 10, padding: 10, background: 'rgba(255,255,255,.045)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: C.auditAccent, fontFamily: 'var(--font-mono)', fontSize: 10, marginBottom: 6 }}>
+              <span>pending</span><span>0 / 22</span>
+            </div>
+            <div style={{ color: '#F5F0DC', fontSize: 13 }}>Sweep observations will appear here every 250ms.</div>
+          </div>
+        ) : (
+          displayed.map(obs => <RailObservation key={obs.observation_id} obs={obs} />)
+        )}
+        <div ref={traceRef} />
+      </div>
+
+      {/* Post-sweep receipt grid */}
+      {isSweepComplete && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
+          {[
+            { label: 'escalation', value: gateCounts['ESCALATION']      ?? 0 },
+            { label: 'review',     value: gateCounts['REVIEW_REQUIRED']  ?? 0 },
+            { label: 'blocked',    value: gateCounts['BLOCKED']          ?? 0 },
+            { label: 'auto safe',  value: gateCounts['AUTO_SAFE']        ?? 0 },
+            { label: 'decisions',  value: decisionCount                       },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ border: `1px solid ${C.auditLine}`, borderRadius: 10, padding: 10, background: 'rgba(158,225,199,.08)' }}>
+              <span style={{ display: 'block', color: C.auditMuted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+              </span>
+              <strong style={{ display: 'block', marginTop: 5, color: C.auditAccent, fontSize: 18 }}>
+                {value}
+              </strong>
             </div>
           ))}
         </div>
       )}
+    </aside>
+  );
+}
+
+// ─── SourceDrawer ─────────────────────────────────────────────────────────────
+
+function SourceDrawer({
+  item, onClose, onConfirm,
+}: {
+  item:      BriefDeadlineItem | null;
+  onClose:   () => void;
+  onConfirm: () => void;
+}) {
+  const isOpen = !!item;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: isOpen ? 'auto' : 'none', zIndex: 20 }} aria-hidden={!isOpen}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,23,19,.24)', opacity: isOpen ? 1 : 0, transition: 'opacity 0.22s ease' }} />
+      <aside style={{
+        position:   'absolute',
+        top:        0,
+        right:      0,
+        height:     '100%',
+        width:      'min(460px, 92vw)',
+        background: C.paper,
+        borderLeft: `1px solid ${C.line}`,
+        boxShadow:  '-22px 0 54px rgba(20,27,23,.18)',
+        transform:  isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.28s ease',
+        padding:    22,
+        display:    'grid',
+        alignContent: 'start',
+        gap:        16,
+        overflowY:  'auto',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 14, borderBottom: `1px solid ${C.line}`, paddingBottom: 14 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 10, marginBottom: 4 }}>
+              Transparent Confidence
+            </div>
+            <h3 style={{ margin: 0, fontSize: 24, color: C.ink }}>
+              {item?.matter_name ?? 'Deadline'} source reasoning
+            </h3>
+          </div>
+          <button onClick={onClose} aria-label="Close drawer" style={{ border: `1px solid ${C.line}`, background: C.surface, borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>
+            ×
+          </button>
+        </div>
+
+        {[
+          { key: 'source_found',   value: '"Due tomorrow, Friday"',   desc: 'Rivera opposing counsel email received 2026-05-28. Useful signal, but not an authoritative deadline source.' },
+          { key: 'source_missing', value: 'Court order not found',     desc: 'No court notice, docket entry, or attorney confirmation exists in firm sources.' },
+          { key: 'gate_decision',  value: 'ESCALATION',               desc: 'Litt cannot confirm this autonomously. It surfaces the risk and refuses to resolve without attorney review.' },
+          { key: 'confidence',     value: '70%',                      desc: 'Basis: email language and matter timing. Confidence is capped because no court document was found.' },
+        ].map(({ key, value, desc }) => (
+          <div key={key} style={{ border: `1px solid ${C.line}`, borderRadius: 12, background: C.surface, padding: 12, display: 'grid', gap: 6 }}>
+            <span style={{ color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{key}</span>
+            <strong style={{ fontSize: 16, color: C.ink }}>{value}</strong>
+            <p style={{ margin: 0, color: C.muted, lineHeight: 1.42, fontSize: 13 }}>{desc}</p>
+          </div>
+        ))}
+
+        <button
+          onClick={onConfirm}
+          style={{ border: 0, borderRadius: 8, background: C.forest, color: '#FFFFFF', padding: '12px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
+        >
+          Log attorney decision
+        </button>
+      </aside>
     </div>
   );
 }
@@ -823,17 +865,25 @@ function ResolvedTray({ items }: { items: ResolvedItem[] }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function DailyCloseoutBrief() {
-  const [brief, setBrief] = useState<BriefResponse | null>(null);
-  const [timeline, setTimeline] = useState<AgentRunTimelineType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sweeping, setSweeping] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<OpenModal | null>(null);
-  const [resolved, setResolved] = useState<Set<string>>(new Set());
-  const [resolvedItems, setResolvedItems] = useState<ResolvedItem[]>([]);
-  const [auditDrawer, setAuditDrawer] = useState<ToolResult | null>(null);
+  const [brief,          setBrief]         = useState<BriefResponse | null>(null);
+  const [timeline,       setTimeline]      = useState<AgentRunTimelineType | null>(null);
+  const [loading,        setLoading]       = useState(true);
+  const [sweeping,       setSweeping]      = useState(false);
+  const [error,          setError]         = useState<string | null>(null);
+  const [modal,          setModal]         = useState<OpenModal | null>(null);
+  const [resolved,       setResolved]      = useState<Set<string>>(new Set());
+  const [resolvedItems,  setResolvedItems] = useState<ResolvedItem[]>([]);
+  const [auditDrawer,    setAuditDrawer]   = useState<ToolResult | null>(null);
+  const [sourceItem,     setSourceItem]    = useState<BriefDeadlineItem | null>(null);
+  const [receiptedIds,   setReceiptedIds]  = useState<Set<string>>(new Set());
+  const [collapsingIds,  setCollapsingIds] = useState<Set<string>>(new Set());
+  const [displayed,      setDisplayed]     = useState<AgentObservation[]>([]);
+  const [isPlaying,      setIsPlaying]     = useState(false);
+  const [isSweepComplete, setIsSweepComplete] = useState(false);
+  const timerRefs    = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const traceBottomRef = useRef<HTMLDivElement>(null);
 
-  async function load() {
+  async function loadBrief() {
     setLoading(true);
     setError(null);
     try {
@@ -848,201 +898,336 @@ export function DailyCloseoutBrief() {
   async function handleSweep() {
     setSweeping(true);
     setTimeline(null);
+    setDisplayed([]);
+    setIsPlaying(false);
+    setIsSweepComplete(false);
     try {
       const result = await runSweep(FIRM_ID);
       setTimeline(result.timeline);
       setBrief(result.brief);
     } catch {
-      // Sweep failed — reload current brief from Firestore
-      await load();
+      await loadBrief();
     } finally {
       setSweeping(false);
     }
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadBrief(); }, []);
+
+  // Feed timeline observations into rail at 250ms/obs
+  useEffect(() => {
+    if (!timeline) return;
+    setDisplayed([]);
+    setIsPlaying(true);
+    setIsSweepComplete(false);
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed(prev => [...prev, timeline.observations[i]]);
+      i++;
+      if (i >= timeline.observations.length) {
+        clearInterval(interval);
+        setIsPlaying(false);
+        setIsSweepComplete(true);
+      }
+    }, 250);
+    return () => clearInterval(interval);
+  }, [timeline]);
+
+  // Auto-scroll trace bottom
+  useEffect(() => {
+    if (displayed.length > 0) {
+      traceBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [displayed.length]);
+
+  // Cleanup transition timers on unmount
+  useEffect(() => {
+    const timers = timerRefs.current;
+    return () => { timers.forEach(t => clearTimeout(t)); };
+  }, []);
 
   const handleSuccess = useCallback((result: ToolResult, sectionId: string) => {
-    setResolved(prev => new Set([...prev, sectionId]));
     setResolvedItems(prev => [...prev, {
       sectionId,
-      entityId: result.entity_id,
-      entityType: result.entity_type,
+      entityId:     result.entity_id,
+      entityType:   result.entity_type,
       auditEventId: result.audit_event_id,
-      resolvedAt: new Date().toISOString(),
+      resolvedAt:   new Date().toISOString(),
     }]);
     setAuditDrawer(result);
     setModal(null);
+    setSourceItem(null);
+
+    // receipted → collapsing → resolved
+    setReceiptedIds(prev => new Set([...prev, sectionId]));
+    const t1 = setTimeout(() => {
+      setCollapsingIds(prev => new Set([...prev, sectionId]));
+      const t2 = setTimeout(() => {
+        setResolved(prev => new Set([...prev, sectionId]));
+        setReceiptedIds(prev => { const s = new Set(prev); s.delete(sectionId); return s; });
+        setCollapsingIds(prev => { const s = new Set(prev); s.delete(sectionId); return s; });
+      }, 600);
+      timerRefs.current.set(`${sectionId}-2`, t2);
+    }, 1250);
+    timerRefs.current.set(`${sectionId}-1`, t1);
   }, []);
 
-  const closeModal = useCallback(() => setModal(null), []);
+  const closeModal  = useCallback(() => setModal(null),       []);
   const closeDrawer = useCallback(() => setAuditDrawer(null), []);
+
+  const decisionRows = useMemo(
+    () => brief ? buildDecisionRows(brief, setModal) : [],
+    [brief],
+  );
+
+  const gateCounts = useMemo(
+    () => displayed.reduce((acc, obs) => {
+      acc[obs.commitment_level] = (acc[obs.commitment_level] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    [displayed],
+  );
+
+  const pressure = useMemo(
+    () => brief ? computePressureIndex(brief) : null,
+    [brief],
+  );
+
+  const escalationDeadline = useMemo(
+    () => brief?.sections.deadlines.items.find(d => d.classification === 'HARD_LEGAL' && d.is_unconfirmed) ?? null,
+    [brief],
+  );
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>Loading brief…</p>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: 14, color: C.muted }}>Loading brief…</p>
       </div>
     );
   }
 
-  if (error || !brief) {
+  if (error || !brief || !pressure) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: 'var(--color-text-danger)', marginBottom: 12 }}>{error ?? 'Brief unavailable'}</p>
-          <button onClick={load} style={{ fontSize: 13, color: 'var(--color-text-info)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+          <p style={{ fontSize: 14, color: C.danger, marginBottom: 12 }}>{error ?? 'Brief unavailable'}</p>
+          <button onClick={loadBrief} style={{ fontSize: 13, color: C.teal, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
-  const s = brief.sections;
-  const visibleDeadlines = s.deadlines.items.filter(i => !resolved.has(i.deadline_id));
-  const visibleEntries = s.time_entries.items.filter(i => !resolved.has(i.entry_id));
-  const visibleBudgets = s.budget_risks.items.filter(i => !resolved.has(i.client_id));
-  const visibleSilence = s.client_silence.items.filter(i => !resolved.has(i.matter_id));
-  const visibleAnomalies = s.anomalies.items.filter(i => !resolved.has(i.escalation_id));
-  const criticalCount = visibleDeadlines.filter(i => i.classification === 'HARD_LEGAL' && i.days_out <= 7).length
-    + visibleEntries.filter(i => i.has_block).length
-    + visibleBudgets.filter(i => i.alert_status === 'CRITICAL').length
-    + visibleAnomalies.filter(i => i.risk_level === 'CRITICAL').length;
-  const decisionCount = visibleDeadlines.length + visibleEntries.length + visibleBudgets.length + visibleSilence.length + visibleAnomalies.length;
-  const blockCount = visibleEntries.filter(i => i.has_block).length;
+  const visibleRows    = decisionRows.filter(r => !resolved.has(r.id));
+  const criticalCount  = visibleRows.filter(r => r.gate === 'ESCALATION').length;
+  const wipUsd         = brief.sections.time_entries.total_wip_usd;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)' }}>
+    <div style={{ minHeight: '100vh', background: C.bg }}>
       <DemoBanner firmName={brief.firm_name} demoDate={brief.generated_at.slice(0, 10)} />
 
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '32px 20px 40px' }}>
-        {/* Page header */}
-        <div style={{ marginBottom: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
-              LITT / OPERATIONS CONTROL
-            </div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 500, color: 'var(--color-text-primary)', letterSpacing: 0 }}>Daily closeout brief</h1>
-            <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--color-text-secondary)' }}>
-              {brief.firm_name} / {brief.attorney_name} / generated {brief.generated_at.slice(11, 16)} UTC
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <DemoResetButton firmId={FIRM_ID} onReset={load} />
-            <a
-              href="/email-preview"
-              target="_blank"
-              style={{ fontSize: 13, color: 'var(--color-text-secondary)', textDecoration: 'none', border: '0.5px solid var(--color-border-secondary)', padding: '6px 12px', borderRadius: 'var(--border-radius-md)' }}
-            >
-              Email preview
-            </a>
-            <button
-              onClick={handleSweep}
-              disabled={sweeping}
+      <div style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
+        <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
+
+          {/* ── Topbar ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
+            <span
+              role="img"
+              aria-label="Litt"
               style={{
-                fontSize: 13,
-                fontWeight: 500,
-                background: 'var(--color-action-primary)',
-                color: 'var(--color-action-primary-text)',
-                border: 'none',
-                padding: '7px 14px',
-                borderRadius: 'var(--border-radius-md)',
-                cursor: sweeping ? 'not-allowed' : 'pointer',
-                opacity: sweeping ? 0.6 : 1,
+                display:         'block',
+                width:           214,
+                height:          62,
+                backgroundImage: 'url("/icons-logo/litt_logo_main_no_tagline.png")',
+                backgroundSize:  '258px auto',
+                backgroundRepeat:'no-repeat',
+                backgroundPosition:'center',
+                mixBlendMode:    'multiply',
               }}
-            >
-              {sweeping ? 'Running…' : 'Run Closeout'}
-            </button>
-          </div>
-        </div>
-
-        <ProductStoryPanel
-          criticalCount={criticalCount}
-          decisionCount={decisionCount}
-          resolvedItems={resolvedItems}
-          totalWip={s.time_entries.total_wip_usd}
-          blockCount={blockCount}
-          silenceCount={visibleSilence.length}
-          budgetCount={visibleBudgets.length}
-        />
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 16 }}>
-          <TriageMetric label={criticalCount === 1 ? 'Critical risk' : 'Critical risks'} value={String(criticalCount)} tone={criticalCount > 0 ? 'critical' : 'success'} detail="requires judgment" />
-          <TriageMetric label="Billing blocks" value={String(blockCount)} tone={blockCount > 0 ? 'critical' : 'success'} detail="approval blockers" />
-          <TriageMetric label="WIP exposure" value={`$${s.time_entries.total_wip_usd.toLocaleString()}`} tone={s.time_entries.total_wip_usd > 0 ? 'warning' : 'neutral'} detail="pending approval" />
-          <TriageMetric label="Client silence" value={String(visibleSilence.length)} tone={visibleSilence.length > 0 ? 'warning' : 'success'} detail="outreach triggers" />
-          <TriageMetric label="Audit posture" value="Ready" tone="success" detail={`${resolvedItems.length} logged this session`} />
-        </div>
-
-        {/* Agent run timeline — visible after first sweep */}
-        {timeline && (
-          <div style={{ marginBottom: 16 }}>
-            <AgentRunTimeline timeline={timeline} />
-          </div>
-        )}
-
-        <div className="closeout-layout" style={{ display: 'grid', gap: 16, alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            <CommandSummary criticalCount={criticalCount} decisionCount={decisionCount} totalWip={s.time_entries.total_wip_usd} />
-            <DeadlinesSection items={s.deadlines.items} resolved={resolved} onModal={setModal} />
-            <WIPSection items={s.time_entries.items} resolved={resolved} onModal={setModal} />
-            <BudgetSection items={s.budget_risks.items} resolved={resolved} onModal={setModal} />
-            <SilenceSection items={s.client_silence.items} resolved={resolved} onModal={setModal} />
-            <AnomaliesSection items={s.anomalies.items} resolved={resolved} onModal={setModal} />
-          </div>
-
-          <aside style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 48 }}>
-            <CloseoutTimeline
-              deadlines={visibleDeadlines.length}
-              entries={visibleEntries.length}
-              budgets={visibleBudgets.length}
-              silence={visibleSilence.length}
-              anomalies={visibleAnomalies.length}
-              resolvedItems={resolvedItems}
             />
-            <div style={{
-              background: 'var(--color-audit-surface)',
-              color: '#E8E6DC',
-              borderRadius: 'var(--border-radius-lg)',
-              padding: 16,
-              border: '0.5px solid rgba(255,255,255,0.14)',
-            }}>
-              <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--color-audit-success)', marginBottom: 10 }}>
-                DEFENSIBLE AUDIT TRAIL
-              </div>
-              <p style={{ margin: '0 0 12px', fontSize: 14, lineHeight: 1.5, color: '#D3D1C7' }}>
-                Every write path runs through Litt tools, validates expected state, and logs the resulting audit event.
-              </p>
-              <div style={{ display: 'grid', gap: 8, fontSize: 12, fontFamily: 'var(--font-mono)' }}>
-                <span>tool_layer=only_write_path</span>
-                <span>routing=python_deterministic</span>
-                <span>firm_id={brief.firm_id}</span>
-              </div>
-            </div>
-            <ResolvedTray items={resolvedItems} />
-          </aside>
-        </div>
 
-        <p style={{ marginTop: 16, textAlign: 'right', fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-          Total WIP: ${s.time_entries.total_wip_usd.toLocaleString()} / Generated {brief.generated_at.slice(0, 19).replace('T', ' ')} UTC
-        </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {criticalCount > 0 && (
+                <span style={{ border: '1px solid rgba(155,45,35,.35)', borderRadius: 999, padding: '5px 8px', color: C.danger, background: C.dangerSoft, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                  {criticalCount} critical
+                </span>
+              )}
+              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                {visibleRows.length} decisions
+              </span>
+              {wipUsd > 0 && (
+                <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  ${wipUsd.toLocaleString()} WIP
+                </span>
+              )}
+              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                5 agents
+              </span>
+              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                {resolvedItems.length} receipts
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
+              <button
+                onClick={handleSweep}
+                disabled={sweeping}
+                style={{
+                  border:       0,
+                  borderRadius: 8,
+                  background:   C.forest,
+                  color:        '#FFFFFF',
+                  padding:      '11px 15px',
+                  fontWeight:   700,
+                  fontSize:     13,
+                  cursor:       sweeping ? 'not-allowed' : 'pointer',
+                  opacity:      sweeping ? 0.82 : 1,
+                  whiteSpace:   'nowrap',
+                }}
+              >
+                {sweeping ? 'Running…' : 'Run closeout sweep'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── 3-column body ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '286px 1fr 392px', minHeight: 860 }}>
+
+            <NavPanel brief={brief} />
+
+            {/* Main workbench */}
+            <main style={{
+              padding:      18,
+              display:      'grid',
+              gap:          16,
+              alignContent: 'start',
+              background:   `linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 260px), ${C.bg}`,
+            }}>
+              {/* Work header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'end', borderBottom: `1px solid ${C.line}`, paddingBottom: 15 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1, letterSpacing: '-0.02em', color: C.ink }}>
+                    Closeout docket
+                  </h2>
+                  <p style={{ margin: '7px 0 0', color: C.muted, maxWidth: 720, lineHeight: 1.45, fontSize: 14 }}>
+                    Attorney decisions ranked by operational pressure. Each row exposes Litt's gate, source confidence, architecture boundary, matter impact, and action path.
+                  </p>
+                </div>
+                <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {brief.firm_id} / {brief.generated_at.slice(0, 10)}
+                </span>
+              </div>
+
+              <PressureSection pressure={pressure} brief={brief} />
+
+              {/* Decision docket */}
+              <section style={{ border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
+                {visibleRows.length === 0 ? (
+                  <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 14, color: C.muted }}>
+                    All items resolved — closeout complete.
+                  </div>
+                ) : (
+                  visibleRows.map((row, idx) => {
+                    const isReceipted = receiptedIds.has(row.id);
+                    const isCollapsing = collapsingIds.has(row.id);
+                    const isLast = idx === visibleRows.length - 1;
+                    const resolvedEntry = resolvedItems.find(r => r.sectionId === row.id);
+
+                    return (
+                      <DecisionRowItem
+                        key={row.id}
+                        row={row}
+                        isReceipted={isReceipted}
+                        isCollapsing={isCollapsing}
+                        isLast={isLast}
+                        auditEventId={resolvedEntry?.auditEventId}
+                        onOpenSourceDrawer={
+                          row.isEscalationDeadline
+                            ? () => setSourceItem(escalationDeadline)
+                            : undefined
+                        }
+                        onActionClick={() => {
+                          if (row.isEscalationDeadline) {
+                            setSourceItem(escalationDeadline);
+                          } else {
+                            row.onAction();
+                          }
+                        }}
+                      />
+                    );
+                  })
+                )}
+              </section>
+            </main>
+
+            <ProofRail
+              isPlaying={isPlaying}
+              isSweepComplete={isSweepComplete}
+              displayed={displayed}
+              gateCounts={gateCounts}
+              decisionCount={resolvedItems.length}
+              traceRef={traceBottomRef}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Source Transparency Drawer */}
+      <SourceDrawer
+        item={sourceItem}
+        onClose={() => setSourceItem(null)}
+        onConfirm={() => {
+          if (sourceItem) {
+            setSourceItem(null);
+            setModal({ type: 'deadline', item: sourceItem, action: 'confirm' });
+          }
+        }}
+      />
 
       {/* Modals */}
       {modal?.type === 'deadline' && (
-        <DeadlineModal item={modal.item} action={modal.action} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={handleSuccess} />
+        <DeadlineModal
+          item={modal.item}
+          action={modal.action}
+          firmId={FIRM_ID}
+          attorneyId={ATTORNEY_ID}
+          onClose={closeModal}
+          onSuccess={r => handleSuccess(r, modal.item.deadline_id)}
+        />
       )}
       {modal?.type === 'billing' && (
-        <BillingWIPModal item={modal.item} action={modal.action} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={handleSuccess} />
+        <BillingWIPModal
+          item={modal.item}
+          action={modal.action}
+          firmId={FIRM_ID}
+          attorneyId={ATTORNEY_ID}
+          onClose={closeModal}
+          onSuccess={r => handleSuccess(r, modal.item.entry_id)}
+        />
       )}
       {modal?.type === 'comms' && (
-        <ClientCommsModal item={modal.item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={handleSuccess} />
+        <ClientCommsModal
+          item={modal.item}
+          firmId={FIRM_ID}
+          attorneyId={ATTORNEY_ID}
+          onClose={closeModal}
+          onSuccess={r => handleSuccess(r, modal.item.matter_id)}
+        />
       )}
       {modal?.type === 'budget' && (
         <BudgetModal item={modal.item} onClose={closeModal} />
       )}
       {modal?.type === 'anomaly' && (
-        <AnomalyModal item={modal.item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={handleSuccess} />
+        <AnomalyModal
+          item={modal.item}
+          firmId={FIRM_ID}
+          attorneyId={ATTORNEY_ID}
+          onClose={closeModal}
+          onSuccess={r => handleSuccess(r, modal.item.escalation_id)}
+        />
       )}
 
       <AuditEventDrawer result={auditDrawer} onClose={closeDrawer} />

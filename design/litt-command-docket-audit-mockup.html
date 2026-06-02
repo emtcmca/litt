@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Command Docket Audit Mockups</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #ece6da; color: #1b211d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .page { max-width: 1680px; margin: 0 auto; padding: 26px; }
+    .intro { margin-bottom: 18px; max-width: 980px; }
+    .intro h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: -.02em; }
+    .intro p { margin: 0; color: #5f594d; line-height: 1.55; }
+    .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    @media (max-width: 1320px) { .options { grid-template-columns: 1fr; } }
+    .option { background: #fffaf1; border: 1px solid #d5cbbb; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 48px rgba(32, 35, 31, .08); }
+    .option-label { padding: 15px 16px; border-top: 1px solid #ded5c6; background: #fffdf8; }
+    .option-label h2 { margin: 0 0 6px; font-size: 19px; }
+    .option-label p { margin: 0; color: #625c50; font-size: 13px; line-height: 1.45; }
+    .traits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .trait { font-size: 11px; border: 1px solid #d9d0be; border-radius: 999px; padding: 4px 7px; color: #4f4a42; background: #fbfaf4; }
+    .mock { min-height: 760px; background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0) 180px), #f2efe6; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 14px; border-bottom: 1px solid rgba(20,34,31,.16); background: #fbfaf4; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 820; letter-spacing: .04em; }
+    .mark { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 4px; background: #14221f; color: #d6c181; font-size: 12px; }
+    .logo-lockup {
+      display: block;
+      background-image: url("/icons-logo/litt_logo_main_no_tagline.png");
+      background-repeat: no-repeat;
+      background-position: center;
+      mix-blend-mode: multiply;
+      flex: 0 0 auto;
+    }
+    .logo-lockup.platform {
+      width: 214px;
+      height: 62px;
+      background-size: 258px auto;
+    }
+    .logo-lockup.compact {
+      width: 164px;
+      height: 50px;
+      background-size: 198px auto;
+    }
+    .logo-lockup.topbar-logo {
+      width: 166px;
+      height: 52px;
+      background-size: 204px auto;
+    }
+    .nav-logo-card {
+      background: #fbfaf4;
+      border: 1px solid #d8d0be;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2px;
+    }
+    .nav-logo-card .ops-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 9px;
+      background: #fffdf8;
+      border: 1px solid #d8d0be;
+      object-fit: cover;
+      object-position: center;
+      mix-blend-mode: multiply;
+      flex: 0 0 auto;
+    }
+    .ops-card-text {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+    .ops-card-text strong {
+      font-size: 13px;
+      color: #17201c;
+      line-height: 1.1;
+    }
+    .nav-logo-card span {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #756d5d;
+    }
+    .meta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: #756d5d; text-align: right; }
+    .body { display: grid; gap: 10px; padding: 13px; }
+    .title h3 { margin: 0; font-size: 22px; line-height: 1.04; letter-spacing: -.02em; }
+    .title p { margin: 5px 0 0; color: #625c50; line-height: 1.4; font-size: 11px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 5px; }
+    .pill { border: 1px solid #d8d0be; background: #fbfaf4; border-radius: 999px; padding: 4px 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: #596253; }
+    .pill.hot { color: #7d271f; background: #f4e2d9; border-color: #c98d7e; }
+    .label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; text-transform: uppercase; letter-spacing: .11em; color: #d6c181; }
+    .docket { border-radius: 12px; background: #17201c; color: #f5f0dc; border: 1px solid rgba(214,193,129,.32); padding: 12px; display: grid; gap: 11px; }
+    .big { display: flex; align-items: baseline; gap: 8px; }
+    .big b { font-size: 42px; line-height: .82; }
+    .big span { color: #aeb8a4; font-size: 10px; }
+    .bars { display: grid; gap: 6px; }
+    .barline { display: grid; grid-template-columns: 58px 1fr 31px; gap: 6px; align-items: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: #aeb8a4; }
+    .bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,.13); overflow: hidden; }
+    .bar span { display: block; height: 100%; background: #cfe85d; }
+    .bar.hot span { background: #9b2d23; }
+    .bar.gold span { background: #d6c181; }
+    .mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .metric { background: #fbfaf4; border: 1px solid #d9d0be; border-radius: 10px; padding: 9px; display: grid; gap: 7px; min-height: 78px; }
+    .metric .label { color: #756d5d; }
+    .metric-value { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .metric-value b { font-size: 22px; line-height: .9; }
+    .metric-value span { font-size: 9px; color: #6b6458; }
+    .matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+    .cell { height: 7px; border-radius: 2px; background: #dad2bf; }
+    .cell.on { background: #cfe85d; }
+    .cell.hot { background: #9b2d23; }
+    .cell.gold { background: #d6c181; }
+    .rows { display: grid; gap: 7px; }
+    .row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; padding: 9px; border-radius: 9px; background: #fbfaf4; border: 1px solid #ddd6c7; border-left: 4px solid #9b2d23; }
+    .chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; padding: 3px 5px; border-radius: 4px; background: #9b2d23; color: white; font-weight: 800; letter-spacing: .05em; }
+    .chip.gold { background: #a98435; }
+    .chip.dark { background: #14221f; color: #d6c181; }
+    .row h4 { margin: 0; font-size: 11px; line-height: 1.2; }
+    .row p { margin: 3px 0 0; color: #6b6458; line-height: 1.35; font-size: 9px; }
+    .btn { border: 0; border-radius: 6px; background: #14221f; color: white; padding: 5px 7px; font-weight: 750; font-size: 9px; white-space: nowrap; }
+    .ledger { background: #101713; color: #e9e0c7; border: 1px solid rgba(214,193,129,.3); border-radius: 12px; padding: 11px; display: grid; gap: 9px; }
+    details.ledger { display: block; }
+    details.ledger summary { list-style: none; cursor: pointer; display: grid; gap: 9px; }
+    details.ledger summary::-webkit-details-marker { display: none; }
+    .ledger-summary-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .expand-chip { border: 1px solid rgba(207,232,93,.28); border-radius: 999px; padding: 4px 7px; color: #cfe85d; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; white-space: nowrap; }
+    details.ledger[open] .expand-chip::after { content: " open"; }
+    details.ledger:not([open]) .expand-chip::after { content: " expand"; }
+    .collapsed-proof { display: grid; gap: 7px; margin-top: 10px; }
+    details.ledger[open] .collapsed-proof { margin-bottom: 10px; }
+    .ledger h4 { margin: 0; font-size: 14px; color: #f5f0dc; }
+    .ledger p { margin: 0; color: #aeb8a4; line-height: 1.4; font-size: 9px; }
+    .receipt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .receipt { border-radius: 8px; padding: 8px; background: rgba(207,232,93,.08); border: 1px solid rgba(207,232,93,.22); }
+    .receipt span { display: block; font-size: 8px; color: #aeb8a4; text-transform: uppercase; letter-spacing: .08em; }
+    .receipt b { display: block; margin-top: 5px; font-size: 13px; color: #cfe85d; }
+    .event { display: grid; gap: 5px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); }
+    .event-top { display: flex; justify-content: space-between; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: #d6c181; }
+    .event-main { font-size: 10px; color: #f0ead9; line-height: 1.3; }
+    .event-meta { display: grid; gap: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: #90a089; }
+    .two-col { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 9px; }
+    .agent-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .agent { border-radius: 9px; padding: 8px; background: #fbfaf4; border: 1px solid #d9d0be; display: grid; gap: 5px; }
+    .agent .label { color: #756d5d; font-size: 7px; }
+    .agent b { font-size: 11px; }
+    .agent span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7px; color: #6b6458; }
+    .flow { display: grid; gap: 7px; }
+    .flow-step { display: grid; grid-template-columns: 16px 1fr; gap: 7px; align-items: start; }
+    .flow-dot { width: 16px; height: 16px; border-radius: 999px; background: #cfe85d; color: #101713; display: grid; place-items: center; font-size: 9px; font-weight: 800; }
+    .flow-step b { display: block; font-size: 10px; color: #f5f0dc; }
+    .flow-step span { display: block; margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: #90a089; }
+    .dense-metrics { display: grid; grid-template-columns: 1.15fr .85fr; gap: 8px; }
+    .audit-table { display: grid; gap: 1px; overflow: hidden; border-radius: 10px; border: 1px solid rgba(214,193,129,.25); }
+    .audit-row { display: grid; grid-template-columns: 54px 1fr 46px; gap: 7px; padding: 7px; background: rgba(255,255,255,.045); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: #aeb8a4; }
+    .audit-row b { color: #f5f0dc; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 9px; }
+    .featured { margin-bottom: 22px; background: #fffaf1; border: 1px solid #d5cbbb; border-radius: 18px; overflow: hidden; box-shadow: 0 22px 62px rgba(32,35,31,.11); }
+    .featured .mock { min-height: 820px; }
+    .featured-body { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 18px; padding: 18px; }
+    @media (max-width: 1180px) { .featured-body { grid-template-columns: 1fr; } }
+    .featured .title h3 { font-size: 34px; }
+    .featured .title p { font-size: 14px; max-width: 780px; }
+    .wide-docket { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 760px) { .wide-docket { grid-template-columns: 1fr; } }
+    .featured .docket { padding: 16px; min-height: 198px; }
+    .featured .big b { font-size: 68px; }
+    .featured .big span { font-size: 13px; }
+    .featured .barline { grid-template-columns: 88px 1fr 44px; font-size: 11px; }
+    .intel-widget {
+      border-radius: 16px;
+      border: 1px solid #d9d0be;
+      background: #fbfaf4;
+      overflow: hidden;
+      display: grid;
+      gap: 0;
+    }
+    .widget-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 15px; border-bottom: 1px solid #e0d7c7; }
+    .widget-head h4 { margin: 0; font-size: 18px; }
+    .widget-head p { margin: 4px 0 0; color: #625c50; font-size: 12px; line-height: 1.4; }
+    .widget-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid #e0d7c7; }
+    .widget-tabs label {
+      cursor: pointer;
+      padding: 10px;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #625c50;
+      border-right: 1px solid #e0d7c7;
+    }
+    .widget-tabs label:last-child { border-right: 0; }
+    .widget input { position: absolute; opacity: 0; pointer-events: none; }
+    .panel { display: none; padding: 15px; gap: 12px; }
+    #pressure:checked ~ .intel-widget .tabs-pressure,
+    #audit:checked ~ .intel-widget .tabs-audit,
+    #agents:checked ~ .intel-widget .tabs-agents { background: #17201c; color: #d6c181; }
+    #pressure:checked ~ .intel-widget .panel-pressure,
+    #audit:checked ~ .intel-widget .panel-audit,
+    #agents:checked ~ .intel-widget .panel-agents { display: grid; }
+    .pressure-grid { display: grid; grid-template-columns: .8fr 1fr; gap: 12px; align-items: stretch; }
+    @media (max-width: 760px) { .pressure-grid { grid-template-columns: 1fr; } }
+    .pressure-score { background: #17201c; color: #f5f0dc; border-radius: 14px; padding: 15px; display: grid; gap: 12px; }
+    .pressure-score b { font-size: 64px; line-height: .8; }
+    .pressure-score span { color: #aeb8a4; font-size: 12px; }
+    .factor-list { display: grid; gap: 8px; }
+    .factor { display: grid; grid-template-columns: 118px 1fr 48px; gap: 8px; align-items: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #625c50; }
+    .widget .bar { background: #e0d8c8; height: 7px; }
+    .widget .bar span { background: #14221f; }
+    .widget .bar.hot span { background: #9b2d23; }
+    .widget .bar.gold span { background: #a98435; }
+    .drill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    @media (max-width: 760px) { .drill-grid { grid-template-columns: 1fr; } }
+    .drill-card { border: 1px solid #d9d0be; border-radius: 12px; padding: 12px; background: #fffdf8; display: grid; gap: 8px; }
+    .drill-card .label { color: #756d5d; font-size: 9px; }
+    .drill-card b { font-size: 24px; }
+    .drill-card p { margin: 0; font-size: 11px; line-height: 1.35; color: #625c50; }
+    .featured-ledger { background: #101713; color: #e9e0c7; border: 1px solid rgba(214,193,129,.3); border-radius: 16px; padding: 15px; align-content: start; }
+    .featured-ledger summary { list-style: none; cursor: pointer; display: grid; gap: 12px; }
+    .featured-ledger summary::-webkit-details-marker { display: none; }
+    .featured-ledger h4 { margin: 0; font-size: 22px; color: #f5f0dc; }
+    .featured-ledger p { margin: 0; color: #aeb8a4; line-height: 1.45; font-size: 13px; }
+    .featured-ledger .receipt b { font-size: 18px; }
+    .featured-ledger .event { padding: 11px; }
+    .featured-ledger .event-top { font-size: 10px; }
+    .featured-ledger .event-main { font-size: 13px; }
+    .featured-ledger .event-meta { font-size: 10px; }
+    .widget-audit-table { display: grid; gap: 1px; overflow: hidden; border: 1px solid #d9d0be; border-radius: 12px; }
+    .widget-audit-row { display: grid; grid-template-columns: 72px 1fr 92px 72px; gap: 10px; padding: 10px; background: #fffdf8; align-items: center; font-size: 12px; color: #625c50; }
+    .widget-audit-row b { color: #1b211d; }
+    .widget-audit-row span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .widget-audit-row .ok { color: #4e6b2a; }
+    .widget-audit-row .hot { color: #8d2a22; }
+    .previous-title { margin: 6px 0 12px; color: #625c50; font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .08em; }
+    .cohesive { margin-bottom: 22px; border: 1px solid #d0c5b2; border-radius: 20px; overflow: hidden; background: #f4efe4; box-shadow: 0 28px 78px rgba(32,35,31,.13); }
+    .platform-top { display: grid; grid-template-columns: 250px minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 12px 18px; background: #fbfaf4; border-bottom: 1px solid #d8d0be; }
+    @media (max-width: 900px) { .platform-top { grid-template-columns: 1fr; } }
+    .platform-status { display: flex; justify-content: center; gap: 7px; flex-wrap: wrap; }
+    .platform-action { border: 0; border-radius: 8px; background: #14221f; color: #fff; padding: 9px 13px; font-weight: 760; }
+    .platform-body { display: grid; grid-template-columns: 250px minmax(0, 1fr) 330px; min-height: 760px; }
+    @media (max-width: 1220px) { .platform-body { grid-template-columns: 1fr; } }
+    .platform-nav { background: #ebe3d4; border-right: 1px solid #d8d0be; padding: 16px; display: grid; align-content: start; gap: 14px; }
+    @media (max-width: 1220px) { .platform-nav { border-right: 0; border-bottom: 1px solid #d8d0be; } }
+    .nav-section { display: grid; gap: 7px; }
+    .nav-title { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #756d5d; }
+    .nav-item { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border-radius: 9px; color: #3d382f; font-size: 13px; }
+    .nav-item.active { background: #14221f; color: #f5f0dc; }
+    .nav-item span:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: inherit; opacity: .68; }
+    .platform-main { padding: 18px; display: grid; gap: 16px; align-content: start; background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 260px), #f2efe6; }
+    .work-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; border-bottom: 1px solid #d8d0be; padding-bottom: 15px; }
+    @media (max-width: 760px) { .work-header { display: grid; } }
+    .work-header h2 { margin: 0; font-size: 34px; line-height: 1; letter-spacing: -.02em; }
+    .work-header p { margin: 7px 0 0; color: #625c50; max-width: 660px; line-height: 1.45; }
+    .pressure-band { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0; border: 1px solid #d3c8b7; border-radius: 16px; overflow: hidden; background: #fbfaf4; }
+    @media (max-width: 760px) { .pressure-band { grid-template-columns: 1fr; } }
+    .pressure-number { background: #17201c; color: #f5f0dc; padding: 18px; display: grid; gap: 10px; align-content: center; }
+    .pressure-number b { font-size: 68px; line-height: .8; }
+    .pressure-number span { color: #aeb8a4; font-size: 12px; }
+    .pressure-detail { padding: 15px; display: grid; gap: 12px; }
+    .pressure-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .pressure-tabs label { cursor: pointer; text-align: center; border: 1px solid #d8d0be; border-radius: 999px; padding: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #625c50; }
+    .cohesive input { position: absolute; opacity: 0; pointer-events: none; }
+    .co-panel { display: none; gap: 12px; }
+    #co-pressure:checked ~ .pressure-band .tab-pressure,
+    #co-audit:checked ~ .pressure-band .tab-audit,
+    #co-agents:checked ~ .pressure-band .tab-agents { background: #17201c; color: #d6c181; border-color: #17201c; }
+    #co-pressure:checked ~ .pressure-band .co-pressure,
+    #co-audit:checked ~ .pressure-band .co-audit,
+    #co-agents:checked ~ .pressure-band .co-agents { display: grid; }
+    .co-factors { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 9px; }
+    @media (max-width: 760px) { .co-factors { grid-template-columns: repeat(2, 1fr); } }
+    .co-factor { display: grid; gap: 6px; }
+    .co-factor .label { color: #756d5d; font-size: 9px; }
+    .co-factor b { font-size: 18px; }
+    .co-factor p { margin: 0; color: #625c50; font-size: 11px; line-height: 1.35; }
+    .decision-stack { border: 1px solid #d8d0be; border-radius: 16px; overflow: hidden; background: #fbfaf4; }
+    .decision-row { display: grid; grid-template-columns: 86px 1fr 150px 96px; gap: 12px; align-items: center; padding: 13px 14px; border-bottom: 1px solid #e2d9ca; }
+    .decision-row:last-child { border-bottom: 0; }
+    @media (max-width: 760px) { .decision-row { grid-template-columns: 1fr; } }
+    .decision-row h3 { margin: 0; font-size: 15px; }
+    .decision-row p { margin: 4px 0 0; color: #625c50; font-size: 12px; line-height: 1.35; }
+    .decision-meta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: #756d5d; display: grid; gap: 4px; }
+    .platform-audit { background: #101713; color: #e9e0c7; border-left: 1px solid rgba(214,193,129,.28); padding: 16px; display: grid; gap: 14px; align-content: start; }
+    @media (max-width: 1220px) { .platform-audit { border-left: 0; border-top: 1px solid rgba(214,193,129,.28); } }
+    .platform-audit h3 { margin: 0; color: #f5f0dc; font-size: 22px; }
+    .platform-audit p { margin: 0; color: #aeb8a4; font-size: 13px; line-height: 1.45; }
+    .audit-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .audit-summary { border: 1px solid rgba(207,232,93,.22); border-radius: 10px; padding: 10px; background: rgba(207,232,93,.08); }
+    .audit-summary span { display: block; font-size: 9px; color: #aeb8a4; text-transform: uppercase; letter-spacing: .08em; }
+    .audit-summary b { display: block; margin-top: 5px; color: #cfe85d; font-size: 17px; }
+    .audit-stream { display: grid; gap: 8px; }
+    .stream-event { display: grid; gap: 6px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); }
+    .stream-event .event-top { font-size: 10px; }
+    .stream-event .event-main { font-size: 13px; }
+    .stream-event .event-meta { font-size: 10px; }
+    .cohesive-note { padding: 15px 16px; background: #fffdf8; border-top: 1px solid #ded5c6; }
+    .cohesive-note h2 { margin: 0 0 6px; font-size: 20px; }
+    .cohesive-note p { margin: 0; color: #625c50; line-height: 1.5; }
+    .north-star {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      border: 1px solid rgba(207,232,93,.34);
+      background: #17201c;
+      color: #d6c181;
+      border-radius: 999px;
+      padding: 7px 10px;
+      margin-bottom: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .north-star::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #cfe85d;
+      box-shadow: 0 0 14px rgba(207,232,93,.58);
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>Cohesive Command Docket Platform</h1>
+      <p>This pass keeps the data offering, but organizes it as one operational platform: left navigation context, center decision workbench, and right proof rail. The intelligence drilldown is integrated into the page architecture instead of reading as a separate widget pile.</p>
+    </section>
+
+    <section class="cohesive">
+      <div style="padding: 16px 18px 0; background:#f4efe4;">
+        <div class="north-star">Working north star</div>
+      </div>
+      <div class="platform-top">
+        <div class="brand"><span class="logo-lockup platform" role="img" aria-label="Litt"></span></div>
+        <div class="platform-status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div>
+        <button class="platform-action">Run closeout sweep</button>
+      </div>
+      <div class="platform-body">
+        <nav class="platform-nav">
+          <div class="nav-logo-card"><img class="ops-icon" src="/icons-logo/prepare-icon.png" alt=""><div class="ops-card-text"><strong>Ops control</strong><span>Prepared layer</span></div></div>
+          <div class="nav-section"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div><div class="nav-item"><span>Client silence</span><span>1</span></div></div>
+          <div class="nav-section"><div class="nav-title">System</div><div class="nav-item"><span>Agent sweep</span><span>5/5</span></div><div class="nav-item"><span>Audit trail</span><span>12</span></div><div class="nav-item"><span>Demo readiness</span><span>ok</span></div></div>
+        </nav>
+
+        <main class="platform-main">
+          <div class="work-header"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure. Each item connects to deterministic checks, domain-agent context, and a defensible audit receipt.</p></div><span class="pill">Strand & Okafor / 2026-05-29</span></div>
+
+          <div class="cohesive widget">
+            <input id="co-pressure" name="co-intel" type="radio" checked>
+            <input id="co-audit" name="co-intel" type="radio">
+            <input id="co-agents" name="co-intel" type="radio">
+            <section class="pressure-band">
+              <div class="pressure-number"><div class="label">Operational pressure</div><div><b>72</b><span> / 100 elevated</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell on"></span><span class="cell on"></span><span class="cell"></span></div></div>
+              <div class="pressure-detail">
+                <div class="pressure-tabs"><label class="tab-pressure" for="co-pressure">Pressure</label><label class="tab-audit" for="co-audit">Audit</label><label class="tab-agents" for="co-agents">Agents</label></div>
+                <div class="co-panel co-pressure"><div class="co-factors"><div class="co-factor"><div class="label">deadline horizon</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="co-factor"><div class="label">budget pressure</div><b>78%</b><p>ACME commercial warning.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="co-factor"><div class="label">wip exposure</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="co-factor"><div class="label">client silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div>
+                <div class="co-panel co-audit"><div class="co-factors"><div class="co-factor"><div class="label">write path</div><b>tools only</b><p>Agents never write directly.</p></div><div class="co-factor"><div class="label">state lock</div><b>expected</b><p>Optimistic checks on writes.</p></div><div class="co-factor"><div class="label">events</div><b>12</b><p>Append-only receipts.</p></div><div class="co-factor"><div class="label">latest</div><b>audit_8f12</b><p>Deadline confirmation.</p></div></div></div>
+                <div class="co-panel co-agents"><div class="co-factors"><div class="co-factor"><div class="label">billing_agent</div><b>2 blocks</b><p>Scrubber + LEDES checks.</p></div><div class="co-factor"><div class="label">deadline_agent</div><b>1 hard</b><p>6 days out.</p></div><div class="co-factor"><div class="label">comms_agent</div><b>1 silence</b><p>Gemini draft only.</p></div><div class="co-factor"><div class="label">rules</div><b>31</b><p>Python deterministic checks.</p></div></div></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="decision-stack">
+            <div class="decision-row"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out. Tool path: confirm_deadline.</p></div><div class="decision-meta"><span>pressure +34</span><span>expected=UNCONFIRMED</span></div><button class="btn">Confirm</button></div>
+            <div class="decision-row"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit: “review documents”</h3><p>Likely LEDES rejection with write-down and narrative repair paths.</p></div><div class="decision-meta"><span>pressure +18</span><span>entity=te-005</span></div><button class="btn">Resolve</button></div>
+            <div class="decision-row"><span class="chip dark">COMMS</span><div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft; Gemini used only for editable language.</p></div><div class="decision-meta"><span>pressure +11</span><span>draft=ready</span></div><button class="btn">Draft</button></div>
+          </section>
+        </main>
+
+        <aside class="platform-audit">
+          <div><div class="label">Defensible audit trail</div><h3>Proof rail</h3><p>Always visible, but quiet. Expands the story without competing with the workbench.</p></div>
+          <div class="audit-summary-grid"><div class="audit-summary"><span>write path</span><b>tools only</b></div><div class="audit-summary"><span>events</span><b>12</b></div><div class="audit-summary"><span>lock</span><b>expected</b></div><div class="audit-summary"><span>mode</span><b>append</b></div></div>
+          <div class="audit-stream"><div class="stream-event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed -> Mercer opposition</div><div class="event-meta"><span>actor=dana-strand</span><span>before=UNCONFIRMED / after=CONFIRMED</span></div></div><div class="stream-event"><div class="event-top"><span>17:43 UTC</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down -> blocked narrative</div><div class="event-meta"><span>entity=te-005</span><span>idempotency_key=demo-closeout</span></div></div><div class="stream-event"><div class="event-top"><span>17:44 UTC</span><span>audit_c244</span></div><div class="event-main">client_outreach.approved -> Whitmore</div><div class="event-meta"><span>agent=comms_agent</span><span>gemini=draft_narrative_only</span></div></div></div>
+        </aside>
+      </div>
+      <div class="cohesive-note"><h2>Cohesion Pass</h2><p>This version treats Litt as a platform shell rather than a board of cards. Navigation, pressure, decisions, and proof are separate regions of one operating surface, with repeated visual rules instead of independent widgets.</p></div>
+    </section>
+
+    <section class="featured">
+      <div class="mock">
+        <div class="topbar"><div class="brand"><span class="logo-lockup topbar-logo" role="img" aria-label="Litt"></span></div><div class="meta">Daily closeout / Strand & Okafor / audit ready</div></div>
+        <div class="featured-body">
+          <div class="left">
+            <div class="title"><h3>Closeout docket</h3><p>Attorney decisions grouped by legal risk, billing exposure, client silence, and operational proof. Litt curates firm signals into a defensible action queue.</p></div>
+            <div class="pills"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents swept</span><span class="pill">31 deterministic checks</span><span class="pill">12 audit events</span></div>
+
+            <div class="wide-docket">
+              <div class="docket"><div class="label">Attorney judgment required</div><div class="big"><b>8</b><span>open decision packets ranked by operational risk</span></div><div class="bars"><div class="barline"><span>deadline</span><div class="bar hot"><span style="width:82%"></span></div><b>6d</b></div><div class="barline"><span>budget</span><div class="bar gold"><span style="width:78%"></span></div><b>78%</b></div><div class="barline"><span>silence</span><div class="bar"><span style="width:64%"></span></div><b>16d</b></div></div></div>
+              <div class="intel-widget widget">
+                <input id="pressure" name="intel" type="radio" checked>
+                <input id="audit" name="intel" type="radio">
+                <input id="agents" name="intel" type="radio">
+                <div class="widget-head"><div><div class="label" style="color:#756d5d">Operational intelligence</div><h4>Drilldown console</h4><p>One compact surface for the hackathon story: pressure, proof, and agentic architecture.</p></div><span class="pill hot">72 pressure</span></div>
+                <div class="widget-tabs"><label class="tabs-pressure" for="pressure">Pressure</label><label class="tabs-audit" for="audit">Audit</label><label class="tabs-agents" for="agents">Agents</label></div>
+                <div class="panel panel-pressure">
+                  <div class="pressure-grid"><div class="pressure-score"><div class="label">Operational pressure index</div><div><b>72</b><span> / 100 elevated</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell on"></span><span class="cell on"></span><span class="cell"></span></div></div><div class="factor-list"><div class="factor"><span>deadline horizon</span><div class="bar hot"><span style="width:82%"></span></div><b>6d</b></div><div class="factor"><span>budget pressure</span><div class="bar gold"><span style="width:78%"></span></div><b>78%</b></div><div class="factor"><span>wip exposure</span><div class="bar gold"><span style="width:54%"></span></div><b>$4.2k</b></div><div class="factor"><span>client silence</span><div class="bar"><span style="width:64%"></span></div><b>16d</b></div></div></div>
+                  <div class="drill-grid"><div class="drill-card"><div class="label">Why elevated</div><b>hard legal + WIP</b><p>Deadline and billing blockers account for most of today’s pressure.</p></div><div class="drill-card"><div class="label">Next best action</div><b>confirm deadline</b><p>Clears the highest legal-risk packet and writes an audit receipt.</p></div><div class="drill-card"><div class="label">AI boundary</div><b>drafts only</b><p>Gemini assists narrative; Python owns routing, math, and state.</p></div></div>
+                </div>
+                <div class="panel panel-audit">
+                  <div class="widget-audit-table"><div class="widget-audit-row"><span>17:42</span><b>deadline.confirmed</b><span>dl-mercer-001</span><span class="ok">append</span></div><div class="widget-audit-row"><span>17:43</span><b>time_entry.write_down</b><span>te-005</span><span class="hot">lock ok</span></div><div class="widget-audit-row"><span>17:44</span><b>outreach.approved</b><span>cm-019</span><span class="ok">Gemini draft</span></div></div>
+                  <div class="drill-grid"><div class="drill-card"><div class="label">Receipt fields</div><b>actor + entity</b><p>Each event records who acted, on what, when, and why.</p></div><div class="drill-card"><div class="label">Write path</div><b>tools only</b><p>No agent writes Firestore directly; tools enforce state locks.</p></div><div class="drill-card"><div class="label">Demo proof</div><b>12 events</b><p>Session receipts make the architecture visible during judging.</p></div></div>
+                </div>
+                <div class="panel panel-agents">
+                  <div class="agent-strip"><div class="agent"><div class="label">billing_agent</div><b>2 blocks</b><span>scrubber + LEDES</span></div><div class="agent"><div class="label">deadline_agent</div><b>1 hard</b><span>6 days out</span></div><div class="agent"><div class="label">comms_agent</div><b>1 silence</b><span>draft staged</span></div><div class="agent"><div class="label">anomaly_agent</div><b>1 miss</b><span>empty narrative</span></div></div>
+                  <div class="drill-grid"><div class="drill-card"><div class="label">Routing</div><b>Python dict</b><p>Signals are classified deterministically before any agent runs.</p></div><div class="drill-card"><div class="label">Coverage</div><b>5 / 5 domains</b><p>Billing, deadlines, comms, budgets, and anomalies swept.</p></div><div class="drill-card"><div class="label">Checks</div><b>31 rules</b><p>State machines, scrubbers, budget math, and dedupe checks.</p></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rows"><div class="row"><span class="chip">HARD</span><div><h4>Mercer opposition deadline unconfirmed</h4><p>Deadline agent found HARD_LEGAL event 6 days out. Expected status: unconfirmed. Tool path: confirm_deadline.</p></div><button class="btn">Confirm</button></div><div class="row"><span class="chip gold">WIP</span><div><h4>Billing scrubber hit: “review documents”</h4><p>Billing agent flagged likely LEDES rejection with write-down and narrative repair paths.</p></div><button class="btn">Resolve</button></div><div class="row"><span class="chip dark">COMMS</span><div><h4>Whitmore client quiet for 16 days</h4><p>Comms agent prepared outreach draft. Gemini used only for editable narrative, not routing.</p></div><button class="btn">Draft</button></div></div>
+          </div>
+
+          <details class="featured-ledger" open><summary><div class="ledger-summary-top"><div><div class="label">Defensible audit trail</div><h4>Decision receipts</h4></div><span class="expand-chip">receipts</span></div><p>Visible proof is available at rest, with the full event log opening when an attorney or judge wants to inspect it.</p><div class="receipt-grid"><div class="receipt"><span>write path</span><b>tools only</b></div><div class="receipt"><span>events</span><b>12</b></div><div class="receipt"><span>lock</span><b>expected</b></div><div class="receipt"><span>mode</span><b>append</b></div></div></summary><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed -> Mercer opposition</div><div class="event-meta"><span>actor=dana-strand</span><span>entity=dl-mercer-001</span><span>before=UNCONFIRMED / after=CONFIRMED</span></div></div><div class="event"><div class="event-top"><span>17:43 UTC</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down -> blocked narrative</div><div class="event-meta"><span>actor=dana-strand</span><span>entity=te-005</span><span>idempotency_key=demo-closeout</span></div></div><div class="event"><div class="event-top"><span>17:44 UTC</span><span>audit_c244</span></div><div class="event-main">client_outreach.approved -> Whitmore</div><div class="event-meta"><span>agent=comms_agent</span><span>gemini=draft_narrative_only</span><span>write=tool_layer</span></div></div></details>
+        </div>
+      </div>
+    </section>
+
+    <div class="previous-title">Earlier comparison directions</div>
+    <section class="options">
+      <article class="option">
+        <div class="mock">
+          <div class="topbar"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="meta">Daily closeout / 2026-05-29</div></div>
+          <div class="body two-col">
+            <div class="left">
+              <div class="title"><h3>Closeout docket</h3><p>Attorney decisions grouped by risk, WIP exposure, silence, and operational proof.</p></div>
+              <div class="pills"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">31 checks</span></div>
+              <div class="docket"><div class="label">Attorney judgment required</div><div class="big"><b>8</b><span>open decision packets</span></div><div class="bars"><div class="barline"><span>deadline</span><div class="bar hot"><span style="width:82%"></span></div><b>6d</b></div><div class="barline"><span>budget</span><div class="bar gold"><span style="width:78%"></span></div><b>78%</b></div><div class="barline"><span>silence</span><div class="bar"><span style="width:64%"></span></div><b>16d</b></div></div></div>
+              <div class="mini-grid"><div class="metric"><div class="label">Agent sweep</div><div class="metric-value"><b>5/5</b><span>domains</span></div><div class="matrix"><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div></div><div class="metric"><div class="label">Rule checks</div><div class="metric-value"><b>31</b><span>run</span></div><div class="matrix"><span class="cell on"></span><span class="cell on"></span><span class="cell hot"></span><span class="cell on"></span><span class="cell gold"></span><span class="cell on"></span><span class="cell hot"></span><span class="cell on"></span></div></div></div>
+              <div class="rows"><div class="row"><span class="chip">HARD</span><div><h4>Mercer deadline unconfirmed</h4><p>Deadline agent found HARD_LEGAL event 6 days out.</p></div><button class="btn">Confirm</button></div><div class="row"><span class="chip gold">WIP</span><div><h4>Billing scrubber hit</h4><p>Likely LEDES rejection with write-down path.</p></div><button class="btn">Resolve</button></div><div class="row"><span class="chip dark">COMMS</span><div><h4>Whitmore quiet for 16 days</h4><p>Outreach draft staged for attorney review.</p></div><button class="btn">Draft</button></div></div>
+            </div>
+            <details class="ledger"><summary><div class="ledger-summary-top"><div><div class="label">Defensible audit trail</div><h4>Decision receipts</h4></div><span class="expand-chip">receipts</span></div><p>Every action writes actor, entity, timestamp, expected status, and before/after state.</p><div class="collapsed-proof"><div class="receipt-grid"><div class="receipt"><span>write path</span><b>tools</b></div><div class="receipt"><span>events</span><b>12</b></div></div><div class="event"><div class="event-top"><span>latest receipt</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed → dl-mercer-001</div></div></div></summary><div class="receipt-grid"><div class="receipt"><span>lock</span><b>expected</b></div><div class="receipt"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div><div class="event-meta"><span>entity=dl-mercer-001</span><span>before=UNCONFIRMED</span><span>after=CONFIRMED</span></div></div><div class="event"><div class="event-top"><span>17:43 UTC</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down</div><div class="event-meta"><span>entity=te-005</span><span>idempotency_key=demo</span></div></div></details>
+          </div>
+        </div>
+        <div class="option-label"><h2>1. Audit Ledger Primary</h2><p>Most polished product direction. The audit trail is not a footnote; it is a visible proof surface beside the closeout queue.</p><div class="traits"><span class="trait">recommended</span><span class="trait">defensible</span><span class="trait">enterprise</span></div></div>
+      </article>
+
+      <article class="option">
+        <div class="mock">
+          <div class="topbar"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="meta">Agentic operations layer / audit live</div></div>
+          <div class="body">
+            <div class="title"><h3>Closeout command docket</h3><p>Signals flow through deterministic routing, domain agents, tool writes, and append-only audit events.</p></div>
+            <div class="agent-strip"><div class="agent"><div class="label">billing_agent</div><b>2 blocks</b><span>scrubber</span></div><div class="agent"><div class="label">deadline_agent</div><b>1 hard</b><span>6 days</span></div><div class="agent"><div class="label">comms_agent</div><b>1 silence</b><span>draft</span></div><div class="agent"><div class="label">anomaly_agent</div><b>1 miss</b><span>empty</span></div></div>
+            <div class="dense-metrics"><div class="docket"><div class="label">Curated closeout state</div><div class="big"><b>8</b><span>actions ranked by operational risk</span></div><div class="bars"><div class="barline"><span>rules</span><div class="bar"><span style="width:100%"></span></div><b>31</b></div><div class="barline"><span>agents</span><div class="bar gold"><span style="width:100%"></span></div><b>5</b></div><div class="barline"><span>writes</span><div class="bar hot"><span style="width:36%"></span></div><b>3</b></div></div></div><div class="ledger"><div><div class="label">Architecture rail</div><h4>Signal to proof</h4></div><div class="flow"><div class="flow-step"><span class="flow-dot">1</span><div><b>Route</b><span>SIGNAL_ROUTING</span></div></div><div class="flow-step"><span class="flow-dot">2</span><div><b>Curate</b><span>domain agent</span></div></div><div class="flow-step"><span class="flow-dot">3</span><div><b>Write</b><span>tool layer</span></div></div><div class="flow-step"><span class="flow-dot">4</span><div><b>Prove</b><span>audit event</span></div></div></div></div></div>
+            <div class="mini-grid"><div class="metric"><div class="label">Budget pressure</div><div class="metric-value"><b>78%</b><span>ACME</span></div><div class="matrix"><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell"></span><span class="cell"></span></div></div><div class="metric"><div class="label">Audit posture</div><div class="metric-value"><b>ready</b><span>append</span></div><div class="matrix"><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span><span class="cell on"></span></div></div></div>
+            <div class="rows"><div class="row"><span class="chip">HARD</span><div><h4>Mercer deadline requires confirmation</h4><p>deadline_event -> deadline_agent -> confirm_deadline tool.</p></div><button class="btn">Confirm</button></div><div class="row"><span class="chip gold">BILL</span><div><h4>Pending WIP has rejection risk</h4><p>time_entry -> billing_agent -> approve/write_down tool.</p></div><button class="btn">Resolve</button></div><div class="row"><span class="chip dark">ANOM</span><div><h4>Missing narrative needs review</h4><p>anomaly_score -> anomaly_agent -> dismiss/escalate tool.</p></div><button class="btn">Review</button></div></div>
+          </div>
+        </div>
+        <div class="option-label"><h2>2. Agent Architecture Visible</h2><p>Best hackathon storytelling. It explicitly shows the agents and routing pipeline, but it feels a little more technical than the production product should.</p><div class="traits"><span class="trait">hackathon-forward</span><span class="trait">agentic</span><span class="trait">technical proof</span></div></div>
+      </article>
+
+      <article class="option">
+        <div class="mock">
+          <div class="topbar"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="meta">Operational intelligence / closeout ready</div></div>
+          <div class="body">
+            <div class="title"><h3>Firm operations state</h3><p>A denser command surface for showing more metrics without turning every module into a generic card.</p></div>
+            <div class="docket"><div class="label">Operational pressure index</div><div class="big"><b>72</b><span>weighted by deadlines, WIP, budget pressure, silence, and anomalies</span></div><div class="bars"><div class="barline"><span>risk</span><div class="bar hot"><span style="width:72%"></span></div><b>high</b></div><div class="barline"><span>proof</span><div class="bar"><span style="width:96%"></span></div><b>ok</b></div><div class="barline"><span>ai use</span><div class="bar gold"><span style="width:24%"></span></div><b>draft</b></div></div></div>
+            <div class="mini-grid"><div class="metric"><div class="label">Critical risk</div><div class="metric-value"><b>3</b><span>P1</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div></div><div class="metric"><div class="label">WIP exposure</div><div class="metric-value"><b>$4.2k</b><span>pending</span></div><div class="matrix"><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div></div><div class="metric"><div class="label">Deadline horizon</div><div class="metric-value"><b>6d</b><span>hard</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell"></span><span class="cell"></span></div></div><div class="metric"><div class="label">Client silence</div><div class="metric-value"><b>16d</b><span>gap</span></div><div class="matrix"><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div></div></div>
+            <div class="ledger"><div><div class="label">Audit activity</div><h4>Recent operational receipts</h4></div><div class="audit-table"><div class="audit-row"><span>17:42</span><b>deadline.confirmed</b><span>dl-001</span></div><div class="audit-row"><span>17:43</span><b>wip.write_down</b><span>te-005</span></div><div class="audit-row"><span>17:44</span><b>outreach.approved</b><span>cm-019</span></div><div class="audit-row"><span>17:45</span><b>anomaly.dismissed</b><span>an-003</span></div></div></div>
+            <div class="rows"><div class="row"><span class="chip">HARD</span><div><h4>Deadline confirmation</h4><p>High severity, near horizon, needs attorney judgment.</p></div><button class="btn">Open</button></div><div class="row"><span class="chip gold">WARN</span><div><h4>Budget pressure</h4><p>ACME commercial at 78 percent utilization.</p></div><button class="btn">Inspect</button></div><div class="row"><span class="chip dark">PROOF</span><div><h4>Audit posture ready</h4><p>Tool-only writes and append-only receipts available.</p></div><button class="btn">View</button></div></div>
+          </div>
+        </div>
+        <div class="option-label"><h2>3. Metrics Command Surface</h2><p>Most data-rich. It shows power immediately, but needs careful restraint so it does not become a wall of numbers.</p><div class="traits"><span class="trait">data-rich</span><span class="trait">sleek</span><span class="trait">ops console</span></div></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

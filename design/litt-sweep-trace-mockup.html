@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Sweep Trace Mockup</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    :root {
+      --bg: #f3efe6;
+      --paper: #fffdf8;
+      --surface: #ffffff;
+      --rail: #e8e1d2;
+      --line: #cfd5c9;
+      --line-soft: #e6e2d8;
+      --ink: #17201c;
+      --muted: #5f6a61;
+      --forest: #14221f;
+      --brass: #d6c181;
+      --teal: #207c68;
+      --teal-soft: rgba(32, 124, 104, .1);
+      --danger: #9b2d23;
+      --danger-soft: #f3ded7;
+      --gold: #a98435;
+      --gold-soft: #f3ead2;
+      --audit: #101713;
+      --audit-line: rgba(214, 193, 129, .28);
+      --audit-muted: #aeb8a4;
+      --audit-accent: #9ee1c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+    }
+    button { font: inherit; }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+    .page { max-width: 1680px; margin: 0 auto; padding: 26px; }
+    .intro { max-width: 1000px; margin-bottom: 18px; }
+    .intro h1 { margin: 0 0 8px; font-size: 36px; line-height: 1; letter-spacing: -.02em; }
+    .intro p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .platform {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: 0 28px 78px rgba(32, 35, 31, .13);
+    }
+    .top {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 18px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+    }
+    .logo-lockup {
+      display: block;
+      width: 214px;
+      height: 62px;
+      background-image: url("/icons-logo/litt_logo_main_no_tagline.png");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 258px auto;
+      mix-blend-mode: multiply;
+    }
+    .status { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 8px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      background: var(--surface);
+      white-space: nowrap;
+    }
+    .pill.hot { color: var(--danger); background: var(--danger-soft); border-color: rgba(155,45,35,.35); }
+    .run {
+      border: 0;
+      border-radius: 8px;
+      background: var(--forest);
+      color: #fff;
+      padding: 11px 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .run[disabled] { opacity: .72; cursor: default; }
+    .body { display: grid; grid-template-columns: 260px minmax(0, 1fr) 360px; min-height: 820px; }
+    .nav {
+      background: var(--rail);
+      border-right: 1px solid var(--line);
+      padding: 16px;
+      display: grid;
+      align-content: start;
+      gap: 14px;
+    }
+    .ops-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ops-card img { width: 44px; height: 44px; object-fit: contain; mix-blend-mode: multiply; }
+    .ops-card strong { display: block; font-size: 13px; }
+    .ops-card span { display: block; margin-top: 3px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .nav-title, .label {
+      font-family: "IBM Plex Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .nav-item { display: flex; justify-content: space-between; gap: 14px; padding: 9px 10px; border-radius: 6px; color: var(--ink); }
+    .nav-item.active { background: var(--forest); color: var(--brass); }
+    .main {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+      background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 260px), var(--bg);
+    }
+    .work-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 15px;
+    }
+    .work-header h2 { margin: 0; font-size: 34px; line-height: 1; letter-spacing: -.02em; }
+    .work-header p { margin: 7px 0 0; color: var(--muted); max-width: 720px; line-height: 1.45; }
+    .pressure {
+      display: grid;
+      grid-template-columns: 176px minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .score {
+      background: var(--forest);
+      color: var(--brass);
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+    .score b { font-size: 68px; line-height: .82; }
+    .score span { color: var(--audit-muted); font-size: 12px; }
+    .matrix { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+    .cell { height: 9px; border-radius: 3px; background: #d8d0be; }
+    .cell.on { background: var(--teal); }
+    .cell.hot { background: var(--danger); }
+    .cell.gold { background: var(--gold); }
+    .intel { padding: 15px; display: grid; gap: 13px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .tab {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px;
+      text-align: center;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      background: var(--paper);
+    }
+    .tab.active { background: var(--forest); color: var(--brass); border-color: var(--forest); }
+    .factors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .factor { display: grid; gap: 6px; }
+    .factor b { font-size: 18px; }
+    .factor p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .bar { height: 7px; border-radius: 999px; background: #dfe5dc; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--teal); }
+    .bar.hot span { background: var(--danger); }
+    .bar.gold span { background: var(--gold); }
+    .decisions { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+    .row {
+      display: grid;
+      grid-template-columns: 118px 1fr 220px 96px;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .row:last-child { border-bottom: 0; }
+    .gate {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 6px;
+      padding: 5px 7px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      white-space: nowrap;
+    }
+    .gate.escalation { background: var(--danger); color: #fff; }
+    .gate.review { background: var(--gold); color: #fff7e4; }
+    .gate.blocked { background: var(--forest); color: var(--brass); }
+    .gate.safe { background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(32,124,104,.26); }
+    .row h3 { margin: 0; font-size: 16px; line-height: 1.2; }
+    .row p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .confidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+    }
+    .boundary {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+    }
+    .boundary strong { color: var(--ink); font-family: "IBM Plex Sans", sans-serif; font-size: 12px; }
+    .action {
+      border: 0;
+      border-radius: 7px;
+      background: var(--forest);
+      color: #fff;
+      padding: 8px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .rail {
+      background: var(--audit);
+      color: #e9e0c7;
+      border-left: 1px solid var(--audit-line);
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+    .rail h3 { margin: 0; color: #f5f0dc; font-size: 22px; }
+    .rail p { margin: 0; color: var(--audit-muted); line-height: 1.45; font-size: 13px; }
+    .rail-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .rail-state {
+      border: 1px solid var(--audit-line);
+      border-radius: 999px;
+      padding: 5px 8px;
+      color: var(--audit-accent);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .agent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .agent {
+      border: 1px solid var(--audit-line);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,.045);
+      display: grid;
+      gap: 6px;
+    }
+    .agent.active { border-color: rgba(158,225,199,.65); box-shadow: 0 0 0 2px rgba(158,225,199,.1); }
+    .agent span { color: var(--audit-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .agent b { color: #f5f0dc; font-size: 14px; }
+    .trace {
+      display: grid;
+      gap: 8px;
+      max-height: 398px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .observation {
+      display: grid;
+      gap: 6px;
+      border: 1px solid var(--audit-line);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,.045);
+      animation: drip .22s ease-out both;
+    }
+    @keyframes drip {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .obs-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--audit-accent); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+    .obs-main { color: #f5f0dc; font-size: 13px; }
+    .obs-gate { display: inline-flex; width: fit-content; border-radius: 6px; padding: 4px 6px; font-family: "IBM Plex Mono", monospace; font-size: 9px; font-weight: 700; }
+    .obs-gate.escalation { background: var(--danger); color: white; }
+    .obs-gate.review { background: var(--gold); color: #fff7e4; }
+    .obs-gate.blocked { background: rgba(214,193,129,.14); color: var(--brass); border: 1px solid rgba(214,193,129,.35); }
+    .obs-gate.safe { background: rgba(158,225,199,.1); color: var(--audit-accent); border: 1px solid rgba(158,225,199,.3); }
+    .receipt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .receipt {
+      border: 1px solid var(--audit-line);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(158,225,199,.08);
+    }
+    .receipt span { display: block; color: var(--audit-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .receipt b { display: block; margin-top: 5px; color: var(--audit-accent); font-size: 18px; }
+    @media (max-width: 1200px) {
+      .body { grid-template-columns: 1fr; }
+      .rail { border-left: 0; border-top: 1px solid var(--audit-line); }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>Closeout Sweep Trace Mockup</h1>
+      <p>This update follows the critique: the right proof rail becomes the live sweep trace, the triage cards become the Operational Pressure Index, and each decision row exposes gate, confidence, and Gemini/Python boundary.</p>
+    </section>
+
+    <section class="platform">
+      <div class="top">
+        <span class="logo-lockup" role="img" aria-label="Litt"></span>
+        <div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div>
+        <button id="runSweep" class="run">Run closeout sweep</button>
+      </div>
+      <div class="body">
+        <nav class="nav">
+          <div class="ops-card"><img src="/icons-logo/prepare-icon.png" alt=""><div><strong>Ops control</strong><span>Prepared layer</span></div></div>
+          <div><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span class="mono">8</span></div><div class="nav-item"><span>Deadline risk</span><span class="mono">1</span></div><div class="nav-item"><span>Billing WIP</span><span class="mono">2</span></div><div class="nav-item"><span>Client silence</span><span class="mono">1</span></div></div>
+          <div><div class="nav-title">System</div><div class="nav-item"><span>Agent sweep</span><span class="mono">ready</span></div><div class="nav-item"><span>Audit trail</span><span class="mono">12</span></div><div class="nav-item"><span>Demo readiness</span><span class="mono">ok</span></div></div>
+        </nav>
+
+        <main class="main">
+          <div class="work-header"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure. Each item connects to deterministic checks, agent context, confidence, and audit proof.</p></div><span class="pill">Strand & Okafor / 2026-05-29</span></div>
+
+          <section class="pressure">
+            <div class="score"><div class="label">Operational pressure</div><div><b>72</b><span> / 100 elevated</span></div><div class="matrix"><span class="cell hot"></span><span class="cell hot"></span><span class="cell hot"></span><span class="cell gold"></span><span class="cell gold"></span><span class="cell on"></span><span class="cell on"></span><span class="cell"></span></div></div>
+            <div class="intel">
+              <div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div>
+              <div class="factors">
+                <div class="factor"><div class="label">Deadline horizon</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div>
+                <div class="factor"><div class="label">Budget pressure</div><b>78%</b><p>ACME warning threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div>
+                <div class="factor"><div class="label">WIP exposure</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div>
+                <div class="factor"><div class="label">Client silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="decisions">
+            <div class="row">
+              <span class="gate escalation">ESCALATION</span>
+              <div><h3>Rivera deadline cannot be resolved by Litt</h3><p>Possible hard legal deadline from opposing counsel email, but no court order exists in firm sources.</p><div class="confidence"><span>confidence=70%</span><span>source=opposing counsel email</span><span>missing=court order</span></div></div>
+              <div class="boundary"><strong>Transparent Confidence</strong><span>route=deadline_agent</span><span>llm=none</span><span>decision=escalate</span></div>
+              <button class="action">Review</button>
+            </div>
+            <div class="row">
+              <span class="gate review">REVIEW_REQUIRED</span>
+              <div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out. Attorney confirmation required before closeout.</p></div>
+              <div class="boundary"><strong>Python boundary</strong><span>route=deadline_agent</span><span>llm=none</span><span>tool=confirm_deadline</span></div>
+              <button class="action">Confirm</button>
+            </div>
+            <div class="row">
+              <span class="gate blocked">BLOCKED</span>
+              <div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft but Litt will not send without attorney approval.</p></div>
+              <div class="boundary"><strong>Gemini boundary</strong><span>route=comms_agent</span><span>llm=draft_narrative</span><span>write=tool_layer</span></div>
+              <button class="action">Draft</button>
+            </div>
+            <div class="row">
+              <span class="gate safe">AUTO_SAFE</span>
+              <div><h3>ACME budget pressure logged</h3><p>Budget utilization crossed 78 percent warning threshold. No write action required yet.</p></div>
+              <div class="boundary"><strong>Python boundary</strong><span>route=budget_agent</span><span>llm=none</span><span>math=deterministic</span></div>
+              <button class="action">Inspect</button>
+            </div>
+          </section>
+        </main>
+
+        <aside class="rail">
+          <div class="rail-head"><div><div class="label">Defensible audit trail</div><h3 id="railTitle">Sweep trace ready</h3><p id="railCopy">Click Run closeout sweep to watch agents emit observations and gate decisions in real time.</p></div><span id="railState" class="rail-state">pending</span></div>
+          <div class="agent-grid">
+            <div class="agent" data-agent="deadline_agent"><span>deadline_agent</span><b>ready</b></div>
+            <div class="agent" data-agent="billing_agent"><span>billing_agent</span><b>ready</b></div>
+            <div class="agent" data-agent="comms_agent"><span>comms_agent</span><b>ready</b></div>
+            <div class="agent" data-agent="anomaly_agent"><span>anomaly_agent</span><b>ready</b></div>
+          </div>
+          <div id="trace" class="trace">
+            <div class="observation"><div class="obs-top"><span>pending</span><span>0 / 22</span></div><div class="obs-main">Sweep observations will appear here every 250ms.</div></div>
+          </div>
+          <div id="receipts" class="receipt-grid" hidden>
+            <div class="receipt"><span>observations</span><b>22</b></div>
+            <div class="receipt"><span>gates</span><b>4</b></div>
+            <div class="receipt"><span>write path</span><b>tools</b></div>
+            <div class="receipt"><span>audit</span><b>ready</b></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const observations = [
+      ["deadline_agent", "scanned deadline_events for strand-okafor", "AUTO_SAFE"],
+      ["deadline_agent", "Rivera deadline source is opposing counsel email", "REVIEW_REQUIRED"],
+      ["deadline_agent", "no court order found in firm sources", "ESCALATION"],
+      ["deadline_agent", "Mercer deadline is HARD_LEGAL and 6 days out", "REVIEW_REQUIRED"],
+      ["deadline_agent", "deadline gate emitted for attorney confirmation", "REVIEW_REQUIRED"],
+      ["billing_agent", "scanned 5 pending time entries", "AUTO_SAFE"],
+      ["billing_agent", "te-005 narrative contains scrubber phrase", "BLOCKED"],
+      ["billing_agent", "te-001 missing narrative anomaly preserved", "REVIEW_REQUIRED"],
+      ["billing_agent", "LEDES policy checks completed", "AUTO_SAFE"],
+      ["billing_agent", "$4.2k WIP exposure added to pressure index", "REVIEW_REQUIRED"],
+      ["comms_agent", "client silence threshold checked", "AUTO_SAFE"],
+      ["comms_agent", "Whitmore matter quiet for 16 days", "BLOCKED"],
+      ["comms_agent", "Gemini drafted outreach narrative only", "BLOCKED"],
+      ["comms_agent", "send action blocked pending attorney approval", "BLOCKED"],
+      ["anomaly_agent", "empty narrative anomaly scored", "REVIEW_REQUIRED"],
+      ["anomaly_agent", "budget pressure ACME at 78 percent", "AUTO_SAFE"],
+      ["anomaly_agent", "deduped overlapping billing signals", "AUTO_SAFE"],
+      ["deadline_agent", "coordinator received 2 deadline packets", "REVIEW_REQUIRED"],
+      ["billing_agent", "coordinator received 2 billing packets", "BLOCKED"],
+      ["comms_agent", "coordinator received 1 comms packet", "BLOCKED"],
+      ["anomaly_agent", "coordinator assembled pressure index", "AUTO_SAFE"],
+      ["coordinator", "closeout brief ready with audit posture", "AUTO_SAFE"]
+    ];
+    const gateClass = {
+      ESCALATION: "escalation",
+      REVIEW_REQUIRED: "review",
+      BLOCKED: "blocked",
+      AUTO_SAFE: "safe"
+    };
+    const button = document.getElementById("runSweep");
+    const trace = document.getElementById("trace");
+    const receipts = document.getElementById("receipts");
+    const railTitle = document.getElementById("railTitle");
+    const railCopy = document.getElementById("railCopy");
+    const railState = document.getElementById("railState");
+    const agentEls = [...document.querySelectorAll(".agent")];
+
+    function setActiveAgent(agent) {
+      agentEls.forEach(el => {
+        const active = el.dataset.agent === agent;
+        el.classList.toggle("active", active);
+        el.querySelector("b").textContent = active ? "running" : (el.querySelector("b").textContent === "done" ? "done" : "ready");
+      });
+    }
+
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      button.textContent = "Sweep running...";
+      railTitle.textContent = "Sweep trace running";
+      railCopy.textContent = "Observations are emitting from the agent layer. Gate badges appear as Litt decides what it can and cannot do.";
+      railState.textContent = "running";
+      receipts.hidden = true;
+      trace.innerHTML = "";
+
+      observations.forEach((obs, index) => {
+        setTimeout(() => {
+          const [agent, text, gate] = obs;
+          setActiveAgent(agent);
+          if (agent !== "coordinator") {
+            const agentEl = document.querySelector(`[data-agent="${agent}"] b`);
+            if (agentEl) agentEl.textContent = "running";
+          }
+          const card = document.createElement("div");
+          card.className = "observation";
+          card.innerHTML = `<div class="obs-top"><span>${agent}</span><span>${index + 1} / ${observations.length}</span></div><div class="obs-main">${text}</div><span class="obs-gate ${gateClass[gate]}">${gate}</span>`;
+          trace.prepend(card);
+          if (index === observations.length - 1) {
+            setTimeout(() => {
+              agentEls.forEach(el => {
+                el.classList.remove("active");
+                el.querySelector("b").textContent = "done";
+              });
+              railTitle.textContent = "Sweep complete";
+              railCopy.textContent = "The rail settles into audit proof after showing the agent work. Receipts are ready for every consequential action.";
+              railState.textContent = "complete";
+              button.textContent = "Sweep complete";
+              receipts.hidden = false;
+            }, 300);
+          }
+        }, index * 250);
+      });
+    });
+  </script>
+</body>
+</html>

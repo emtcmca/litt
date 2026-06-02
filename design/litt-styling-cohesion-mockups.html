@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Styling Cohesion Mockups</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9e3d8; color: #1d221f; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .page { max-width: 1680px; margin: 0 auto; padding: 26px; }
+    .intro { max-width: 980px; margin-bottom: 18px; }
+    .intro h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: -.02em; }
+    .intro p { margin: 0; color: #5f594d; line-height: 1.55; }
+    .styles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    @media (max-width: 1320px) { .styles { grid-template-columns: 1fr; } }
+    .style-card { border-radius: 18px; overflow: hidden; box-shadow: 0 22px 62px rgba(28,31,27,.12); border: 1px solid var(--line); background: var(--paper); }
+    .mock { min-height: 735px; display: grid; grid-template-rows: auto 1fr; background: var(--bg); color: var(--ink); }
+    .top { display: grid; grid-template-columns: 148px 1fr auto; gap: 12px; align-items: center; padding: 13px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    @media (max-width: 860px) { .top { grid-template-columns: 1fr; } }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 830; letter-spacing: .04em; }
+    .mark { width: 26px; height: 26px; display: grid; place-items: center; background: var(--mark); color: var(--markText); border-radius: var(--markRadius); font-size: 12px; }
+    .status { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 4px 7px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; background: var(--surface); }
+    .pill.hot { background: var(--hotSoft); color: var(--hot); border-color: color-mix(in srgb, var(--hot) 40%, var(--line)); }
+    .action { border: 0; border-radius: var(--radiusSm); background: var(--mark); color: var(--markText); padding: 8px 10px; font-weight: 760; font-size: 11px; }
+    .body { display: grid; grid-template-columns: 128px minmax(0, 1fr) 154px; min-height: 680px; }
+    @media (max-width: 860px) { .body { grid-template-columns: 1fr; } }
+    .nav { background: var(--rail); border-right: 1px solid var(--line); padding: 12px; display: grid; align-content: start; gap: 12px; }
+    @media (max-width: 860px) { .nav { border-right: 0; border-bottom: 1px solid var(--line); } }
+    .nav-title, .label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .1em; font-size: 8px; color: var(--muted); }
+    .nav-item { display: flex; justify-content: space-between; padding: 7px 8px; border-radius: var(--radiusSm); font-size: 10px; color: var(--navText); }
+    .nav-item.active { background: var(--mark); color: var(--markText); }
+    .main { padding: 13px; display: grid; gap: 12px; align-content: start; }
+    .work-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 11px; }
+    .work-head h2 { margin: 0; font-size: 25px; line-height: 1; letter-spacing: -.02em; }
+    .work-head p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.38; max-width: 460px; }
+    .pressure { display: grid; grid-template-columns: 112px 1fr; border: 1px solid var(--line); border-radius: var(--radiusLg); overflow: hidden; background: var(--surface); }
+    .score { background: var(--mark); color: var(--markText); padding: 13px; display: grid; gap: 8px; align-content: center; }
+    .score b { font-size: 44px; line-height: .8; }
+    .score span { color: var(--markMuted); font-size: 9px; }
+    .intel { padding: 11px; display: grid; gap: 10px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .tab { text-align: center; border: 1px solid var(--line); border-radius: 999px; padding: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: var(--muted); background: var(--paper); }
+    .tab.active { background: var(--mark); color: var(--markText); border-color: var(--mark); }
+    .factors { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 7px; }
+    .factor { display: grid; gap: 5px; }
+    .factor b { font-size: 12px; }
+    .factor p { margin: 0; font-size: 8px; color: var(--muted); line-height: 1.25; }
+    .bar { height: 5px; border-radius: 999px; background: var(--barBg); overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--accent); }
+    .bar.hot span { background: var(--hot); }
+    .bar.gold span { background: var(--gold); }
+    .decisions { border: 1px solid var(--line); border-radius: var(--radiusLg); overflow: hidden; background: var(--surface); }
+    .decision { display: grid; grid-template-columns: 48px 1fr 68px; gap: 8px; padding: 9px 10px; border-bottom: 1px solid var(--lineSoft); align-items: center; }
+    .decision:last-child { border-bottom: 0; }
+    .chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; padding: 4px 5px; border-radius: var(--chipRadius); background: var(--hot); color: white; font-weight: 820; text-align: center; }
+    .chip.gold { background: var(--gold); color: var(--goldText); }
+    .chip.dark { background: var(--mark); color: var(--markText); }
+    .decision h3 { margin: 0; font-size: 11px; line-height: 1.2; }
+    .decision p { margin: 3px 0 0; color: var(--muted); font-size: 8px; line-height: 1.28; }
+    .mini-meta { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; color: var(--muted); display: grid; gap: 3px; }
+    .audit { background: var(--audit); color: var(--auditText); border-left: 1px solid var(--auditLine); padding: 12px; display: grid; gap: 10px; align-content: start; }
+    .audit h3 { margin: 0; color: var(--auditHead); font-size: 16px; }
+    .audit p { margin: 0; color: var(--auditMuted); font-size: 9px; line-height: 1.35; }
+    .audit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .audit-stat { border: 1px solid var(--auditLine); border-radius: var(--radiusSm); padding: 8px; background: var(--auditStat); }
+    .audit-stat span { display: block; font-size: 7px; color: var(--auditMuted); text-transform: uppercase; letter-spacing: .08em; }
+    .audit-stat b { display: block; margin-top: 4px; color: var(--auditAccent); font-size: 12px; }
+    .event { display: grid; gap: 5px; padding: 8px; border-radius: var(--radiusSm); background: var(--auditEvent); border: 1px solid var(--auditLine); }
+    .event-top { display: flex; justify-content: space-between; gap: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 7px; color: var(--auditAccent); }
+    .event-main { font-size: 9px; color: var(--auditHead); }
+    .caption { padding: 15px 16px; border-top: 1px solid var(--line); background: var(--paper); }
+    .caption h2 { margin: 0 0 6px; font-size: 19px; }
+    .caption p { margin: 0; color: #625c50; font-size: 13px; line-height: 1.45; }
+    .traits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+    .trait { border: 1px solid #d8d0be; border-radius: 999px; padding: 4px 7px; font-size: 11px; color: #4f4a42; background: #fbfaf4; }
+
+    .ledger-house {
+      --bg:#f2efe6; --paper:#fffdf8; --surface:#fbfaf4; --rail:#ebe3d4; --line:#d8d0be; --lineSoft:#e4dccd;
+      --ink:#1b211d; --muted:#655f52; --navText:#3d382f; --mark:#14221f; --markText:#d6c181; --markMuted:#aeb8a4;
+      --accent:#637044; --hot:#9b2d23; --hotSoft:#f4e2d9; --gold:#a98435; --goldText:#fff7e4; --barBg:#e1d8c8;
+      --audit:#101713; --auditText:#e9e0c7; --auditHead:#f5f0dc; --auditMuted:#aeb8a4; --auditLine:rgba(214,193,129,.3); --auditAccent:#cfe85d; --auditStat:rgba(207,232,93,.08); --auditEvent:rgba(255,255,255,.045);
+      --radiusLg:15px; --radiusSm:8px; --markRadius:4px; --chipRadius:5px;
+    }
+    .instrument-panel {
+      --bg:#f5f6f2; --paper:#fbfcf8; --surface:#ffffff; --rail:#e5e9df; --line:#cdd5ca; --lineSoft:#e5ebe2;
+      --ink:#172027; --muted:#60706b; --navText:#273630; --mark:#0e2430; --markText:#eaf2dc; --markMuted:#a8b9b2;
+      --accent:#207c68; --hot:#b93a31; --hotSoft:#f5dfdc; --gold:#ba8b1d; --goldText:#101713; --barBg:#dfe7df;
+      --audit:#0e2430; --auditText:#dfe9e6; --auditHead:#f6fbf5; --auditMuted:#9eb3ad; --auditLine:rgba(172,202,190,.26); --auditAccent:#7ce0bd; --auditStat:rgba(124,224,189,.08); --auditEvent:rgba(255,255,255,.05);
+      --radiusLg:10px; --radiusSm:6px; --markRadius:7px; --chipRadius:5px;
+    }
+    .court-terminal {
+      --bg:#e7e0d4; --paper:#f8f2e7; --surface:#f4eddf; --rail:#1a211d; --line:#cfc3b0; --lineSoft:#ded2bf;
+      --ink:#171a17; --muted:#665f54; --navText:#e4dac7; --mark:#111511; --markText:#d8ff5f; --markMuted:#a4b179;
+      --accent:#6a7637; --hot:#8f271f; --hotSoft:#efd9d1; --gold:#c09a3c; --goldText:#171a17; --barBg:#d9cfbd;
+      --audit:#0b0d0b; --auditText:#e6decf; --auditHead:#fff8e8; --auditMuted:#9aa28f; --auditLine:rgba(216,255,95,.22); --auditAccent:#d8ff5f; --auditStat:rgba(216,255,95,.08); --auditEvent:rgba(255,255,255,.04);
+      --radiusLg:8px; --radiusSm:4px; --markRadius:999px; --chipRadius:3px;
+    }
+    .ledger-instrument {
+      --bg:#f3efe6; --paper:#fffdf8; --surface:#ffffff; --rail:#e8e1d2; --line:#cfd5c9; --lineSoft:#e6e2d8;
+      --ink:#17201c; --muted:#5f6a61; --navText:#303a32; --mark:#14221f; --markText:#d6c181; --markMuted:#aeb8a4;
+      --accent:#207c68; --hot:#9b2d23; --hotSoft:#f3ded7; --gold:#a98435; --goldText:#fff7e4; --barBg:#dfe5dc;
+      --audit:#101713; --auditText:#e9e0c7; --auditHead:#f5f0dc; --auditMuted:#aeb8a4; --auditLine:rgba(214,193,129,.28); --auditAccent:#9ee1c7; --auditStat:rgba(158,225,199,.08); --auditEvent:rgba(255,255,255,.045);
+      --radiusLg:11px; --radiusSm:6px; --markRadius:5px; --chipRadius:4px;
+    }
+    .ledger-court {
+      --bg:#f3efe6; --paper:#fffdf8; --surface:#fbfaf4; --rail:#e8e1d2; --line:#d4c9b8; --lineSoft:#e5dccf;
+      --ink:#17201c; --muted:#655f52; --navText:#303a32; --mark:#14221f; --markText:#d6c181; --markMuted:#aeb8a4;
+      --accent:#d8ff5f; --hot:#9b2d23; --hotSoft:#f3ded7; --gold:#c09a3c; --goldText:#171a17; --barBg:#ddd4c5;
+      --audit:#0b0d0b; --auditText:#e6decf; --auditHead:#fff8e8; --auditMuted:#9aa28f; --auditLine:rgba(216,255,95,.22); --auditAccent:#d8ff5f; --auditStat:rgba(216,255,95,.08); --auditEvent:rgba(255,255,255,.04);
+      --radiusLg:10px; --radiusSm:5px; --markRadius:5px; --chipRadius:4px;
+    }
+    .accent-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 22px; }
+    @media (max-width: 1320px) { .accent-comparison { grid-template-columns: 1fr; } }
+    .accent-comparison .hybrid-wrap { margin-bottom: 0; }
+    .hybrid-wrap { margin-bottom: 22px; border: 1px solid #cfd5c9; border-radius: 20px; overflow: hidden; box-shadow: 0 28px 76px rgba(28,31,27,.13); background: #fffdf8; }
+    .hybrid-wrap .mock { min-height: 820px; }
+    .hybrid-wrap .top { grid-template-columns: 190px 1fr auto; padding: 15px 18px; }
+    .hybrid-wrap .body { grid-template-columns: 220px minmax(0, 1fr) 320px; min-height: 760px; }
+    @media (max-width: 1180px) { .hybrid-wrap .body { grid-template-columns: 1fr; } }
+    .hybrid-wrap .nav { padding: 15px; }
+    .hybrid-wrap .nav-item { padding: 9px 10px; font-size: 13px; }
+    .hybrid-wrap .main { padding: 18px; gap: 15px; }
+    .hybrid-wrap .work-head h2 { font-size: 34px; }
+    .hybrid-wrap .work-head p { font-size: 14px; max-width: 680px; }
+    .hybrid-wrap .pressure { grid-template-columns: 172px 1fr; }
+    .hybrid-wrap .score { padding: 18px; }
+    .hybrid-wrap .score b { font-size: 68px; }
+    .hybrid-wrap .score span { font-size: 12px; }
+    .hybrid-wrap .intel { padding: 15px; gap: 13px; }
+    .hybrid-wrap .tab { font-size: 10px; padding: 7px; }
+    .hybrid-wrap .factor .label { font-size: 9px; }
+    .hybrid-wrap .factor b { font-size: 18px; }
+    .hybrid-wrap .factor p { font-size: 11px; }
+    .hybrid-wrap .decision { grid-template-columns: 78px 1fr 142px 82px; padding: 13px 14px; }
+    @media (max-width: 760px) { .hybrid-wrap .decision { grid-template-columns: 1fr; } }
+    .hybrid-wrap .decision h3 { font-size: 15px; }
+    .hybrid-wrap .decision p { font-size: 12px; }
+    .hybrid-wrap .mini-meta { font-size: 10px; }
+    .hybrid-wrap .chip { font-size: 10px; padding: 5px 7px; }
+    .hybrid-wrap .audit { padding: 16px; gap: 14px; }
+    .hybrid-wrap .audit h3 { font-size: 22px; }
+    .hybrid-wrap .audit p { font-size: 13px; }
+    .hybrid-wrap .audit-stat { padding: 10px; }
+    .hybrid-wrap .audit-stat b { font-size: 17px; }
+    .hybrid-wrap .event { padding: 11px; }
+    .hybrid-wrap .event-top { font-size: 10px; }
+    .hybrid-wrap .event-main { font-size: 13px; }
+    .hybrid-caption { padding: 16px 18px; border-top: 1px solid #d8d0be; background: #fffdf8; }
+    .hybrid-caption h2 { margin: 0 0 6px; font-size: 21px; }
+    .hybrid-caption p { margin: 0; color: #625c50; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>Styling Cohesion Directions</h1>
+      <p>Same north-star layout, now led by a hybrid of Ledger House and Instrument Panel: warm legal-institutional materials, but with sharper data geometry and cleaner operational legibility.</p>
+    </section>
+
+    <section class="accent-comparison">
+    <section class="hybrid-wrap ledger-court">
+      <div class="mock">
+        <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div><button class="action">Run closeout sweep</button></div>
+        <div class="body">
+          <nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div><div class="nav-item"><span>Client silence</span><span>1</span></div><div class="nav-title" style="margin-top:10px">System</div><div class="nav-item"><span>Agent sweep</span><span>5/5</span></div><div class="nav-item"><span>Audit trail</span><span>12</span></div></nav>
+          <main class="main">
+            <div class="work-head"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure. Each item connects to deterministic checks, domain-agent context, and a defensible audit receipt.</p></div><span class="pill">Strand & Okafor / 2026-05-29</span></div>
+            <section class="pressure"><div class="score"><div class="label">Operational pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factors"><div class="factor"><div class="label">deadline horizon</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget pressure</div><b>78%</b><p>ACME warning threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip exposure</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">client silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+            <section class="decisions"><div class="decision"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out. Tool path: confirm_deadline.</p></div><div class="mini-meta"><span>pressure +34</span><span>expected=UNCONFIRMED</span></div><button class="action">Confirm</button></div><div class="decision"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit: “review documents”</h3><p>Likely LEDES rejection with write-down and narrative repair paths.</p></div><div class="mini-meta"><span>pressure +18</span><span>entity=te-005</span></div><button class="action">Resolve</button></div><div class="decision"><span class="chip dark">COMMS</span><div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft; Gemini used only for editable language.</p></div><div class="mini-meta"><span>pressure +11</span><span>draft=ready</span></div><button class="action">Draft</button></div></section>
+          </main>
+          <aside class="audit"><div><div class="label">Defensible audit trail</div><h3>Proof rail</h3><p>Ledger House base with Court Terminal’s high-signal proof accent.</p></div><div class="audit-grid"><div class="audit-stat"><span>write path</span><b>tools</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed -> Mercer opposition</div></div><div class="event"><div class="event-top"><span>17:43 UTC</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down -> blocked narrative</div></div><div class="event"><div class="event-top"><span>17:44 UTC</span><span>audit_c244</span></div><div class="event-main">client_outreach.approved -> Whitmore</div></div></aside>
+        </div>
+      </div>
+      <div class="hybrid-caption"><h2>Ledger Court Hybrid</h2><p>Ledger House foundation with Court Terminal’s sharper proof accent. More memorable and energetic; the question is whether the electric proof color feels premium or too loud.</p></div>
+    </section>
+
+    <section class="hybrid-wrap ledger-instrument">
+      <div class="mock">
+        <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">$4.2k WIP</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div><button class="action">Run closeout sweep</button></div>
+        <div class="body">
+          <nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Decision docket</span><span>8</span></div><div class="nav-item"><span>Deadline risk</span><span>1</span></div><div class="nav-item"><span>Billing WIP</span><span>2</span></div><div class="nav-item"><span>Client silence</span><span>1</span></div><div class="nav-title" style="margin-top:10px">System</div><div class="nav-item"><span>Agent sweep</span><span>5/5</span></div><div class="nav-item"><span>Audit trail</span><span>12</span></div></nav>
+          <main class="main">
+            <div class="work-head"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure. Each item connects to deterministic checks, domain-agent context, and a defensible audit receipt.</p></div><span class="pill">Strand & Okafor / 2026-05-29</span></div>
+            <section class="pressure"><div class="score"><div class="label">Operational pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factors"><div class="factor"><div class="label">deadline horizon</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget pressure</div><b>78%</b><p>ACME warning threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip exposure</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">client silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+            <section class="decisions"><div class="decision"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out. Tool path: confirm_deadline.</p></div><div class="mini-meta"><span>pressure +34</span><span>expected=UNCONFIRMED</span></div><button class="action">Confirm</button></div><div class="decision"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit: “review documents”</h3><p>Likely LEDES rejection with write-down and narrative repair paths.</p></div><div class="mini-meta"><span>pressure +18</span><span>entity=te-005</span></div><button class="action">Resolve</button></div><div class="decision"><span class="chip dark">COMMS</span><div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft; Gemini used only for editable language.</p></div><div class="mini-meta"><span>pressure +11</span><span>draft=ready</span></div><button class="action">Draft</button></div></section>
+          </main>
+          <aside class="audit"><div><div class="label">Defensible audit trail</div><h3>Proof rail</h3><p>Persistent evidence of the tool-only write path. Calm at rest, concrete on inspection.</p></div><div class="audit-grid"><div class="audit-stat"><span>write path</span><b>tools</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed -> Mercer opposition</div></div><div class="event"><div class="event-top"><span>17:43 UTC</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down -> blocked narrative</div></div><div class="event"><div class="event-top"><span>17:44 UTC</span><span>audit_c244</span></div><div class="event-main">client_outreach.approved -> Whitmore</div></div></aside>
+        </div>
+      </div>
+      <div class="hybrid-caption"><h2>Ledger Instrument Hybrid</h2><p>This is the proposed styling base: Ledger House warmth and credibility, sharpened with Instrument Panel’s cleaner geometry, tighter borders, brighter proof accents, and more legible data modules.</p></div>
+    </section>
+    </section>
+
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em;color:#625c50;font-size:12px;margin:0 0 12px;">Reference directions</div>
+    <section class="styles">
+      <article class="style-card ledger-house">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div><button class="action">Run sweep</button></div>
+          <div class="body">
+            <nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Docket</span><span>8</span></div><div class="nav-item"><span>Deadlines</span><span>1</span></div><div class="nav-item"><span>Billing</span><span>2</span></div><div class="nav-item"><span>Audit</span><span>12</span></div></nav>
+            <main class="main">
+              <div class="work-head"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, with proof behind every consequential action.</p></div><span class="pill">2026-05-29</span></div>
+              <section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">silence</div><b>16 days</b><p>Draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+              <section class="decisions"><div class="decision"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out.</p></div><div class="mini-meta"><span>+34 pressure</span><span>confirm_deadline</span></div></div><div class="decision"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection with write-down path.</p></div><div class="mini-meta"><span>+18 pressure</span><span>te-005</span></div></div><div class="decision"><span class="chip dark">COMMS</span><div><h3>Whitmore quiet for 16 days</h3><p>Outreach draft ready for attorney review.</p></div><div class="mini-meta"><span>+11 pressure</span><span>draft=ready</span></div></div></section>
+            </main>
+            <aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Persistent, quiet evidence of the write path.</p></div><div class="audit-grid"><div class="audit-stat"><span>write path</span><b>tools</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div><div class="event"><div class="event-top"><span>17:43</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down</div></div></aside>
+          </div>
+        </div>
+        <div class="caption"><h2>1. Ledger House</h2><p>My recommendation. Warm institutional surfaces, deep green audit rail, brass accents, calm density. It feels most like a premium legal operations platform.</p><div class="traits"><span class="trait">recommended</span><span class="trait">law-native</span><span class="trait">quiet premium</span></div></div>
+      </article>
+
+      <article class="style-card instrument-panel">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">Li</div><span>LITT</span></div><div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div><button class="action">Run sweep</button></div>
+          <div class="body">
+            <nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Docket</span><span>8</span></div><div class="nav-item"><span>Deadlines</span><span>1</span></div><div class="nav-item"><span>Billing</span><span>2</span></div><div class="nav-item"><span>Audit</span><span>12</span></div></nav>
+            <main class="main">
+              <div class="work-head"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, with proof behind every consequential action.</p></div><span class="pill">2026-05-29</span></div>
+              <section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">silence</div><b>16 days</b><p>Draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+              <section class="decisions"><div class="decision"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out.</p></div><div class="mini-meta"><span>+34 pressure</span><span>confirm_deadline</span></div></div><div class="decision"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection with write-down path.</p></div><div class="mini-meta"><span>+18 pressure</span><span>te-005</span></div></div><div class="decision"><span class="chip dark">COMMS</span><div><h3>Whitmore quiet for 16 days</h3><p>Outreach draft ready for attorney review.</p></div><div class="mini-meta"><span>+11 pressure</span><span>draft=ready</span></div></div></section>
+            </main>
+            <aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Sharper, more SaaS-like evidence system.</p></div><div class="audit-grid"><div class="audit-stat"><span>write path</span><b>tools</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div><div class="event"><div class="event-top"><span>17:43</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down</div></div></aside>
+          </div>
+        </div>
+        <div class="caption"><h2>2. Instrument Panel</h2><p>Crisper, more enterprise SaaS and data-platform oriented. Strong for scalability, but less distinctive to legal operations than Ledger House.</p><div class="traits"><span class="trait">clean</span><span class="trait">scalable</span><span class="trait">data-platform</span></div></div>
+      </article>
+
+      <article class="style-card court-terminal">
+        <div class="mock">
+          <div class="top"><div class="brand"><div class="mark">L</div><span>LITT</span></div><div class="status"><span class="pill hot">3 critical</span><span class="pill">8 decisions</span><span class="pill">5 agents</span><span class="pill">12 receipts</span></div><button class="action">Run sweep</button></div>
+          <div class="body">
+            <nav class="nav"><div class="nav-title">Closeout</div><div class="nav-item active"><span>Docket</span><span>8</span></div><div class="nav-item"><span>Deadlines</span><span>1</span></div><div class="nav-item"><span>Billing</span><span>2</span></div><div class="nav-item"><span>Audit</span><span>12</span></div></nav>
+            <main class="main">
+              <div class="work-head"><div><h2>Closeout docket</h2><p>Attorney decisions ranked by operational pressure, with proof behind every consequential action.</p></div><span class="pill">2026-05-29</span></div>
+              <section class="pressure"><div class="score"><div class="label">Pressure</div><div><b>72</b><span>/100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factors"><div class="factor"><div class="label">deadline</div><b>6 days</b><p>Hard legal date.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="label">budget</div><b>78%</b><p>Warn threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="label">wip</div><b>$4.2k</b><p>Pending blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="label">silence</div><b>16 days</b><p>Draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+              <section class="decisions"><div class="decision"><span class="chip">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out.</p></div><div class="mini-meta"><span>+34 pressure</span><span>confirm_deadline</span></div></div><div class="decision"><span class="chip gold">WIP</span><div><h3>Billing scrubber hit</h3><p>Likely LEDES rejection with write-down path.</p></div><div class="mini-meta"><span>+18 pressure</span><span>te-005</span></div></div><div class="decision"><span class="chip dark">COMMS</span><div><h3>Whitmore quiet for 16 days</h3><p>Outreach draft ready for attorney review.</p></div><div class="mini-meta"><span>+11 pressure</span><span>draft=ready</span></div></div></section>
+            </main>
+            <aside class="audit"><div><div class="label">Audit trail</div><h3>Proof rail</h3><p>Most technical and memorable, but closer to command-center styling.</p></div><div class="audit-grid"><div class="audit-stat"><span>write path</span><b>tools</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div><div class="event"><div class="event-top"><span>17:43</span><span>audit_b931</span></div><div class="event-main">time_entry.write_down</div></div></aside>
+          </div>
+        </div>
+        <div class="caption"><h2>3. Court Terminal</h2><p>Most distinctive and demo-forward. The dark rail and sharper contrast add energy, but we’d need restraint so Litt still feels like legal ops, not an incident console.</p><div class="traits"><span class="trait">memorable</span><span class="trait">technical</span><span class="trait">higher contrast</span></div></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

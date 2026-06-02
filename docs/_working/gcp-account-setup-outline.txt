@@ -1,0 +1,108 @@
+First commit is in. Now — everything you need to set up manually.
+
+  ---
+  Manual Setup List
+
+  Do these in order. Numbers match dependency order — each step unlocks the next.
+
+  ---
+  1. Google Cloud SDK (gcloud CLI) — install on your PC
+
+  Download and run the installer:
+  https://cloud.google.com/sdk/docs/install-sdk#windows
+
+  After install, open a new PowerShell window and verify:
+  ! gcloud --version
+  Expected: Google Cloud SDK 500+
+
+  ---
+  2. GCP account login
+
+  ! gcloud auth login
+  Browser opens — sign in with whichever Google account you'll use for GCP (doesn't need to match eric@erictetzlaff.com).
+
+  Then:
+  ! gcloud auth application-default login
+  This sets credentials for local Python code (seed script, backend).
+
+  ---
+  3. Create GCP project
+
+  ! gcloud projects create litt-prod --name="Litt"
+  ! gcloud config set project litt-prod
+
+  Verify: ! gcloud config get-value project → shows litt-prod
+
+  ---
+  4. Enable billing + claim $500 credit
+
+  Billing can't be done from CLI — must be browser:
+  1. Go to console.cloud.google.com/billing
+  2. Create billing account or link existing one to litt-prod
+  3. Claim the $500 hackathon credit at goo.gle/gfs-agents-challenge-credits (or the link from your invite email)
+
+  ---
+  5. Enable all required APIs (paste this entire block after billing is enabled):
+
+  ! gcloud services enable firestore.googleapis.com run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com cloudscheduler.googleapis.com
+  aiplatform.googleapis.com logging.googleapis.com cloudtrace.googleapis.com artifactregistry.googleapis.com
+
+  Verify: ! gcloud services list --enabled --filter="name:firestore" → should show enabled.
+
+  ---
+  6. Create Firestore database
+
+  ! gcloud firestore databases create --location=us-east1
+
+  ---
+  7. Create service account
+
+  ! gcloud iam service-accounts create litt-backend --display-name="Litt Backend"
+
+  Grant roles:
+  ! gcloud projects add-iam-policy-binding litt-prod --member="serviceAccount:litt-backend@litt-prod.iam.gserviceaccount.com" --role="roles/datastore.user"
+  ! gcloud projects add-iam-policy-binding litt-prod --member="serviceAccount:litt-backend@litt-prod.iam.gserviceaccount.com" --role="roles/aiplatform.user"
+  ! gcloud projects add-iam-policy-binding litt-prod --member="serviceAccount:litt-backend@litt-prod.iam.gserviceaccount.com"
+  --role="roles/secretmanager.secretAccessor"
+  ! gcloud projects add-iam-policy-binding litt-prod --member="serviceAccount:litt-backend@litt-prod.iam.gserviceaccount.com" --role="roles/run.invoker"
+
+  Download the key (this is the only file that must NEVER be committed):
+  ! gcloud iam service-accounts keys create service-account-key.json --iam-account=litt-backend@litt-prod.iam.gserviceaccount.com
+
+  ---
+  8. Store key in Secret Manager and set local env
+
+  ! gcloud secrets create litt-service-account --data-file=service-account-key.json
+  ! Remove-Item service-account-key.json
+
+  Copy .env.example to .env and set GOOGLE_APPLICATION_CREDENTIALS to the local path where you saved the key — or use ADC (application default credentials from
+  step 2, which is simpler). If you ran gcloud auth application-default login, you don't need the key file locally — ADC handles it.
+
+  ---
+  9. GitHub repo
+
+  1. Go to github.com/new
+  2. Name: litt, owner: emtcmca, Public, no README (we already have files)
+  3. Copy the SSH URL
+
+  Then push:
+  ! git remote add origin git@github.com:emtcmca/litt.git
+  ! git push -u origin main
+
+  If you don't have an SSH key set up for GitHub yet, run ! ssh-keygen -t ed25519 -C "eric@erictetzlaff.com" and add the public key to github.com/settings/keys.
+
+  ---
+  10. Devpost account
+
+  Go to devpost.com — sign up or log in with eric@erictetzlaff.com. Find the Google for Startups AI Agents Challenge and register. You'll submit the GitHub URL
+  here on Day 7.
+
+  ---
+  11. Vertex AI — no extra setup needed
+
+  Enabled in step 5 via aiplatform.googleapis.com. Gemini 2.5 Pro access is automatic once Vertex AI API is enabled and the service account has aiplatform.user
+  role.
+
+  ---
+  Once steps 1–8 are done, paste the output of ! python scripts/seed_demo.py here and I'll confirm the seed worked, then we'll verify the /health endpoint
+  locally and start Day 2 (tool layer).

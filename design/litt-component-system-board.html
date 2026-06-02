@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Litt Component System Board</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    :root {
+      --bg: #f3efe6;
+      --paper: #fffdf8;
+      --surface: #ffffff;
+      --rail: #e8e1d2;
+      --line: #cfd5c9;
+      --line-soft: #e6e2d8;
+      --ink: #17201c;
+      --muted: #5f6a61;
+      --subtle: #858477;
+      --forest: #14221f;
+      --brass: #d6c181;
+      --teal: #207c68;
+      --teal-soft: rgba(32, 124, 104, .1);
+      --danger: #9b2d23;
+      --danger-soft: #f3ded7;
+      --gold: #a98435;
+      --gold-soft: #f3ead2;
+      --audit: #101713;
+      --audit-line: rgba(214, 193, 129, .28);
+      --audit-muted: #aeb8a4;
+      --audit-accent: #9ee1c7;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 22px 64px rgba(28, 31, 27, .11);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+    }
+    button, input, textarea { font: inherit; }
+    .mono { font-family: "IBM Plex Mono", "SF Mono", Consolas, monospace; }
+    .page { max-width: 1520px; margin: 0 auto; padding: 28px; }
+    .intro { max-width: 980px; margin-bottom: 22px; }
+    .intro h1 { margin: 0 0 8px; font-size: 36px; line-height: 1; letter-spacing: -.02em; }
+    .intro p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .board { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 18px; align-items: start; }
+    @media (max-width: 980px) { .board { grid-template-columns: 1fr; } }
+    .toc {
+      position: sticky;
+      top: 20px;
+      background: var(--rail);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .toc .label, .section-label, .spec-label {
+      font-family: "IBM Plex Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .toc a {
+      color: var(--ink);
+      text-decoration: none;
+      padding: 8px 9px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+    }
+    .toc a:first-of-type { background: var(--forest); color: var(--brass); }
+    .content { display: grid; gap: 18px; }
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .section-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .section-head h2 { margin: 3px 0 0; font-size: 23px; letter-spacing: -.01em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; max-width: 620px; }
+    .section-body { padding: 18px; }
+    .swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 760px) { .swatches { grid-template-columns: repeat(2, 1fr); } }
+    .swatch { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+    .color { height: 68px; background: var(--c); }
+    .swatch div:last-child { padding: 9px; display: grid; gap: 3px; }
+    .swatch b { font-size: 13px; }
+    .swatch span { color: var(--muted); font-size: 11px; }
+    .button-grid, .chip-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .btn {
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+    }
+    .btn-primary { background: var(--forest); color: #fff; }
+    .btn-primary span { color: var(--brass); }
+    .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+    .btn-proof { background: var(--teal-soft); color: var(--teal); border-color: rgba(32,124,104,.28); }
+    .btn-danger { background: var(--danger-soft); color: var(--danger); border-color: rgba(155,45,35,.28); }
+    .btn-ghost { background: transparent; color: var(--muted); border-color: transparent; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: var(--radius-sm);
+      padding: 5px 7px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .03em;
+    }
+    .chip-hard { background: var(--danger); color: #fff; }
+    .chip-warn { background: var(--gold); color: #fff7e4; }
+    .chip-proof { background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(32,124,104,.24); }
+    .chip-neutral { background: #ebe6da; color: var(--muted); border: 1px solid var(--line); }
+    .chip-system { background: var(--forest); color: var(--brass); }
+    .component-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    @media (max-width: 900px) { .component-grid { grid-template-columns: 1fr; } }
+    .pressure {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    @media (max-width: 700px) { .pressure { grid-template-columns: 1fr; } }
+    .score {
+      background: var(--forest);
+      color: var(--brass);
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+    .score b { font-size: 66px; line-height: .82; }
+    .score span { color: var(--audit-muted); font-size: 12px; }
+    .intel { padding: 15px; display: grid; gap: 13px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .tab {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px;
+      text-align: center;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      background: var(--paper);
+    }
+    .tab.active { background: var(--forest); color: var(--brass); border-color: var(--forest); }
+    .factor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 700px) { .factor-grid { grid-template-columns: repeat(2, 1fr); } }
+    .factor { display: grid; gap: 6px; }
+    .factor b { font-size: 18px; }
+    .factor p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .bar { height: 7px; border-radius: 999px; background: #dfe5dc; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--teal); }
+    .bar.hot span { background: var(--danger); }
+    .bar.gold span { background: var(--gold); }
+    .decision-stack { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+    .decision-row {
+      display: grid;
+      grid-template-columns: 78px 1fr 142px 88px;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .decision-row:last-child { border-bottom: 0; }
+    @media (max-width: 760px) { .decision-row { grid-template-columns: 1fr; } }
+    .decision-row h3 { margin: 0; font-size: 15px; line-height: 1.2; }
+    .decision-row p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .row-meta { display: grid; gap: 3px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+    .audit-card {
+      background: var(--audit);
+      color: #e9e0c7;
+      border: 1px solid var(--audit-line);
+      border-radius: var(--radius-lg);
+      padding: 15px;
+      display: grid;
+      gap: 13px;
+    }
+    .audit-card h3 { margin: 0; color: #f5f0dc; font-size: 21px; }
+    .audit-card p { margin: 0; color: var(--audit-muted); font-size: 13px; line-height: 1.45; }
+    .audit-card.branded {
+      position: relative;
+      overflow: hidden;
+    }
+    .audit-card.branded::after {
+      content: none;
+    }
+    .audit-card.branded > * {
+      position: relative;
+      z-index: 1;
+    }
+    .receipt-icon-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 900px) {
+      .receipt-icon-row { grid-template-columns: 1fr; }
+    }
+    .receipt-mini {
+      background: var(--audit);
+      color: #e9e0c7;
+      border: 1px solid var(--audit-line);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      min-height: 260px;
+    }
+    .receipt-mini-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .receipt-mini h3 {
+      margin: 0;
+      color: #f5f0dc;
+      font-size: 18px;
+    }
+    .receipt-mini p {
+      margin: 5px 0 0;
+      color: var(--audit-muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .brand-icon-tile {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      border: 1px solid var(--audit-line);
+      background: rgba(255,255,255,.06);
+      object-fit: cover;
+      object-position: center;
+      mix-blend-mode: screen;
+      opacity: .9;
+      flex: 0 0 auto;
+    }
+    .audit-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 760px) { .audit-stats { grid-template-columns: repeat(2, 1fr); } }
+    .audit-stat { border: 1px solid var(--audit-line); border-radius: var(--radius-sm); padding: 10px; background: rgba(158,225,199,.08); }
+    .audit-stat span { display: block; color: var(--audit-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+    .audit-stat b { display: block; margin-top: 5px; color: var(--audit-accent); font-size: 17px; }
+    .event { border: 1px solid var(--audit-line); border-radius: var(--radius-sm); padding: 11px; background: rgba(255,255,255,.045); display: grid; gap: 6px; }
+    .event-top { display: flex; justify-content: space-between; gap: 10px; color: var(--audit-accent); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+    .event-main { color: #f5f0dc; font-size: 13px; }
+    .event-meta { color: var(--audit-muted); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
+    .nav-demo {
+      background: var(--rail);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      max-width: 310px;
+    }
+    .nav-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+    }
+    .nav-item.active { background: var(--forest); color: var(--brass); }
+    .modal-demo {
+      background: rgba(16,23,19,.18);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      min-height: 360px;
+    }
+    .modal {
+      width: min(560px, 100%);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 30px 90px rgba(16,23,19,.28);
+      overflow: hidden;
+    }
+    .modal-head { padding: 15px 17px; border-bottom: 1px solid var(--line-soft); display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+    .modal-head h3 { margin: 0; font-size: 20px; }
+    .modal-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .modal-body { padding: 17px; display: grid; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-family: "IBM Plex Mono", monospace; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .field textarea { min-height: 86px; resize: vertical; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; background: var(--surface); color: var(--ink); }
+    .modal-foot { padding: 13px 17px; background: #f4efe4; border-top: 1px solid var(--line-soft); display: flex; justify-content: flex-end; gap: 9px; }
+    .spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 760px) { .spec-grid { grid-template-columns: 1fr; } }
+    .spec-card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 12px; background: var(--surface); display: grid; gap: 8px; }
+    .spec-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>Litt Component System Board</h1>
+      <p>Chosen foundation: Ledger House base, Instrument Panel accent, IBM Plex Sans. This board defines the reusable UI parts before we apply the design to the real dashboard.</p>
+    </section>
+    <div class="board">
+      <nav class="toc">
+        <div class="label">Components</div>
+        <a href="#tokens">Tokens</a>
+        <a href="#buttons">Buttons & Chips</a>
+        <a href="#pressure">Pressure Module</a>
+        <a href="#rows">Decision Rows</a>
+        <a href="#audit">Audit Receipt</a>
+        <a href="#nav">Navigation</a>
+        <a href="#modal">Modal</a>
+      </nav>
+      <div class="content">
+        <section id="tokens" class="section">
+          <div class="section-head"><div><div class="section-label">01 / Foundation</div><h2>Color & Material Tokens</h2></div><p>Warm legal surfaces, crisp operational borders, and a teal proof accent used sparingly for verified system evidence.</p></div>
+          <div class="section-body">
+            <div class="swatches">
+              <div class="swatch" style="--c:var(--bg)"><div class="color"></div><div><b>Background</b><span>#f3efe6</span></div></div>
+              <div class="swatch" style="--c:var(--paper)"><div class="color"></div><div><b>Paper</b><span>#fffdf8</span></div></div>
+              <div class="swatch" style="--c:var(--forest)"><div class="color"></div><div><b>Forest</b><span>#14221f</span></div></div>
+              <div class="swatch" style="--c:var(--brass)"><div class="color"></div><div><b>Brass</b><span>#d6c181</span></div></div>
+              <div class="swatch" style="--c:var(--teal)"><div class="color"></div><div><b>Proof Teal</b><span>#207c68</span></div></div>
+              <div class="swatch" style="--c:var(--danger)"><div class="color"></div><div><b>Hard Risk</b><span>#9b2d23</span></div></div>
+              <div class="swatch" style="--c:var(--gold)"><div class="color"></div><div><b>Warning</b><span>#a98435</span></div></div>
+              <div class="swatch" style="--c:var(--audit)"><div class="color"></div><div><b>Audit Rail</b><span>#101713</span></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="buttons" class="section">
+          <div class="section-head"><div><div class="section-label">02 / Actions</div><h2>Buttons & Chips</h2></div><p>Buttons use restrained command language. Chips are compact, mono-coded evidence markers, not decorative badges.</p></div>
+          <div class="section-body component-grid">
+            <div class="spec-card"><div class="spec-label">Buttons</div><div class="button-grid"><button class="btn btn-primary"><span>●</span>Confirm deadline</button><button class="btn btn-secondary">Review packet</button><button class="btn btn-proof">View receipt</button><button class="btn btn-danger">Write down</button><button class="btn btn-ghost">Dismiss</button></div></div>
+            <div class="spec-card"><div class="spec-label">Status Chips</div><div class="chip-grid"><span class="chip chip-hard">HARD</span><span class="chip chip-warn">WIP</span><span class="chip chip-proof">PROOF</span><span class="chip chip-system">AGENT</span><span class="chip chip-neutral">ROUTINE</span></div></div>
+          </div>
+        </section>
+
+        <section id="pressure" class="section">
+          <div class="section-head"><div><div class="section-label">03 / Signature</div><h2>Operational Pressure Module</h2></div><p>The signature Litt component: a single pressure score with drillable factors. It explains why the docket is ordered the way it is.</p></div>
+          <div class="section-body">
+            <section class="pressure"><div class="score"><div class="section-label">Pressure</div><div><b>72</b><span> / 100 elevated</span></div></div><div class="intel"><div class="tabs"><div class="tab active">Pressure</div><div class="tab">Audit</div><div class="tab">Agents</div></div><div class="factor-grid"><div class="factor"><div class="section-label">Deadline</div><b>6 days</b><p>Hard legal date unconfirmed.</p><div class="bar hot"><span style="width:82%"></span></div></div><div class="factor"><div class="section-label">Budget</div><b>78%</b><p>ACME warning threshold.</p><div class="bar gold"><span style="width:78%"></span></div></div><div class="factor"><div class="section-label">WIP</div><b>$4.2k</b><p>Pending approval blockers.</p><div class="bar gold"><span style="width:54%"></span></div></div><div class="factor"><div class="section-label">Silence</div><b>16 days</b><p>Outreach draft staged.</p><div class="bar"><span style="width:64%"></span></div></div></div></div></section>
+          </div>
+        </section>
+
+        <section id="rows" class="section">
+          <div class="section-head"><div><div class="section-label">04 / Workbench</div><h2>Decision Rows</h2></div><p>Rows are dense but not cramped. Each item carries severity, matter context, pressure contribution, route/tool evidence, and an attorney action.</p></div>
+          <div class="section-body"><section class="decision-stack"><div class="decision-row"><span class="chip chip-hard">HARD</span><div><h3>Mercer opposition deadline unconfirmed</h3><p>Deadline agent found HARD_LEGAL event 6 days out. Tool path: confirm_deadline.</p></div><div class="row-meta"><span>pressure +34</span><span>expected=UNCONFIRMED</span></div><button class="btn btn-primary">Confirm</button></div><div class="decision-row"><span class="chip chip-warn">WIP</span><div><h3>Billing scrubber hit: “review documents”</h3><p>Likely LEDES rejection with write-down and narrative repair paths.</p></div><div class="row-meta"><span>pressure +18</span><span>entity=te-005</span></div><button class="btn btn-secondary">Resolve</button></div><div class="decision-row"><span class="chip chip-system">COMMS</span><div><h3>Whitmore client quiet for 16 days</h3><p>Comms agent prepared outreach draft; Gemini used only for editable language.</p></div><div class="row-meta"><span>pressure +11</span><span>draft=ready</span></div><button class="btn btn-secondary">Draft</button></div></section></div>
+        </section>
+
+        <section id="audit" class="section">
+          <div class="section-head"><div><div class="section-label">05 / Proof</div><h2>Audit Receipt</h2></div><p>The audit rail is persistent and calm. Expanded receipts should feel concrete, inspectable, and system-authored.</p></div>
+          <div class="section-body"><section class="audit-card"><div><div class="section-label">Baseline</div><h3>Decision receipts</h3><p>Every consequential action writes actor, entity, timestamp, expected status, and before/after state.</p></div><div class="audit-stats"><div class="audit-stat"><span>write path</span><b>tools only</b></div><div class="audit-stat"><span>events</span><b>12</b></div><div class="audit-stat"><span>lock</span><b>expected</b></div><div class="audit-stat"><span>mode</span><b>append</b></div></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed -> Mercer opposition</div><div class="event-meta">actor=dana-strand / before=UNCONFIRMED / after=CONFIRMED</div></div></section><div class="receipt-icon-row"><section class="receipt-mini"><div class="receipt-mini-head"><div><div class="section-label">Document icon</div><h3>Audit document</h3><p>Best semantic fit for receipt/proof. Reads as an official record.</p></div><img class="brand-icon-tile" src="/icons-logo/document-icon.png" alt=""></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></section><section class="receipt-mini"><div class="receipt-mini-head"><div><div class="section-label">Success icon</div><h3>Verified outcome</h3><p>Good for completed actions or demo readiness, less ideal for every receipt.</p></div><img class="brand-icon-tile" src="/icons-logo/success-icon.png" alt=""></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">tool write verified</div></div></section><section class="receipt-mini"><div class="receipt-mini-head"><div><div class="section-label">No icon</div><h3>System receipt</h3><p>Cleanest for the persistent rail. Lets the data remain the brand.</p></div></div><div class="event"><div class="event-top"><span>17:42 UTC</span><span>audit_8f12</span></div><div class="event-main">deadline.confirmed</div></div></section></div></div>
+        </section>
+
+        <section id="nav" class="section">
+          <div class="section-head"><div><div class="section-label">06 / Shell</div><h2>Navigation Rail</h2></div><p>The left rail gives operational scope, not marketing navigation. Counts and readiness states help users understand the firm’s closeout posture.</p></div>
+          <div class="section-body"><nav class="nav-demo"><div class="section-label">Closeout</div><div class="nav-item active"><span>Decision docket</span><span class="mono">8</span></div><div class="nav-item"><span>Deadline risk</span><span class="mono">1</span></div><div class="nav-item"><span>Billing WIP</span><span class="mono">2</span></div><div class="nav-item"><span>Client silence</span><span class="mono">1</span></div><div class="section-label" style="margin-top:10px">System</div><div class="nav-item"><span>Agent sweep</span><span class="mono">5/5</span></div><div class="nav-item"><span>Audit trail</span><span class="mono">12</span></div></nav></div>
+        </section>
+
+        <section id="modal" class="section">
+          <div class="section-head"><div><div class="section-label">07 / Decision Flow</div><h2>Modal Style</h2></div><p>Modals should feel like focused attorney decision packets. They include enough proof to decide without leaving the flow.</p></div>
+          <div class="section-body"><div class="modal-demo"><div class="modal"><div class="modal-head"><div><span class="chip chip-hard">HARD</span><h3 style="margin-top:10px">Confirm Mercer deadline</h3><p>Expected status: UNCONFIRMED. This action writes an append-only audit event.</p></div><button class="btn btn-ghost">Close</button></div><div class="modal-body"><div class="field"><label>Attorney note</label><textarea>Confirmed deadline from court notice. Calendar and filing packet updated.</textarea></div><section class="audit-card" style="border-radius:var(--radius-md);padding:12px;"><div class="event"><div class="event-top"><span>write preview</span><span>deadline.confirmed</span></div><div class="event-main">entity=dl-mercer-001 / actor=dana-strand</div></div></section></div><div class="modal-foot"><button class="btn btn-secondary">Cancel</button><button class="btn btn-primary"><span>●</span>Confirm and log</button></div></div></div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
