@@ -232,6 +232,34 @@ export interface SourceEmail {
 }
 
 // ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+export type AuditTier = "engineering" | "operational" | "legal_defensibility";
+
+export interface AuditLogEvent {
+  id: string;
+  firm_id: string;
+  created_at: string;
+  updated_at: string;
+  tier: AuditTier;
+  event_type: string;
+  actor: string;
+  entity_type: string;
+  entity_id: string;
+  before_state: Record<string, unknown> | null;
+  after_state: Record<string, unknown> | null;
+  idempotency_key: string | null;
+  notes: string | null;
+}
+
+export interface AuditLogResponse {
+  events: AuditLogEvent[];
+  count: number;
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
 // Action requests
 // ---------------------------------------------------------------------------
 

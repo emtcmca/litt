@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { CSSProperties, RefObject } from 'react';
 import type {
   AgentObservation,
@@ -1501,6 +1502,26 @@ export function DailyCloseoutBrief() {
 
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
+              <Link
+                to="/audit"
+                style={{
+                  border:       `1px solid ${C.line}`,
+                  borderRadius: 8,
+                  background:   C.surface,
+                  color:        C.ink,
+                  padding:      '10px 14px',
+                  fontWeight:   500,
+                  fontSize:     12,
+                  whiteSpace:   'nowrap',
+                  fontFamily:   'var(--font-mono)',
+                  textDecoration: 'none',
+                  display:      'inline-flex',
+                  alignItems:   'center',
+                }}
+                title="View full audit log"
+              >
+                Audit Log
+              </Link>
               <button
                 onClick={() => downloadLedesExport(FIRM_ID).catch(e => console.error('LEDES export failed', e))}
                 style={{

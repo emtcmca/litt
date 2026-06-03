@@ -152,7 +152,7 @@
 | Full matter view page | DOES NOT SHIP | v1.1 |
 | Full billing view page | DOES NOT SHIP | v1.1 |
 | Full deadline timeline page | DOES NOT SHIP | v1.1 |
-| Full audit log page | SHIPS STUBBED | Shows recent events; full export UI is v1.1 |
+| Full audit log page | SHIPS REAL | /audit — filterable by tier, entity_type, actor; expandable before/after state; append-only note visible |
 | Legal defensibility export UI | DOES NOT SHIP | v1.1 |
 | LEDES export UI | SHIPS STUBBED | Endpoint exists; download button in demo |
 | Source email viewer | SHIPS REAL | DeadlineModal shows full source email body for conflict_flagged deadlines |

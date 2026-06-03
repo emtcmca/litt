@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
 import { EmailPreview } from './pages/EmailPreview';
+import { AuditLog } from './pages/AuditLog';
 
 export default function App() {
   return (
@@ -8,6 +9,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<DailyCloseoutBrief />} />
         <Route path="/email-preview" element={<EmailPreview />} />
+        <Route path="/audit" element={<AuditLog />} />
         <Route path="*" element={
           <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center' }}>

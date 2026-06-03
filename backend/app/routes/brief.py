@@ -88,6 +88,50 @@ def get_source_email(email_id: str, firm_id: str):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.get("/audit-log")
+def get_audit_log(
+    firm_id: str,
+    tier: str = "",
+    entity_type: str = "",
+    actor: str = "",
+    limit: int = 200,
+):
+    """
+    Returns recent audit log events, newest first.
+    Optional filters: tier, entity_type, actor.
+    """
+    try:
+        query = collection_ref(firm_id, "audit_log")
+        docs = list(query.stream())
+
+        events = []
+        for doc in docs:
+            d = doc.to_dict()
+            # normalise Firestore timestamps
+            for field in ("created_at", "updated_at"):
+                raw = d.get(field)
+                if hasattr(raw, "timestamp"):
+                    d[field] = datetime.fromtimestamp(raw.timestamp(), tz=timezone.utc).isoformat()
+                elif isinstance(raw, datetime):
+                    d[field] = raw.isoformat()
+
+            if tier and d.get("tier") != tier:
+                continue
+            if entity_type and d.get("entity_type") != entity_type:
+                continue
+            if actor and d.get("actor") != actor:
+                continue
+            events.append(d)
+
+        events.sort(key=lambda e: e.get("created_at", ""), reverse=True)
+        total = len(events)
+        events = events[:limit]
+
+        return {"events": events, "count": len(events), "total": total}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.get("/sweep/{run_id}", response_model=AgentRunTimeline)
 def get_sweep_timeline(run_id: str, firm_id: str):
     """

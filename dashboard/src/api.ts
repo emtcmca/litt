@@ -6,6 +6,7 @@
 import type {
   ActionResult,
   AlertDismissRequest,
+  AuditLogResponse,
   BillingApproveRequest,
   BillingUpdateNarrativeRequest,
   BillingWriteDownRequest,
@@ -138,6 +139,22 @@ export function queueComm(req: CommsQueueRequest): Promise<ActionResult> {
 
 export function dismissComm(req: CommsDismissRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/comms/dismiss", req);
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+export function getAuditLog(
+  firmId: string,
+  opts: { tier?: string; entityType?: string; actor?: string; limit?: number } = {}
+): Promise<AuditLogResponse> {
+  const params: Record<string, string> = { firm_id: firmId };
+  if (opts.tier) params.tier = opts.tier;
+  if (opts.entityType) params.entity_type = opts.entityType;
+  if (opts.actor) params.actor = opts.actor;
+  if (opts.limit != null) params.limit = String(opts.limit);
+  return get<AuditLogResponse>("/audit-log", params);
 }
 
 // ---------------------------------------------------------------------------
