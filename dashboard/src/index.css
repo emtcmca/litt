@@ -102,36 +102,6 @@
   --border-radius-xl: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background-primary:   #1A1A18;
-    --color-background-secondary: #2D2D2A;
-    --color-background-tertiary:  #262623;
-    --color-background-info:      #0C447C;
-    --color-background-warning:   #633806;
-    --color-background-danger:    #791F1F;
-    --color-background-success:   #085041;
-
-    --color-text-primary:   #E8E6DC;
-    --color-text-secondary: #A9A7A1;
-    --color-text-tertiary:  #6F6D67;
-    --color-text-info:      #B5D4F4;
-    --color-text-warning:   #FAC775;
-    --color-text-danger:    #F7C1C1;
-    --color-text-success:   #9FE1CB;
-
-    --color-border-tertiary:  rgba(255, 255, 255, 0.12);
-    --color-border-secondary: rgba(255, 255, 255, 0.20);
-    --color-border-primary:   rgba(255, 255, 255, 0.30);
-
-    --color-action-primary: #378ADD;
-    --color-action-primary-hover: #85B7EB;
-    --color-action-primary-text: #FFFFFF;
-    --color-audit-surface: #11110F;
-    --color-audit-success: #9FE1CB;
-  }
-}
-
 /* ─── Base ─────────────────────────────────────────────────────────────────── */
 
 body {
@@ -208,8 +178,42 @@ button {
   animation: litt-rail-pulse 1.2s ease-in-out infinite;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .product-story-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .litt-shell-padding {
+    padding: 14px !important;
+  }
+
+  .litt-topbar {
+    grid-template-columns: minmax(180px, 1fr) auto !important;
+  }
+
+  .litt-status-pills {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start !important;
+  }
+
+  .litt-topbar-actions {
+    justify-content: flex-end;
+  }
+
+  .litt-body-grid {
+    grid-template-columns: 236px minmax(0, 1fr) !important;
+  }
+
+  .litt-body-grid > aside:last-child {
+    grid-column: 1 / -1;
+    border-left: 0 !important;
+    border-top: 1px solid var(--color-border-tertiary);
+  }
 }
 
 @media (max-width: 860px) {
@@ -223,6 +227,56 @@ button {
 
   .closeout-layout aside {
     position: static !important;
+  }
+
+  .litt-topbar {
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .litt-logo {
+    width: 190px !important;
+    max-width: 100%;
+  }
+
+  .litt-status-pills,
+  .litt-topbar-actions {
+    grid-column: auto;
+    grid-row: auto;
+    justify-content: flex-start !important;
+    width: 100%;
+  }
+
+  .litt-topbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .litt-body-grid {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+
+  .litt-body-grid > nav,
+  .litt-body-grid > main,
+  .litt-body-grid > aside {
+    border-left: 0 !important;
+    border-right: 0 !important;
+  }
+
+  .litt-main {
+    padding: 14px !important;
+  }
+
+  .litt-work-header {
+    display: grid !important;
+    align-items: start !important;
+  }
+
+  .litt-work-title {
+    font-size: 28px !important;
+    line-height: 1.05 !important;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 }
 

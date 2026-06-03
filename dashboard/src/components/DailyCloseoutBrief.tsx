@@ -83,6 +83,7 @@ interface DecisionRow {
   id:                  string;
   gate:                GateLevel;
   section:             'deadline' | 'billing' | 'budget' | 'silence' | 'anomaly';
+  clientId?:           string;
   title:               string;
   description:         string;
   matterRisk:          string;
@@ -94,12 +95,38 @@ interface DecisionRow {
   extraTags?:          string[];
 }
 
+interface PressureSignalItem {
+  id:    string;
+  label: string;
+  detail: string;
+  pts:   number;
+}
+
+interface PressureSignal {
+  key:    'deadline' | 'budget' | 'wip' | 'silence';
+  label:  string;
+  summary: string;
+  pts:    number;
+  maxPts: number;
+  items:  PressureSignalItem[];
+}
+
+interface ClientPressureRow {
+  clientId:          string;
+  clientName:        string;
+  hardDeadlineDays:  number | null;
+  budgetPct:         number | null;
+  wipUsd:            number;
+  silenceDays:       number | null;
+  score:             number;
+  itemIds:           string[];
+}
+
 interface PressureData {
-  score:        number;
-  deadlineDays: number | null;
-  budgetPct:    number | null;
-  wipUsd:       number;
-  silenceDays:  number | null;
+  score:          number;
+  scoreBreakdown: Array<{ label: string; pts: number; source: string }>;
+  signals:        PressureSignal[];
+  clients:        ClientPressureRow[];
 }
 
 // ─── Gate badge ───────────────────────────────────────────────────────────────
@@ -136,41 +163,137 @@ function GateBadge({ gate }: { gate: GateLevel }) {
 
 function computePressureIndex(brief: BriefResponse): PressureData {
   const { deadlines, budget_risks, client_silence, time_entries, anomalies } = brief.sections;
+  let totalScore = 0;
+  const scoreBreakdown: Array<{ label: string; pts: number; source: string }> = [];
 
-  const nearest = [...deadlines.items]
-    .filter(d => d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
-    .sort((a, b) => a.days_out - b.days_out)[0];
-
-  const maxBudget = budget_risks.items.length > 0
-    ? Math.max(...budget_risks.items.map(b => b.utilization_pct))
-    : 0;
-
-  const maxSilence = client_silence.items.length > 0
-    ? Math.max(...client_silence.items.map(s => s.days_since_contact))
-    : 0;
-
-  const wip = time_entries.total_wip_usd;
-
-  let score = 0;
-  if (nearest) {
-    if (nearest.days_out <= 7)       score += 34;
-    else if (nearest.days_out <= 14) score += 18;
-    else if (nearest.days_out <= 30) score += 8;
+  // ── Deadline signals (highest weight — malpractice risk) ─────────────────
+  const deadlineItems: PressureSignalItem[] = [];
+  for (const d of deadlines.items) {
+    const isHL = d.classification === 'HARD_LEGAL';
+    const isHC = d.classification === 'HARD_CONTRACTUAL';
+    const unc  = d.is_unconfirmed;
+    let pts = 0;
+    if (isHL) {
+      if (d.days_out <= 3)       pts = unc ? 46 : 38;
+      else if (d.days_out <= 7)  pts = unc ? 38 : 30;
+      else if (d.days_out <= 14) pts = unc ? 22 : 18;
+      else if (d.days_out <= 30) pts = 8;
+    } else if (isHC) {
+      if (d.days_out <= 7)       pts = 20;
+      else if (d.days_out <= 14) pts = 10;
+    }
+    if (pts > 0) {
+      totalScore += pts;
+      scoreBreakdown.push({ label: `${d.matter_name}${unc ? ' (unconfirmed)' : ''}`, pts, source: 'deadline' });
+      deadlineItems.push({ id: d.deadline_id, label: `${d.matter_name} · ${d.classification}`, detail: `${d.days_out}d out · due ${d.due_date}${unc ? ' · UNCONFIRMED' : ''}`, pts });
+    }
   }
-  if (maxBudget >= 75)     score += 22;
-  else if (maxBudget >= 50) score += 10;
-  if (wip >= 3000)         score += 12;
-  else if (wip >= 1000)    score += 6;
-  if (maxSilence >= 14)    score += 10;
-  else if (maxSilence >= 7) score += 5;
-  score += anomalies.items.filter(a => a.risk_level === 'CRITICAL').length * 4;
+  const nearestHard = [...deadlines.items].filter(d => d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL').sort((a, b) => a.days_out - b.days_out)[0];
+  const deadlineSummary = nearestHard ? `${nearestHard.days_out}d · ${nearestHard.matter_name}${nearestHard.is_unconfirmed ? ' · unconfirmed' : ''}` : 'No hard deadlines';
+
+  // ── Budget signals (billing relationship risk) ────────────────────────────
+  const budgetItems: PressureSignalItem[] = [];
+  let maxBudgetPct = 0;
+  for (const b of budget_risks.items) {
+    maxBudgetPct = Math.max(maxBudgetPct, b.utilization_pct);
+    let pts = 0;
+    if (b.utilization_pct >= 90)      pts = 22;
+    else if (b.utilization_pct >= 75) pts = 15;
+    else if (b.utilization_pct >= 60) pts = 8;
+    else if (b.utilization_pct >= 50) pts = 4;
+    if (pts > 0) {
+      totalScore += pts;
+      scoreBreakdown.push({ label: `${b.client_name} budget`, pts, source: 'budget' });
+      budgetItems.push({ id: b.client_id, label: b.client_name, detail: `${b.utilization_pct.toFixed(0)}% of $${b.budget_cap.toLocaleString()} · $${b.budget_billed.toLocaleString()} billed`, pts });
+    }
+  }
+  const budgetSummary = maxBudgetPct > 0 ? `${maxBudgetPct.toFixed(0)}% peak utilization` : 'No budget alerts';
+
+  // ── WIP signals (cash flow risk) ──────────────────────────────────────────
+  const wip = time_entries.total_wip_usd;
+  let wipPts = 0;
+  if (wip >= 4000)      wipPts = 10;
+  else if (wip >= 2000) wipPts = 6;
+  else if (wip >= 500)  wipPts = 3;
+  if (wipPts > 0) { totalScore += wipPts; scoreBreakdown.push({ label: 'WIP exposure', pts: wipPts, source: 'wip' }); }
+  const wipItems: PressureSignalItem[] = time_entries.items.map(e => ({ id: e.entry_id, label: `${e.matter_name} · ${e.hours}h`, detail: `$${e.amount.toFixed(0)} pending${e.has_block ? ' · BLOCK' : e.has_warn ? ' · WARN' : ''}`, pts: 0 }));
+  const wipSummary = wip > 0 ? `$${wip.toLocaleString()} pending approval` : 'No pending WIP';
+
+  // ── Silence signals (client retention risk) ───────────────────────────────
+  const silenceItems: PressureSignalItem[] = [];
+  let maxSilenceDays = 0;
+  for (const s of client_silence.items) {
+    maxSilenceDays = Math.max(maxSilenceDays, s.days_since_contact);
+    let pts = 0;
+    if (s.days_since_contact >= 21)      pts = 18;
+    else if (s.days_since_contact >= 14) pts = 12;
+    else if (s.days_since_contact >= 7)  pts = 5;
+    if (pts > 0) {
+      totalScore += pts;
+      scoreBreakdown.push({ label: `${s.client_name} silence`, pts, source: 'silence' });
+      silenceItems.push({ id: s.matter_id, label: `${s.client_name} · ${s.matter_name}`, detail: `${s.days_since_contact} days silent · threshold ${s.threshold_days}d`, pts });
+    }
+  }
+  const silenceSummary = maxSilenceDays > 0 ? `${maxSilenceDays}d · ${client_silence.items.length} matter${client_silence.items.length !== 1 ? 's' : ''}` : 'No silence alerts';
+
+  // ── Anomalies ─────────────────────────────────────────────────────────────
+  let anomalyPts = 0;
+  for (const a of anomalies.items) {
+    const pts = a.risk_level === 'CRITICAL' ? 5 : a.risk_level === 'ELEVATED' ? 2 : 0;
+    if (pts > 0) {
+      anomalyPts = Math.min(anomalyPts + pts, 10);
+      totalScore += pts;
+      scoreBreakdown.push({ label: a.what_is_happening.slice(0, 44), pts, source: 'anomaly' });
+    }
+  }
+
+  // ── Per-client breakdown ──────────────────────────────────────────────────
+  const clientMap = new Map<string, ClientPressureRow>();
+  const ensureClient = (id: string, name: string) => {
+    if (!clientMap.has(id)) clientMap.set(id, { clientId: id, clientName: name, hardDeadlineDays: null, budgetPct: null, wipUsd: 0, silenceDays: null, score: 0, itemIds: [] });
+    return clientMap.get(id)!;
+  };
+  for (const d of deadlines.items) {
+    const r = ensureClient(d.client_id, d.client_name);
+    if (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL') {
+      if (r.hardDeadlineDays === null || d.days_out < r.hardDeadlineDays) r.hardDeadlineDays = d.days_out;
+    }
+    r.itemIds.push(d.deadline_id);
+  }
+  for (const b of budget_risks.items) {
+    const r = ensureClient(b.client_id, b.client_name);
+    r.budgetPct = b.utilization_pct;
+    r.itemIds.push(b.client_id);
+  }
+  for (const e of time_entries.items) {
+    const r = ensureClient(e.client_id, e.client_name);
+    r.wipUsd += e.amount;
+    r.itemIds.push(e.entry_id);
+  }
+  for (const s of client_silence.items) {
+    const r = ensureClient(s.client_id, s.client_name);
+    r.silenceDays = s.days_since_contact;
+    r.itemIds.push(s.matter_id);
+  }
+  for (const r of clientMap.values()) {
+    let s = 0;
+    if (r.hardDeadlineDays !== null) { if (r.hardDeadlineDays <= 7) s += 30; else if (r.hardDeadlineDays <= 14) s += 18; else if (r.hardDeadlineDays <= 30) s += 8; }
+    if (r.budgetPct !== null) { if (r.budgetPct >= 90) s += 22; else if (r.budgetPct >= 75) s += 15; else if (r.budgetPct >= 60) s += 8; }
+    if (r.wipUsd >= 2000) s += 6; else if (r.wipUsd >= 500) s += 3;
+    if (r.silenceDays !== null) { if (r.silenceDays >= 21) s += 18; else if (r.silenceDays >= 14) s += 12; else if (r.silenceDays >= 7) s += 5; }
+    r.score = Math.min(s, 100);
+  }
 
   return {
-    score:        Math.min(score, 100),
-    deadlineDays: nearest?.days_out ?? null,
-    budgetPct:    maxBudget || null,
-    wipUsd:       wip,
-    silenceDays:  maxSilence || null,
+    score: Math.min(Math.round(totalScore), 100),
+    scoreBreakdown,
+    signals: [
+      { key: 'deadline', label: 'Deadline horizon', summary: deadlineSummary, pts: deadlineItems.reduce((s, i) => s + i.pts, 0), maxPts: 46, items: deadlineItems },
+      { key: 'budget',   label: 'Budget pressure',  summary: budgetSummary,  pts: budgetItems.reduce((s, i) => s + i.pts, 0),   maxPts: 22, items: budgetItems   },
+      { key: 'wip',      label: 'WIP exposure',     summary: wipSummary,     pts: wipPts,                                        maxPts: 10, items: wipItems       },
+      { key: 'silence',  label: 'Client silence',   summary: silenceSummary, pts: silenceItems.reduce((s, i) => s + i.pts, 0),  maxPts: 18, items: silenceItems   },
+    ],
+    clients: [...clientMap.values()].sort((a, b) => b.score - a.score),
   };
 }
 
@@ -190,6 +313,7 @@ function buildDecisionRows(
     rows.push({
       id:          d.deadline_id,
       section:     'deadline',
+      clientId:    d.client_id,
       gate:        isEsc ? 'ESCALATION'
                  : (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
                    ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
@@ -224,8 +348,9 @@ function buildDecisionRows(
       tags.push(`⏱ ${h > 0 ? `${h}h ` : ''}${m}m tracked`);
     }
     rows.push({
-      id:      e.entry_id,
-      section: 'billing',
+      id:       e.entry_id,
+      section:  'billing',
+      clientId: e.client_id,
       gate:    e.has_block ? 'BLOCKED' : 'REVIEW_REQUIRED',
       title: blockFlag
         ? `Billing scrubber hit: "${blockFlag.matched_text ?? 'blocked phrase'}"`
@@ -254,8 +379,9 @@ function buildDecisionRows(
 
   for (const b of budget_risks.items) {
     rows.push({
-      id:          b.client_id,
-      section:     'budget',
+      id:       b.client_id,
+      section:  'budget',
+      clientId: b.client_id,
       gate:        b.alert_status === 'CRITICAL' ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
       title:       `${b.client_name} budget pressure logged`,
       description: `Utilization at ${b.utilization_pct.toFixed(0)}% of $${b.budget_cap.toLocaleString()} retainer.${b.alert_status === 'CRITICAL' ? ' Overrun risk.' : ' Warning threshold crossed.'}`,
@@ -274,8 +400,9 @@ function buildDecisionRows(
   for (const s of client_silence.items) {
     const hasDraft = !!s.comm_draft_id;
     rows.push({
-      id:          s.matter_id,
-      section:     'silence',
+      id:       s.matter_id,
+      section:  'silence',
+      clientId: s.client_id,
       gate:        hasDraft ? 'BLOCKED' : 'REVIEW_REQUIRED',
       title:       `${s.client_name} quiet for ${s.days_since_contact} days`,
       description: hasDraft
@@ -444,131 +571,251 @@ function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName, at
 
 // ─── PressureSection ──────────────────────────────────────────────────────────
 
-const MATRIX_PRESETS: Record<string, string[]> = {
-  high:   ['hot','hot','hot','gold','gold','on','on',''],
-  medium: ['gold','gold','gold','on','on','on','',''],
-  low:    ['on','on','on','on','','','',''],
-};
-const CELL_COLORS: Record<string, string> = {
-  hot: '#9B2D23', gold: '#A98435', on: '#1D9E75', '': '#D8D0BE',
+const SIG_COLOR: Record<PressureSignal['key'], string> = {
+  deadline: C.danger, budget: C.gold, wip: C.gold, silence: C.teal,
 };
 
-function PressureSection({ pressure }: { pressure: PressureData }) {
-  const [tab, setTab] = useState<'pressure' | 'audit' | 'agents'>('pressure');
+function PressureSection({ pressure, decisionRows }: { pressure: PressureData; decisionRows: DecisionRow[] }) {
+  const [tab,            setTab]           = useState<'signal' | 'client'>('signal');
+  const [expandedSig,    setExpandedSig]   = useState<PressureSignal['key'] | null>(null);
+  const [expandedClient, setExpandedClient] = useState<string | null>(null);
+  const [showFormula,    setShowFormula]   = useState(false);
 
-  const preset = pressure.score >= 60 ? 'high' : pressure.score >= 40 ? 'medium' : 'low';
-  const cells = MATRIX_PRESETS[preset];
+  // Score bar: 8 cells filled proportionally, colored by severity
+  const filledCells = Math.round((pressure.score / 100) * 8);
+  const cellColor = (i: number) => {
+    if (i >= filledCells) return '#D8D0BE';
+    const pct = (i + 1) / 8;
+    if (pct > 0.75 || pressure.score >= 60) return C.danger;
+    if (pct > 0.4  || pressure.score >= 35) return C.gold;
+    return C.teal;
+  };
 
-  const tabBtn = (t: typeof tab): CSSProperties => ({
-    border:        `1px solid ${t === tab ? C.forest : C.line}`,
-    borderRadius:  999,
-    padding:       8,
-    textAlign:     'center',
-    fontFamily:    'var(--font-mono)',
-    fontSize:      10,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color:         t === tab ? C.brass   : C.muted,
-    background:    t === tab ? C.forest  : C.paper,
-    cursor:        'pointer',
+  const topSignal = pressure.scoreBreakdown[0];
+  const scoreLabel = pressure.score >= 70 ? 'Critical' : pressure.score >= 40 ? 'Elevated' : 'Normal';
+
+  const tabBtn = (t: 'signal' | 'client'): CSSProperties => ({
+    flex: 1, border: `1px solid ${t === tab ? C.forest : C.line}`,
+    borderRadius: 999, padding: '7px 8px', textAlign: 'center',
+    fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase',
+    letterSpacing: '0.08em', color: t === tab ? C.brass : C.muted,
+    background: t === tab ? C.forest : C.paper, cursor: 'pointer',
   });
 
-  const metricCard = (label: string, value: string, hint: string) => (
-    <div key={label} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, padding: 10, background: '#fbf8f0', display: 'grid', gap: 6 }}>
-      <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 10 }}>{label}</span>
-      <strong style={{ fontSize: 18, color: C.ink }}>{value}</strong>
-      <p style={{ margin: 0, color: C.muted, fontSize: 12, lineHeight: 1.35 }}>{hint}</p>
-    </div>
-  );
-
   return (
-    <section style={{ display: 'grid', gridTemplateColumns: '176px 1fr', border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
-      {/* Score */}
-      <div style={{ background: C.forest, color: C.brass, padding: 18, display: 'grid', gap: 10, alignContent: 'center' }}>
-        <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 10, color: C.auditMuted }}>
-          Operational pressure
-        </span>
-        <div>
-          <b style={{ fontSize: 68, lineHeight: 0.82, color: C.brass }}>{pressure.score}</b>
-          <span style={{ color: C.auditMuted, fontSize: 12 }}> / 100 elevated</span>
+    <section style={{ border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '196px 1fr' }}>
+
+        {/* ── Left: Score panel ── */}
+        <div style={{ background: C.forest, color: C.brass, padding: '20px 18px', display: 'grid', gap: 12, alignContent: 'start', borderRight: `1px solid rgba(214,193,129,.2)` }}>
+          <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: 9, color: C.auditMuted }}>
+            Operational pressure
+          </span>
+          <div>
+            <b style={{ fontSize: 66, lineHeight: 0.82, color: C.brass, display: 'block' }}>{pressure.score}</b>
+            <span style={{ color: C.auditMuted, fontSize: 11, fontFamily: 'var(--font-mono)' }}>/ 100 · {scoreLabel}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 3 }}>
+            {Array.from({ length: 8 }, (_, i) => (
+              <span key={i} style={{ height: 8, borderRadius: 3, background: cellColor(i) }} />
+            ))}
+          </div>
+          {topSignal && (
+            <div style={{ paddingTop: 8, borderTop: `1px solid rgba(214,193,129,.18)` }}>
+              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: C.auditMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Top signal
+              </span>
+              <p style={{ margin: '3px 0 0', fontSize: 11, color: C.brass, lineHeight: 1.35 }}>
+                {topSignal.label} <span style={{ color: C.auditMuted }}>+{topSignal.pts}pts</span>
+              </p>
+            </div>
+          )}
+          {/* Formula toggle */}
+          <button
+            onClick={() => setShowFormula(v => !v)}
+            style={{ background: 'none', border: `1px solid rgba(214,193,129,.22)`, borderRadius: 6, padding: '5px 8px', fontSize: 9, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.auditMuted, cursor: 'pointer', textAlign: 'left' }}
+          >
+            {showFormula ? '▲ Hide formula' : '▼ How scored'}
+          </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 3 }}>
-          {cells.map((type, i) => (
-            <span key={i} style={{ height: 9, borderRadius: 3, background: CELL_COLORS[type] }} />
-          ))}
+
+        {/* ── Right: tabs ── */}
+        <div style={{ padding: 15, display: 'grid', gap: 12, alignContent: 'start' }}>
+          <div style={{ display: 'flex', gap: 7 }}>
+            {(['signal', 'client'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)} style={tabBtn(t)}>
+                {t === 'signal' ? 'By Signal' : 'By Client'}
+              </button>
+            ))}
+          </div>
+
+          {/* ── By Signal ── */}
+          {tab === 'signal' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+              {pressure.signals.map(sig => {
+                const isExpanded = expandedSig === sig.key;
+                const color = SIG_COLOR[sig.key];
+                const pct = sig.maxPts > 0 ? Math.min((sig.pts / sig.maxPts) * 100, 100) : 0;
+                return (
+                  <div key={sig.key} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, padding: 12, background: '#fbf8f0', display: 'grid', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 6 }}>
+                      <div>
+                        <span style={{ display: 'block', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 9 }}>{sig.label}</span>
+                        <strong style={{ display: 'block', fontSize: 16, color: C.ink, marginTop: 3, lineHeight: 1.1 }}>{sig.summary}</strong>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: sig.pts > 0 ? color : C.muted, whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 600 }}>
+                        +{sig.pts}
+                      </span>
+                    </div>
+                    {/* Contribution bar */}
+                    <div style={{ height: 5, borderRadius: 999, background: '#DFE5DC', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: color, transition: 'width 0.4s ease' }} />
+                    </div>
+                    {/* Expand toggle */}
+                    {sig.items.length > 0 && (
+                      <button
+                        onClick={() => setExpandedSig(isExpanded ? null : sig.key)}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, color: color, cursor: 'pointer', fontFamily: 'var(--font-mono)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        {isExpanded ? '▲' : '▼'} {sig.items.length} item{sig.items.length !== 1 ? 's' : ''}
+                      </button>
+                    )}
+                    {/* Expanded items */}
+                    {isExpanded && (
+                      <div style={{ borderTop: `1px solid ${C.soft}`, paddingTop: 8, display: 'grid', gap: 6 }}>
+                        {sig.items.map(item => {
+                          const row = decisionRows.find(r => r.id === item.id);
+                          return (
+                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 500, color: C.ink }}>{item.label}</div>
+                                <div style={{ fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)', marginTop: 2 }}>{item.detail}</div>
+                                {item.pts > 0 && <div style={{ fontSize: 10, color: color, fontFamily: 'var(--font-mono)', marginTop: 2 }}>+{item.pts} pts</div>}
+                              </div>
+                              {row && (
+                                <button
+                                  onClick={row.onAction}
+                                  style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '4px 10px', border: `1px solid ${C.forest}`, borderRadius: 6, background: C.forest, color: '#FFF', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                >
+                                  {row.actionLabel} →
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── By Client ── */}
+          {tab === 'client' && (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {pressure.clients.length === 0 ? (
+                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>No active client signals.</p>
+              ) : pressure.clients.map(client => {
+                const isExpanded = expandedClient === client.clientId;
+                const level = client.score >= 40 ? 'high' : client.score >= 20 ? 'med' : 'low';
+                const dotColor = level === 'high' ? C.danger : level === 'med' ? C.gold : C.teal;
+                const clientRows = decisionRows.filter(r => r.clientId === client.clientId);
+                return (
+                  <div key={client.clientId} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, background: '#fbf8f0', overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setExpandedClient(isExpanded ? null : client.clientId)}
+                      style={{ width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', textAlign: 'left' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 999, background: dotColor, flexShrink: 0 }} />
+                        <strong style={{ fontSize: 13, color: C.ink }}>{client.clientName}</strong>
+                        <div style={{ display: 'flex', gap: 10, fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)' }}>
+                          {client.hardDeadlineDays != null && <span style={{ color: C.danger }}>⚑ {client.hardDeadlineDays}d</span>}
+                          {client.budgetPct != null && <span style={{ color: C.gold }}>⬡ {client.budgetPct.toFixed(0)}%</span>}
+                          {client.wipUsd > 0 && <span>${client.wipUsd.toLocaleString()}</span>}
+                          {client.silenceDays != null && <span>{client.silenceDays}d silent</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: dotColor }}>{client.score}</span>
+                        <span style={{ fontSize: 11, color: C.muted }}>{isExpanded ? '▲' : '▼'}</span>
+                      </div>
+                    </button>
+                    {isExpanded && clientRows.length > 0 && (
+                      <div style={{ borderTop: `1px solid ${C.soft}`, padding: '10px 14px', display: 'grid', gap: 8 }}>
+                        {clientRows.map(row => (
+                          <div key={row.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                <GateBadge gate={row.gate} />
+                                <span style={{ fontSize: 12, fontWeight: 500, color: C.ink }}>{row.title}</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontFamily: 'var(--font-mono)' }}>{row.description.slice(0, 72)}</div>
+                            </div>
+                            <button
+                              onClick={row.onAction}
+                              style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '5px 12px', border: `1px solid ${C.forest}`, borderRadius: 6, background: C.forest, color: '#FFF', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              Open →
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {isExpanded && clientRows.length === 0 && (
+                      <div style={{ borderTop: `1px solid ${C.soft}`, padding: '10px 14px' }}>
+                        <span style={{ fontSize: 12, color: C.muted }}>No open action items.</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Intel tabs */}
-      <div style={{ padding: 15, display: 'grid', gap: 13 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 7 }}>
-          {(['pressure', 'audit', 'agents'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={tabBtn(t)}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'pressure' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+      {/* ── Score formula (collapsible, full width) ── */}
+      {showFormula && (
+        <div style={{ borderTop: `1px solid ${C.line}`, padding: '14px 18px', background: C.forest }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 10 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.auditMuted }}>Score formula</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6 }}>
             {[
-              {
-                label: 'Deadline horizon',
-                value: pressure.deadlineDays != null ? `${pressure.deadlineDays} days` : '—',
-                hint:  'Hard legal date unconfirmed.',
-                pct:   pressure.deadlineDays != null ? Math.max(0, 100 - pressure.deadlineDays * 5) : 0,
-                barType: 'hot',
-              },
-              {
-                label: 'Budget pressure',
-                value: pressure.budgetPct != null ? `${pressure.budgetPct.toFixed(0)}%` : '—',
-                hint:  'Retainer utilization.',
-                pct:   pressure.budgetPct ?? 0,
-                barType: 'gold',
-              },
-              {
-                label: 'WIP exposure',
-                value: pressure.wipUsd > 0 ? `$${pressure.wipUsd.toLocaleString()}` : '—',
-                hint:  'Pending approval.',
-                pct:   Math.min((pressure.wipUsd / 6000) * 100, 100),
-                barType: 'gold',
-              },
-              {
-                label: 'Client silence',
-                value: pressure.silenceDays != null ? `${pressure.silenceDays} days` : '—',
-                hint:  'Outreach staged.',
-                pct:   pressure.silenceDays != null ? Math.min((pressure.silenceDays / 30) * 100, 100) : 0,
-                barType: 'teal',
-              },
-            ].map(({ label, value, hint, pct, barType }) => (
-              <div key={label} style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted, fontSize: 10 }}>{label}</span>
-                <strong style={{ fontSize: 18, color: C.ink }}>{value}</strong>
-                <p style={{ margin: 0, color: C.muted, fontSize: 12, lineHeight: 1.35 }}>{hint}</p>
-                <div style={{ height: 7, borderRadius: 999, background: '#DFE5DC', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: barType === 'hot' ? C.danger : barType === 'gold' ? C.gold : C.teal }} />
-                </div>
+              ['HARD_LEGAL ≤7d, unconfirmed', '38 pts'],
+              ['HARD_LEGAL ≤7d', '30 pts'],
+              ['HARD_LEGAL ≤14d', '18 pts'],
+              ['HARD_CONTRACTUAL ≤7d', '20 pts'],
+              ['Budget ≥75%', '15 pts'],
+              ['Budget ≥90%', '22 pts'],
+              ['Client silence ≥14d', '12 pts'],
+              ['Client silence ≥21d', '18 pts'],
+              ['WIP ≥$2,000', '6 pts'],
+              ['WIP ≥$4,000', '10 pts'],
+              ['Critical anomaly', '+5 pts each'],
+            ].map(([label, pts]) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: 11, color: C.auditMuted }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: C.brass, flexShrink: 0 }}>{pts}</span>
               </div>
             ))}
           </div>
-        )}
-
-        {tab === 'audit' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-            {metricCard('Write path', 'tools only', 'Agents never write Firestore.')}
-            {metricCard('Receipts',   '12',         'Actor, entity, timestamp, before/after.')}
-            {metricCard('Lock',       'expected',   'Optimistic status checked on every write.')}
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid rgba(214,193,129,.18)`, display: 'grid', gap: 4 }}>
+            {pressure.scoreBreakdown.map((item, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11 }}>
+                <span style={{ color: C.auditMuted }}>{item.label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: C.brass, flexShrink: 0 }}>+{item.pts}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12, fontWeight: 600, paddingTop: 6, borderTop: `1px solid rgba(214,193,129,.18)` }}>
+              <span style={{ color: C.brass, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
+              <span style={{ color: C.brass, fontFamily: 'var(--font-mono)' }}>{pressure.score} / 100</span>
+            </div>
           </div>
-        )}
-
-        {tab === 'agents' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-            {metricCard('Python',      '31 checks',   'Routing, state, math, scoring.')}
-            {metricCard('Gemini',      'drafts only', 'Narrative for human review.')}
-            {metricCard('Coordinator', 'router',      'No LLM routing decisions.')}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -1261,7 +1508,7 @@ export function DailyCloseoutBrief() {
                 </span>
               </div>
 
-              {activeView === 'docket' && <PressureSection pressure={pressure} />}
+              {activeView === 'docket' && <PressureSection pressure={pressure} decisionRows={decisionRows} />}
 
               {/* Decision docket / filtered view */}
               <section style={{ border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
