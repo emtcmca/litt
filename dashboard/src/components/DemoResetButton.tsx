@@ -40,7 +40,7 @@ export function DemoResetButton({ firmId, onReset }: Props) {
           cursor: loading ? 'not-allowed' : 'pointer',
           opacity: loading ? 0.6 : 1,
           fontWeight: 400,
-          fontFamily: 'var(--font-mono)',
+          fontFamily: 'var(--font-sans)',
           transition: 'background 0.15s',
         }}
       >

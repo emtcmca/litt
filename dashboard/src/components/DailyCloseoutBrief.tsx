@@ -878,7 +878,7 @@ function DecisionRowItem({
       <GateBadge gate={row.gate} />
 
       <div>
-        <h3 style={{ margin: 0, fontSize: 16, lineHeight: 1.2, color: isReceipted ? '#F5F0DC' : C.ink }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.2, color: isReceipted ? '#F5F0DC' : C.ink }}>
           {row.title}
         </h3>
         <p style={{ margin: '5px 0 0', color: isReceipted ? C.auditMuted : C.muted, fontSize: 13, lineHeight: 1.35 }}>
@@ -1521,7 +1521,7 @@ export function DailyCloseoutBrief() {
                   fontWeight:   500,
                   fontSize:     12,
                   whiteSpace:   'nowrap',
-                  fontFamily:   'var(--font-mono)',
+                  fontFamily:   'var(--font-sans)',
                   textDecoration: 'none',
                   display:      'inline-flex',
                   alignItems:   'center',
@@ -1542,7 +1542,7 @@ export function DailyCloseoutBrief() {
                   fontSize:     12,
                   cursor:       'pointer',
                   whiteSpace:   'nowrap',
-                  fontFamily:   'var(--font-mono)',
+                  fontFamily:   'var(--font-sans)',
                 }}
                 title="Export all approved time entries as LEDES 1998B"
               >
@@ -1559,7 +1559,7 @@ export function DailyCloseoutBrief() {
                   padding:      '11px 15px',
                   fontWeight:   700,
                   fontSize:     13,
-                  fontFamily:   'var(--font-mono)',
+                  fontFamily:   'var(--font-sans)',
                   cursor:       sweeping ? 'not-allowed' : 'pointer',
                   opacity:      sweeping ? 0.82 : 1,
                   whiteSpace:   'nowrap',
