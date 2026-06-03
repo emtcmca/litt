@@ -317,6 +317,39 @@ class DeadlineAgent:
                 ),
             ))
 
+            # Write actionable escalation so conflict_flagged deadlines surface in the brief
+            idem_conflict = f"sweep-dl-conflict-esc-{deadline_id}"
+            urgency_str = f"{(date.fromisoformat(str(dl.get('due_date', ''))[:10]) - today).days}d" if dl.get("due_date") else "unknown"
+            conflict_outcome = log_escalation(
+                firm_id=firm_id,
+                escalation_type=EscalationType.DEADLINE.value,
+                entity_id=deadline_id,
+                routed_to="dana-strand",
+                actor="system",
+                idempotency_key=idem_conflict,
+                what_is_happening=(
+                    f"Source conflict: {description} ({urgency_str} out). "
+                    f"Deadline sourced from opposing counsel communication only — "
+                    f"no confirming court order found in firm records."
+                ),
+                why_it_matters=(
+                    f"An unverified deadline carries the same malpractice risk as a confirmed one. "
+                    f"Litt cannot confirm or deny this deadline without attorney review."
+                ),
+                what_litt_has_done=(
+                    f"Extracted deadline date from source email via Gemini "
+                    f"(confidence: {confidence:.0%}). No Firestore write pending attorney review."
+                ),
+                what_attorney_must_decide=(
+                    f"Confirm this deadline is accurate and binding, or dismiss with a documented reason."
+                ),
+                risk_level="CRITICAL",
+                matter_id=dl.get("matter_id"),
+                priority=5,
+            )
+            if hasattr(conflict_outcome, "entity_id"):
+                escalations_created.append(conflict_outcome.entity_id)
+
         # -----------------------------------------------------------------------
         # Summary observation
         # -----------------------------------------------------------------------

@@ -50,6 +50,7 @@ class BriefDeadlineItem(BaseModel):
     court: Optional[str] = None
     jurisdiction: Optional[str] = None
     detected_at: Optional[str] = None          # ISO datetime when ingested
+    conflict_detail: Optional[str] = None      # set when verification_status=conflict_flagged
 
 
 class DeadlineSection(BaseModel):

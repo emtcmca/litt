@@ -132,7 +132,7 @@ def seed_firm_data(db=None) -> None:
         "billing_contact": "James Whitfield",
         "billing_email": "jwhitfield@acme-commercial.com",
         "billing_address": "500 Main St, Chicago, IL 60601",
-        "arrangement": "hourly", "budget_cap": 15000, "budget_billed": 11000,
+        "arrangement": "hourly", "budget_cap": 15000, "budget_billed": 13100,
         "retainer_balance": 800, "retainer_refill_threshold": 1000,
         "ledes_client_id": "ACME-COM-001", "client_matter_id_prefix": "ACME",
         "last_client_contact": _dt(2026, 5, 21),
@@ -151,7 +151,7 @@ def seed_firm_data(db=None) -> None:
         "arrangement": "hourly", "budget_cap": 25000, "budget_billed": 8000,
         "retainer_balance": None, "retainer_refill_threshold": None,
         "ledes_client_id": "MERCER-001", "client_matter_id_prefix": "MERCER",
-        "last_client_contact": _dt(2026, 5, 22),
+        "last_client_contact": _dt(2026, 5, 9),  # 20 days before demo date — triggers silence
         "client_silence_threshold_days": 14,
         "billing_guidelines": default_guidelines,
         "engagement_terms": {**default_terms, "budget_cap": 25000},
@@ -199,7 +199,7 @@ def seed_firm_data(db=None) -> None:
         "type": "litigation", "status": "ACTIVE",
         "assigned_attorneys": ["dana-strand", "kofi-okafor"],
         "opened_at": _dt(2026, 1, 20), "last_activity": _dt(2026, 5, 28),
-        "last_client_contact": _dt(2026, 5, 22),
+        "last_client_contact": _dt(2026, 5, 9),  # 20 days before demo date
         "created_at": _dt(2026, 1, 20), "updated_at": DEMO_DT,
     })
     _col(db, "matters").document("reyes-acquisition").set({
@@ -320,7 +320,40 @@ def seed_firm_data(db=None) -> None:
             "activity_log": [], "write_down_record": None, "write_off_record": None,
             "version": 1, "created_at": _dt(2026, 5, 28, 11), "updated_at": _dt(2026, 5, 28, 11),
         },
-        {   # te-006: APPROVED, pushes acme to 78%
+        {   # te-010: PENDING, AI-assisted, NO disclosure status — triggers AI_DISCLOSURE_GAP
+            "id": "te-010", "firm_id": FIRM_ID, "matter_id": "acme-contract-review-2026",
+            "client_id": "acme-commercial", "attorney_id": "dana-strand",
+            "entry_date": "2026-05-27", "hours": 1.5, "rate": 350, "amount": 525.00,
+            "session_minutes_actual": 62, "billing_increment": 0.1,
+            "task_code": "A100", "activity_code": "A104", "expense_code": None,
+            "narrative": "Analyzed three vendor data-processing addenda using Gemini-assisted clause extraction; summarized compliance gaps against Acme standard requirements and prepared markup recommendations.",
+            "status": "PENDING", "invoice_id": None,
+            "ai_assisted": True, "ai_tool": "Gemini", "model": "gemini-2.5-pro", "ai_cost_usd": 0.14,
+            "human_minutes_actual": 62, "ai_minutes_estimated": 11,
+            "output_type": "analysis", "human_review_completed": True,
+            "reviewing_attorney_id": "dana-strand", "client_ai_disclosure_required": True,
+            "client_ai_disclosure_status": None,  # NOT SET — anomaly_agent fires AI_DISCLOSURE_GAP
+            "billing_treatment": None,
+            "activity_log": [], "write_down_record": None, "write_off_record": None,
+            "version": 1, "created_at": _dt(2026, 5, 27, 14), "updated_at": _dt(2026, 5, 27, 14),
+        },
+        {   # te-011: PENDING, duplicate of te-001 — same attorney/matter/date/hours
+            "id": "te-011", "firm_id": FIRM_ID, "matter_id": "mercer-v-dunlap",
+            "client_id": "mercer-industries", "attorney_id": "dana-strand",
+            "entry_date": "2026-05-27", "hours": 1.4, "rate": 350, "amount": 490.00,
+            "session_minutes_actual": None, "billing_increment": 0.1,
+            "task_code": "L200", "activity_code": None, "expense_code": None,
+            "narrative": "Continued review of MSJ opposition brief; researched procedural posture on summary judgment standard in Cuyahoga County.",
+            "status": "PENDING", "invoice_id": None,
+            "ai_assisted": False, "ai_tool": None, "model": None, "ai_cost_usd": None,
+            "human_minutes_actual": None, "ai_minutes_estimated": None,
+            "output_type": None, "human_review_completed": False,
+            "reviewing_attorney_id": None, "client_ai_disclosure_required": False,
+            "client_ai_disclosure_status": None, "billing_treatment": None,
+            "activity_log": [], "write_down_record": None, "write_off_record": None,
+            "version": 1, "created_at": _dt(2026, 5, 27, 17, 30), "updated_at": _dt(2026, 5, 27, 17, 30),
+        },
+        {   # te-006: APPROVED — committed = 13100 billed + 700 unbilled = 13800 / 15000 = 92% CRITICAL
             "id": "te-006", "firm_id": FIRM_ID, "matter_id": "acme-contract-review-2026",
             "client_id": "acme-commercial", "attorney_id": "dana-strand",
             "entry_date": "2026-05-22", "hours": 2.0, "rate": 350, "amount": 700.00,

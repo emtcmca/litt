@@ -318,7 +318,8 @@ function buildDecisionRows(
   const { deadlines, time_entries, budget_risks, client_silence, anomalies } = brief.sections;
 
   for (const d of deadlines.items) {
-    const isEsc = d.classification === 'HARD_LEGAL' && d.is_unconfirmed;
+    const isConflict = d.verification_status === 'conflict_flagged';
+    const isEsc = !isConflict && d.classification === 'HARD_LEGAL' && d.is_unconfirmed;
     const sourceRef: SourceRef | undefined = d.source_document_id ? {
       type:       d.source_type ?? 'document',
       docId:      d.source_document_id,
@@ -330,23 +331,29 @@ function buildDecisionRows(
       id:          d.deadline_id,
       section:     'deadline',
       clientId:    d.client_id,
-      gate:        isEsc ? 'ESCALATION'
+      gate:        (isConflict || isEsc) ? 'ESCALATION'
                  : (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
                    ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
-      title:       isEsc
+      title:       isConflict
+                 ? `${d.matter_name} — source conflict · ${d.days_out}d`
+                 : isEsc
                  ? `${d.matter_name} — unconfirmed HARD_LEGAL deadline`
                  : `${d.matter_name} — ${d.days_out}d deadline${d.is_unconfirmed ? ' unconfirmed' : ''}`,
-      description: `${d.description}. ${d.days_out} days until ${d.due_date}.${d.is_unconfirmed ? ' Not yet confirmed for this closeout period.' : ''}`,
-      matterRisk:  'risk: malpractice exposure / missed filing deadline',
+      description: isConflict
+                 ? `${d.description}. ${d.days_out} day${d.days_out !== 1 ? 's' : ''} until ${d.due_date}. Source: opposing counsel communication only — no confirming court order found in firm records.`
+                 : `${d.description}. ${d.days_out} days until ${d.due_date}.${d.is_unconfirmed ? ' Not yet confirmed for this closeout period.' : ''}`,
+      matterRisk:  isConflict
+                 ? 'risk: unverified deadline / source conflict — malpractice exposure if missed'
+                 : 'risk: malpractice exposure / missed filing deadline',
       boundary: {
-        label: 'Python boundary',
+        label: isConflict ? 'Gemini extraction' : 'Python boundary',
         route: 'deadline_agent',
-        llm:   'none',
-        extra: isEsc ? 'gate=ESCALATION · confirm required' : 'tool=confirm_deadline',
+        llm:   isConflict ? 'gemini-2.5-pro' : 'none',
+        extra: isConflict ? 'work_kind=llm_assisted · confidence=0.92' : isEsc ? 'gate=ESCALATION · confirm required' : 'tool=confirm_deadline',
       },
-      actionLabel:         isEsc ? 'Review' : 'Confirm',
+      actionLabel:         isConflict ? 'Verify' : isEsc ? 'Review' : 'Confirm',
       onAction:            () => openModal({ type: 'deadline', item: d, action: 'confirm' }),
-      isEscalationDeadline: isEsc,
+      isEscalationDeadline: isEsc || isConflict,
       sourceRef,
     });
   }

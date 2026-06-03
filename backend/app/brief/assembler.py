@@ -96,7 +96,8 @@ def _build_deadlines_section(
     for dl in deadlines:
         if dl.get("status") != "ACTIVE":
             continue
-        if dl.get("verification_status") != "attorney_verified":
+        vs = dl.get("verification_status", "")
+        if vs not in ("attorney_verified", "conflict_flagged"):
             continue
 
         due_date = _parse_date(dl.get("due_date"))
@@ -133,6 +134,7 @@ def _build_deadlines_section(
             court=dl.get("court"),
             jurisdiction=dl.get("jurisdiction"),
             detected_at=detected_dt.isoformat() if detected_dt else None,
+            conflict_detail=dl.get("conflict_detail") if vs == "conflict_flagged" else None,
         ))
 
     items.sort(key=lambda x: x.days_out)

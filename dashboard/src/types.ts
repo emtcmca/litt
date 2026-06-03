@@ -41,6 +41,7 @@ export interface BriefDeadlineItem {
   court: string | null;
   jurisdiction: string | null;
   detected_at: string | null;
+  conflict_detail: string | null;
 }
 
 export interface DeadlineSection {
