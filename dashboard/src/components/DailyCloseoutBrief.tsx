@@ -1552,6 +1552,7 @@ export function DailyCloseoutBrief() {
                   padding:      '11px 15px',
                   fontWeight:   700,
                   fontSize:     13,
+                  fontFamily:   'var(--font-mono)',
                   cursor:       sweeping ? 'not-allowed' : 'pointer',
                   opacity:      sweeping ? 0.82 : 1,
                   whiteSpace:   'nowrap',

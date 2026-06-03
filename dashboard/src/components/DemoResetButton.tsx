@@ -31,8 +31,8 @@ export function DemoResetButton({ firmId, onReset }: Props) {
         onClick={handleReset}
         disabled={loading}
         style={{
-          fontSize: 13,
-          padding: '6px 12px',
+          fontSize: 12,
+          padding: '10px 14px',
           background: 'var(--color-background-warning)',
           color: 'var(--color-text-warning)',
           border: '0.5px solid var(--color-border-warning)',
@@ -40,6 +40,7 @@ export function DemoResetButton({ firmId, onReset }: Props) {
           cursor: loading ? 'not-allowed' : 'pointer',
           opacity: loading ? 0.6 : 1,
           fontWeight: 400,
+          fontFamily: 'var(--font-mono)',
           transition: 'background 0.15s',
         }}
       >
