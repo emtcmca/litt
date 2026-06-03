@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { BriefDeadlineItem, ToolResult } from '../../types';
-import { confirmDeadline, extendDeadline, dismissDeadline } from '../../api';
+import type { BriefDeadlineItem, SourceEmail, ToolResult } from '../../types';
+import { confirmDeadline, extendDeadline, dismissDeadline, verifyDeadline, getSourceEmail } from '../../api';
 
-export type DeadlineAction = 'confirm' | 'extend' | 'dismiss';
+export type DeadlineAction = 'confirm' | 'verify' | 'extend' | 'dismiss';
 
 interface Props {
   item: BriefDeadlineItem;
@@ -45,6 +45,9 @@ function inputStyle(focused: boolean) {
 
 export function DeadlineModal({ item, action: initialAction, firmId, attorneyId, onClose, onSuccess }: Props) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const isConflict = item.verification_status === 'conflict_flagged';
+  const tabs: DeadlineAction[] = isConflict ? ['verify', 'extend', 'dismiss'] : ['confirm', 'extend', 'dismiss'];
+
   const [activeAction, setActiveAction] = useState<DeadlineAction>(initialAction);
   const [newDueDate, setNewDueDate] = useState('');
   const [reason, setReason] = useState('');
@@ -53,14 +56,38 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
   const [focusDate, setFocusDate] = useState(false);
   const [focusReason, setFocusReason] = useState(false);
 
+  // Source email viewer state
+  const [showEmail, setShowEmail] = useState(false);
+  const [emailData, setEmailData] = useState<SourceEmail | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   const action = activeAction;
-  const title = { confirm: 'Confirm deadline', extend: 'Extend deadline', dismiss: 'Dismiss deadline' }[action];
+  const titleMap: Record<DeadlineAction, string> = {
+    confirm: 'Confirm deadline',
+    verify:  'Verify deadline',
+    extend:  'Extend deadline',
+    dismiss: 'Dismiss deadline',
+  };
+  const title = titleMap[action] ?? 'Deadline';
   const badge = CLASS_BADGE_STYLE[item.classification] ?? { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 };
   const titleId = 'deadline-modal-title';
 
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-  }, []);
+  useEffect(() => { closeButtonRef.current?.focus(); }, []);
+
+  async function handleLoadEmail() {
+    if (emailData) { setShowEmail(v => !v); return; }
+    if (!item.source_document_id) return;
+    setEmailLoading(true);
+    setEmailError(null);
+    try {
+      const data = await getSourceEmail(firmId, item.source_document_id);
+      setEmailData(data);
+      setShowEmail(true);
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : 'Failed to load source email');
+    } finally { setEmailLoading(false); }
+  }
 
   async function handleSubmit() {
     if (action === 'extend' && (!newDueDate || !reason.trim())) { setError('New date and reason required'); return; }
@@ -69,7 +96,9 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
     setError(null);
     try {
       let result;
-      if (action === 'confirm') {
+      if (action === 'verify') {
+        result = await verifyDeadline({ firm_id: firmId, attorney_id: attorneyId, deadline_id: item.deadline_id, expected_version: item.version, idempotency_key: `verify-${item.deadline_id}-${Date.now()}` });
+      } else if (action === 'confirm') {
         result = await confirmDeadline({ firm_id: firmId, attorney_id: attorneyId, deadline_id: item.deadline_id, expected_version: item.version, idempotency_key: `confirm-${item.deadline_id}-${Date.now()}` });
       } else if (action === 'extend') {
         result = await extendDeadline({ firm_id: firmId, attorney_id: attorneyId, deadline_id: item.deadline_id, new_due_date: newDueDate, reason, expected_version: item.version, idempotency_key: `extend-${item.deadline_id}-${Date.now()}` });
@@ -77,7 +106,7 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
         result = await dismissDeadline({ firm_id: firmId, attorney_id: attorneyId, deadline_id: item.deadline_id, reason, expected_version: item.version, idempotency_key: `dismiss-${item.deadline_id}-${Date.now()}` });
       }
       if (result.success) { onSuccess(result, item.deadline_id); }
-      else { setError(result.message ?? 'Action failed'); }
+      else { setError((result as { message?: string }).message ?? 'Action failed'); }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Request failed');
     } finally { setLoading(false); }
@@ -85,38 +114,43 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} style={{ maxWidth: 540, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} style={{ maxWidth: 580, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 id={titleId} style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2 id={titleId} style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
+            {isConflict && (
+              <span style={{ background: '#FFF3CD', color: '#856404', border: '0.5px solid #FFCA2C', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                SOURCE CONFLICT
+              </span>
+            )}
+          </div>
           <button ref={closeButtonRef} onClick={onClose} aria-label="Close dialog" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: 24 }}>
+        {/* Scrollable body */}
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+
           {/* Action tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-            {(['confirm', 'extend', 'dismiss'] as DeadlineAction[]).map(a => (
+            {tabs.map(a => (
               <button
                 key={a}
                 onClick={() => { setActiveAction(a); setError(null); setNewDueDate(''); setReason(''); }}
                 style={{
-                  flex: 1,
-                  padding: '7px 4px',
-                  fontSize: 12,
+                  flex: 1, padding: '7px 4px', fontSize: 12,
                   fontWeight: activeAction === a ? 600 : 400,
-                  fontFamily: 'var(--font-mono)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
+                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
                   border: `1px solid ${activeAction === a
-                    ? (a === 'dismiss' ? 'var(--color-border-danger)' : 'var(--color-border-info)')
+                    ? (a === 'dismiss' ? 'var(--color-border-danger)' : a === 'verify' ? 'var(--color-border-warning)' : 'var(--color-border-info)')
                     : 'var(--color-border-tertiary)'}`,
                   borderRadius: 'var(--border-radius-md)',
                   background: activeAction === a
-                    ? (a === 'dismiss' ? 'var(--color-background-danger)' : 'var(--color-background-info)')
+                    ? (a === 'dismiss' ? 'var(--color-background-danger)' : a === 'verify' ? 'var(--color-background-warning)' : 'var(--color-background-info)')
                     : 'transparent',
                   color: activeAction === a
-                    ? (a === 'dismiss' ? 'var(--color-text-danger)' : 'var(--color-text-info)')
+                    ? (a === 'dismiss' ? 'var(--color-text-danger)' : a === 'verify' ? 'var(--color-text-warning)' : 'var(--color-text-info)')
                     : 'var(--color-text-secondary)',
                   cursor: 'pointer',
                 }}
@@ -140,6 +174,8 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
               <span><span style={{ color: 'var(--color-text-secondary)' }}>Days out:</span> <span style={{ fontWeight: 500 }}>{item.days_out}</span></span>
               <span><span style={{ color: 'var(--color-text-secondary)' }}>Matter:</span> <span style={{ fontWeight: 500 }}>{item.matter_name}</span></span>
             </div>
+
+            {/* Source citation */}
             {item.source_document_id && (
               <div style={{ marginTop: 12, borderTop: '0.5px solid var(--color-border-tertiary)', paddingTop: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
@@ -154,17 +190,66 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
                   </span>
                 </div>
                 {item.source_excerpt && (
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5, borderLeft: '2px solid var(--color-border-success)', paddingLeft: 8 }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5, borderLeft: '2px solid var(--color-border-success)', paddingLeft: 8 }}>
                     "{item.source_excerpt}"
                   </p>
                 )}
+                {/* View source email toggle — only for email source type */}
+                {item.source_type === 'email' && (
+                  <button
+                    onClick={handleLoadEmail}
+                    disabled={emailLoading}
+                    style={{ fontSize: 12, fontFamily: 'var(--font-mono)', background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 4, padding: '3px 8px', cursor: emailLoading ? 'not-allowed' : 'pointer', color: 'var(--color-text-secondary)', opacity: emailLoading ? 0.6 : 1 }}
+                  >
+                    {emailLoading ? 'Loading…' : showEmail ? '▲ Hide source email' : '▼ View source email'}
+                  </button>
+                )}
+                {emailError && <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--color-text-danger)' }}>{emailError}</p>}
+              </div>
+            )}
+
+            {/* Source email viewer */}
+            {showEmail && emailData && (
+              <div style={{ marginTop: 12, border: '1px solid var(--color-border-tertiary)', borderRadius: 8, overflow: 'hidden' }}>
+                {/* Email header */}
+                <div style={{ background: 'var(--color-background-tertiary)', padding: '10px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+                  {[
+                    { label: 'From', value: emailData.from_name ? `${emailData.from_name} <${emailData.from_address}>` : (emailData.from_address ?? '—') },
+                    { label: 'To',   value: emailData.to_address ?? '—' },
+                    { label: 'Subj', value: emailData.subject ?? '—' },
+                    { label: 'Date', value: emailData.received_at ? emailData.received_at.slice(0, 16).replace('T', ' ') + ' UTC' : '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ display: 'flex', gap: 10, fontSize: 12, marginBottom: 3 }}>
+                      <span style={{ width: 32, flexShrink: 0, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', fontSize: 10, paddingTop: 1 }}>{label}</span>
+                      <span style={{ color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Gemini extraction badge */}
+                <div style={{ padding: '6px 14px', background: '#FFFBEB', borderBottom: '0.5px solid #FDE68A', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Gemini 2.5 Pro</span>
+                  <span style={{ fontSize: 11, color: '#78350F' }}>Extracted deadline from this email — confidence: 0.92 — no confirming court order found</span>
+                </div>
+                {/* Email body */}
+                <pre style={{ margin: 0, padding: '12px 14px', fontSize: 12, fontFamily: 'var(--font-sans)', lineHeight: 1.6, color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: 'var(--color-background-primary)', maxHeight: 220, overflowY: 'auto' }}>
+                  {emailData.body}
+                </pre>
               </div>
             )}
           </div>
 
-          {action === 'confirm' && (
+          {/* Conflict detail notice */}
+          {isConflict && item.conflict_detail && action !== 'dismiss' && (
+            <div style={{ background: 'var(--color-background-warning)', border: '0.5px solid var(--color-border-warning)', borderRadius: 'var(--border-radius-md)', padding: '12px 14px', marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-warning)', lineHeight: 1.5 }}>{item.conflict_detail}</p>
+            </div>
+          )}
+
+          {(action === 'verify' || action === 'confirm') && (
             <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
-              Confirming this deadline logs your review to the audit trail with actor, entity, timestamp, and before/after state. Use Extend if the date is changing.
+              {action === 'verify'
+                ? 'Verifying this deadline accepts the source email as sufficient authority and marks it as attorney-verified. The next sweep will process it under the normal escalation cadence. This action is logged to the audit trail.'
+                : 'Confirming this deadline logs your review to the audit trail with actor, entity, timestamp, and before/after state. Use Extend if the date is changing.'}
             </p>
           )}
 
@@ -192,11 +277,21 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-secondary)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div style={{ padding: '14px 24px', borderTop: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-secondary)', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
           <button onClick={onClose} style={{ padding: '8px 18px', fontSize: 14, background: 'transparent', border: '0.5px solid var(--color-border-secondary)', borderRadius: 'var(--border-radius-md)', cursor: 'pointer', color: 'var(--color-text-primary)', fontWeight: 400 }}>
             Cancel
           </button>
-          <button onClick={handleSubmit} disabled={loading} style={{ padding: '8px 18px', fontSize: 14, fontWeight: 500, background: action === 'dismiss' ? 'transparent' : 'var(--color-action-primary)', color: action === 'dismiss' ? 'var(--color-text-danger)' : 'var(--color-action-primary-text)', border: action === 'dismiss' ? '0.5px solid var(--color-border-danger)' : 'none', borderRadius: 'var(--border-radius-md)', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            style={{
+              padding: '8px 18px', fontSize: 14, fontWeight: 500, borderRadius: 'var(--border-radius-md)',
+              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
+              background: action === 'dismiss' ? 'transparent' : action === 'verify' ? 'var(--color-ramp-amber-600)' : 'var(--color-action-primary)',
+              color: action === 'dismiss' ? 'var(--color-text-danger)' : '#FFFFFF',
+              border: action === 'dismiss' ? '0.5px solid var(--color-border-danger)' : 'none',
+            }}
+          >
             {loading ? 'Saving…' : title}
           </button>
         </div>

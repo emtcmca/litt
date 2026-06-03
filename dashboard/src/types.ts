@@ -217,8 +217,31 @@ export interface SweepRunResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Source email (for conflict_flagged deadline viewer)
+// ---------------------------------------------------------------------------
+
+export interface SourceEmail {
+  id: string;
+  from_address: string | null;
+  from_name: string | null;
+  to_address: string | null;
+  subject: string | null;
+  received_at: string | null;
+  body: string | null;
+  source_system: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Action requests
 // ---------------------------------------------------------------------------
+
+export interface DeadlineVerifyRequest {
+  firm_id: string;
+  attorney_id: string;
+  deadline_id: string;
+  expected_version?: number;
+  idempotency_key: string;
+}
 
 export interface DeadlineConfirmRequest {
   firm_id: string;

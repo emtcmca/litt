@@ -17,9 +17,11 @@ import type {
   DeadlineConfirmRequest,
   DeadlineDismissRequest,
   DeadlineExtendRequest,
+  DeadlineVerifyRequest,
   DemoReadyResponse,
   DemoResetResponse,
   ScrubberFlag,
+  SourceEmail,
   SweepRunResponse,
 } from "./types";
 
@@ -68,6 +70,14 @@ export function runSweep(firmId: string): Promise<SweepRunResponse> {
 
 export function confirmDeadline(req: DeadlineConfirmRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/deadline/confirm", req);
+}
+
+export function verifyDeadline(req: DeadlineVerifyRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/deadline/verify", req);
+}
+
+export function getSourceEmail(firmId: string, emailId: string): Promise<SourceEmail> {
+  return get<SourceEmail>(`/source-email/${emailId}`, { firm_id: firmId });
 }
 
 export function extendDeadline(req: DeadlineExtendRequest): Promise<ActionResult> {
@@ -128,6 +138,23 @@ export function queueComm(req: CommsQueueRequest): Promise<ActionResult> {
 
 export function dismissComm(req: CommsDismissRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/comms/dismiss", req);
+}
+
+// ---------------------------------------------------------------------------
+// LEDES export — returns raw text for download
+// ---------------------------------------------------------------------------
+
+export async function downloadLedesExport(firmId: string): Promise<void> {
+  const res = await fetch(`/api/billing/ledes-export?firm_id=${encodeURIComponent(firmId)}`);
+  if (!res.ok) throw new Error(`LEDES export failed: ${res.statusText}`);
+  const text = await res.text();
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `strand-okafor-ledes-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------

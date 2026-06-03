@@ -38,7 +38,7 @@
 | All Firestore collections with `firm_id` | SHIPS REAL | firms/{firm_id}/collection/{id} |
 | Pydantic models (models.py) | SHIPS REAL | Canonical type definitions |
 | TypeScript types (types.ts) | SHIPS REAL | Mirror of Pydantic models |
-| Seed data script (seed_demo.py) | SHIPS REAL | Idempotent, strand-okafor |
+| Seed data script (seed_demo.py) | SHIPS REAL | Idempotent, strand-okafor — expanded corpus: AI_DISCLOSURE_GAP (te-010), DUPLICATE_ENTRY_CANDIDATE (te-011), Budget CRITICAL (acme 92%), multi-signal Mercer (silence + deadline + billing), Rivera conflict_flagged in brief |
 | Demo reset script (reset_demo.py) | SHIPS REAL | Deletes + re-seeds firm data |
 | Demo readiness check | SHIPS REAL | GET /api/demo/ready |
 | Demo clock (LITT_DEMO_DATE) | SHIPS REAL | Every date call uses config.get_effective_date() |
@@ -96,6 +96,7 @@
 | Billing sub-agent | SHIPS REAL | Thin ADK wrapper around deterministic tools |
 | Deadline sub-agent | SHIPS REAL | Thin ADK wrapper |
 | Comms sub-agent (draft generation) | SHIPS REAL | FactPacket → Gemini → validated draft |
+| Conflict-flagged deadline extraction | SHIPS REAL | deadline_agent calls Gemini to extract date from source email; conflict_flagged deadlines surface in brief with source email viewer |
 | Anomaly sub-agent | SHIPS REAL | Fully deterministic detectors |
 | Pause-and-wait pattern | SHIPS REAL | PAUSED_AWAITING_INPUT workflow state |
 | Multi-agent parallel execution | SHIPS REAL | For compound signals on same matter |
@@ -140,7 +141,7 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Daily Closeout Brief homepage | SHIPS REAL | Primary demo surface |
-| Deadline action modal | SHIPS REAL | Confirm / Extend / Dismiss with reason |
+| Deadline action modal | SHIPS REAL | Confirm / Verify / Extend / Dismiss; Verify action for conflict_flagged deadlines calls verify_deadline tool |
 | WIP review modal | SHIPS REAL | Approve / Write down / Write off |
 | Client comms draft review modal | SHIPS REAL | Source attribution per sentence |
 | Budget alert panel | SHIPS REAL | |
@@ -154,6 +155,7 @@
 | Full audit log page | SHIPS STUBBED | Shows recent events; full export UI is v1.1 |
 | Legal defensibility export UI | DOES NOT SHIP | v1.1 |
 | LEDES export UI | SHIPS STUBBED | Endpoint exists; download button in demo |
+| Source email viewer | SHIPS REAL | DeadlineModal shows full source email body for conflict_flagged deadlines |
 | A/R dashboard | SHIPS STUBBED | Data computed; UI is single card in brief |
 
 ---

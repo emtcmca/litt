@@ -11,7 +11,7 @@ import type {
   BriefTimeEntryItem,
   ToolResult,
 } from '../types';
-import { getBrief, runSweep } from '../api';
+import { getBrief, runSweep, downloadLedesExport } from '../api';
 import { DeadlineModal } from './modals/DeadlineModal';
 import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
@@ -352,7 +352,7 @@ function buildDecisionRows(
         extra: isConflict ? 'work_kind=llm_assisted · confidence=0.92' : isEsc ? 'gate=ESCALATION · confirm required' : 'tool=confirm_deadline',
       },
       actionLabel:         isConflict ? 'Verify' : isEsc ? 'Review' : 'Confirm',
-      onAction:            () => openModal({ type: 'deadline', item: d, action: 'confirm' }),
+      onAction:            () => openModal({ type: 'deadline', item: d, action: isConflict ? 'verify' : 'confirm' }),
       isEscalationDeadline: isEsc || isConflict,
       sourceRef,
     });
@@ -1501,6 +1501,24 @@ export function DailyCloseoutBrief() {
 
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
+              <button
+                onClick={() => downloadLedesExport(FIRM_ID).catch(e => console.error('LEDES export failed', e))}
+                style={{
+                  border:       `1px solid ${C.line}`,
+                  borderRadius: 8,
+                  background:   C.surface,
+                  color:        C.ink,
+                  padding:      '10px 14px',
+                  fontWeight:   500,
+                  fontSize:     12,
+                  cursor:       'pointer',
+                  whiteSpace:   'nowrap',
+                  fontFamily:   'var(--font-mono)',
+                }}
+                title="Export all approved time entries as LEDES 1998B"
+              >
+                LEDES Export
+              </button>
               <button
                 onClick={handleSweep}
                 disabled={sweeping}

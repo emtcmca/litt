@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -47,6 +49,41 @@ def run_sweep(req: SweepRequest):
         timeline = timeline.model_copy(update={"brief_items_count": items_count})
 
         return SweepRunResponse(timeline=timeline, brief=brief)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/source-email/{email_id}")
+def get_source_email(email_id: str, firm_id: str):
+    """Return a source email by ID from the source_emails collection."""
+    try:
+        doc = collection_ref(firm_id, "source_emails").document(email_id).get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail=f"Source email {email_id!r} not found")
+        d = doc.to_dict()
+
+        received_raw = d.get("received_at")
+        if hasattr(received_raw, "timestamp"):
+            received_str = datetime.fromtimestamp(received_raw.timestamp(), tz=timezone.utc).isoformat()
+        elif isinstance(received_raw, datetime):
+            received_str = received_raw.isoformat()
+        elif isinstance(received_raw, str):
+            received_str = received_raw
+        else:
+            received_str = None
+
+        return {
+            "id": d.get("id", email_id),
+            "from_address": d.get("from_address"),
+            "from_name": d.get("from_name"),
+            "to_address": d.get("to_address"),
+            "subject": d.get("subject"),
+            "received_at": received_str,
+            "body": d.get("body"),
+            "source_system": d.get("source_system"),
+        }
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

@@ -7,11 +7,12 @@ import uuid
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from app.scrubber.prebill import run_prebill_scrubber
 from app.tools.alerts import dismiss_alert
+from app.db import collection_ref
 from app.tools.billing import (
     advance_entry_status,
     compute_budget_utilization,
@@ -266,13 +267,91 @@ def billing_generate_invoice(req: GenerateInvoice):
     ))
 
 
-@router.get("/billing/ledes/{invoice_id}")
-def get_ledes(invoice_id: str, firm_id: str):
-    return {
-        "invoice_id": invoice_id,
-        "ledes_content": "LEDES1998B[]\nINVOICE_DATE|INVOICE_NUMBER|CLIENT_ID|...\n20260529|INV-2026-007|ACME-COM-001|...\n[]",
-        "note": "LEDES export stubbed for v1.0 demo",
-    }
+@router.get("/billing/ledes-export")
+def ledes_export(firm_id: str, client_id: str = ""):
+    """
+    Generate a LEDES 1998B export from all APPROVED/BILLED entries for the firm
+    (or a specific client if client_id is provided). Returns plain text attachment.
+    """
+    from app import config
+
+    attorneys = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "attorneys").stream()}
+    clients   = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "clients").stream()}
+    matters   = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "matters").stream()}
+    all_entries = [doc.to_dict() for doc in collection_ref(firm_id, "time_entries").stream()]
+
+    exportable = [
+        e for e in all_entries
+        if e.get("status") in ("APPROVED", "BILLED")
+        and (not client_id or e.get("client_id") == client_id)
+    ]
+    exportable.sort(key=lambda e: (e.get("client_id", ""), str(e.get("entry_date", ""))))
+
+    today_str = config.get_effective_date().strftime("%Y%m%d")
+    FIRM_ID_LEDES = "STRAND-OKAFOR"
+
+    HEADER = (
+        "INVOICE_DATE|INVOICE_NUMBER|CLIENT_ID|LAW_FIRM_MATTER_ID|INVOICE_TOTAL|"
+        "BILLING_START_DATE|BILLING_END_DATE|INVOICE_DESCRIPTION|LINE_ITEM_NUMBER|"
+        "EXP/FEE/INV_ADJ_TYPE|LINE_ITEM_NUMBER_OF_UNITS|LINE_ITEM_UNIT_COST|"
+        "LINE_ITEM_TOTAL|TIMEKEEPER_ID|TIMEKEEPER_NAME|LINE_ITEM_DESCRIPTION|"
+        "LAW_FIRM_ID|LINE_ITEM_TASK_CODE|LINE_ITEM_ACTIVITY_CODE|LINE_ITEM_EXPENSE_CODE"
+    )
+
+    # Group by client to produce one synthetic invoice per client
+    from collections import defaultdict
+    by_client: dict = defaultdict(list)
+    for e in exportable:
+        by_client[e.get("client_id", "unknown")].append(e)
+
+    lines = ["LEDES1998B[]", HEADER + "[]"]
+
+    for cid, entries in by_client.items():
+        client = clients.get(cid, {})
+        ledes_client_id = client.get("ledes_client_id") or cid.upper()
+        inv_number = f"PRE-BILL-{ledes_client_id}-{today_str}"
+        inv_total = sum(float(e.get("amount", 0)) for e in entries)
+
+        dates = sorted(str(e.get("entry_date", today_str[:4]+"-01-01"))[:10] for e in entries)
+        billing_start = dates[0].replace("-", "") if dates else today_str
+        billing_end   = dates[-1].replace("-", "") if dates else today_str
+
+        for line_num, entry in enumerate(entries, start=1):
+            matter = matters.get(entry.get("matter_id", ""), {})
+            attorney = attorneys.get(entry.get("attorney_id", ""), {})
+            narrative = (entry.get("narrative") or "").replace("|", "/").replace("\n", " ")[:200]
+
+            row = "|".join([
+                today_str,                                          # INVOICE_DATE
+                inv_number,                                         # INVOICE_NUMBER
+                ledes_client_id,                                    # CLIENT_ID
+                matter.get("law_firm_matter_id") or entry.get("matter_id", ""),  # LAW_FIRM_MATTER_ID
+                f"{inv_total:.2f}",                                 # INVOICE_TOTAL
+                billing_start,                                      # BILLING_START_DATE
+                billing_end,                                        # BILLING_END_DATE
+                f"Pre-bill export {today_str}",                     # INVOICE_DESCRIPTION
+                str(line_num),                                      # LINE_ITEM_NUMBER
+                "F",                                                # EXP/FEE/INV_ADJ_TYPE (F=fee)
+                f"{float(entry.get('hours', 0)):.1f}",              # LINE_ITEM_NUMBER_OF_UNITS
+                f"{float(entry.get('rate', 0)):.2f}",               # LINE_ITEM_UNIT_COST
+                f"{float(entry.get('amount', 0)):.2f}",             # LINE_ITEM_TOTAL
+                attorney.get("timekeeper_id") or entry.get("attorney_id", ""),  # TIMEKEEPER_ID
+                attorney.get("name") or entry.get("attorney_id", ""),            # TIMEKEEPER_NAME
+                narrative,                                          # LINE_ITEM_DESCRIPTION
+                FIRM_ID_LEDES,                                      # LAW_FIRM_ID
+                entry.get("task_code") or "",                       # LINE_ITEM_TASK_CODE
+                entry.get("activity_code") or "",                   # LINE_ITEM_ACTIVITY_CODE
+                entry.get("expense_code") or "",                    # LINE_ITEM_EXPENSE_CODE
+            ])
+            lines.append(row + "[]")
+
+    ledes_text = "\r\n".join(lines)
+    filename = f"strand-okafor-ledes-{today_str}.txt"
+    return Response(
+        content=ledes_text,
+        media_type="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ---------------------------------------------------------------------------

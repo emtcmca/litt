@@ -53,7 +53,7 @@ The timeline auto-scrolls. 22 observations drip in at 250 ms each (~5.5 seconds 
 
 | Approx time | Observation | What to say |
 |---|---|---|
-| 0:14 | `deadline_agent` / ESCALATION — Rivera deadline | **"Here. Litt extracted 'due tomorrow, Friday.' Source: opposing counsel. No court order in firm sources. Confidence: 70%. Litt refuses to verify it."** |
+| 0:14 | `deadline_agent` / ESCALATION — Rivera deadline | **"Here. Litt used Gemini to extract 'due tomorrow, Friday' from an opposing counsel email. No court order in firm sources. Confidence: 70%. Litt flags it — never auto-verifies."** |
 | 0:22 | `billing_agent` / REVIEW_REQUIRED — 42-min gap | "Same run: 42-minute client call on calendar, no time entry." |
 | 0:28 | `billing_agent` / REVIEW_REQUIRED — scrubber hit | "Forbidden billing phrase caught before invoice review." |
 | 0:34 | `comms_agent` / BLOCKED — Whitmore draft | "Client update drafted. Delivery blocked until attorney approval." |
@@ -83,12 +83,12 @@ Timeline shows `complete`. Daily Closeout Brief populates below.
 
 ### 1:15–1:30 — Audit Trail
 
-**ACTION:** Click Rivera deadline item to expand audit detail (or show AuditEventDrawer if wired).
+**ACTION:** Click Rivera deadline item → modal opens → click "View source email" → show full opposing counsel email body. Point to the extracted text and confidence score.
 
 **NARRATOR:**
-> "The audit trail shows what Litt observed, which source it used, why it escalated, what confidence it had, and what Sarah decided. That is how an attorney can rely on this system without turning it into an unreviewed black box."
+> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'May 30' with 92% confidence, and refused to verify it without attorney review. Sarah clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence. Every step is in the audit trail."
 
-**Show:** Audit entry with `observation_id`, `source_excerpt`, `commitment_level: ESCALATION`, `confidence: 0.70`.
+**Show:** Full source email (from: jcolbert@colbertmarsh.com, subject: Rivera v. Holbrook — Discovery Responses Due, body with "tomorrow (Friday)" text). Then Verify action completing with AuditEventDrawer confirmation.
 
 ---
 
@@ -143,6 +143,8 @@ github.com/emtcmca/litt
 - [ ] Empty dashboard + "Run Closeout" button visible
 - [ ] Timeline starts (`signal_received` first observation)
 - [ ] Rivera deadline ESCALATION (amber badge, 70% confidence visible)
+- [ ] Rivera source email body visible (opposing counsel text, extracted date)
+- [ ] Rivera "Verify" action completing (AuditEventDrawer shows audit_event_id)
 - [ ] BLOCKED observation for Whitmore comms
 - [ ] Timeline shows `complete` status pill
 - [ ] Brief fully populated (all 4–5 sections visible)
