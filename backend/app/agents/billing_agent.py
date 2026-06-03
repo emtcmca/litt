@@ -77,7 +77,8 @@ class BillingAgent:
             description=f"Running pre-bill scrubber on {len(pending_entries)} entries",
         ))
 
-        anomalies_logged: List[str] = []
+        new_anomalies: List[str] = []
+        existing_anomalies: List[str] = []
         entries_scanned = 0
         block_obs_emitted = False  # emit one focused block observation per sweep
 
@@ -142,23 +143,35 @@ class BillingAgent:
                 )
 
                 if hasattr(outcome, "entity_id"):
-                    anomalies_logged.append(outcome.entity_id)
+                    # New creation: entity_id ≠ audit_event_id. Idempotency hit: they match.
+                    if outcome.entity_id != outcome.audit_event_id:
+                        new_anomalies.append(outcome.entity_id)
+                    else:
+                        existing_anomalies.append(outcome.entity_id)
 
-        final_level = CommitmentLevel.REVIEW_REQUIRED if anomalies_logged else CommitmentLevel.AUTO_SAFE
+        final_level = CommitmentLevel.REVIEW_REQUIRED if new_anomalies else CommitmentLevel.AUTO_SAFE
+        existing_note = f" · {len(existing_anomalies)} existing already under review" if existing_anomalies else ""
         observations.append(_obs(
             observation_type=ObservationType.RESULT,
             commitment_level=final_level,
             description=(
                 f"Billing scan complete: {entries_scanned} entries scanned, "
-                f"{len(anomalies_logged)} anomal{'ies' if len(anomalies_logged) != 1 else 'y'} logged"
+                f"{len(new_anomalies)} new anomal{'ies' if len(new_anomalies) != 1 else 'y'} logged"
+                + existing_note
             ),
-            data={"entries_scanned": entries_scanned, "anomalies_logged": len(anomalies_logged)},
+            data={
+                "entries_scanned": entries_scanned,
+                "new_anomalies": len(new_anomalies),
+                "existing_anomalies": len(existing_anomalies),
+            },
         ))
 
         return {
             "agent": self.name,
             "entries_scanned": entries_scanned,
-            "anomalies_logged": len(anomalies_logged),
-            "escalation_ids": anomalies_logged,
+            "anomalies_logged": len(new_anomalies) + len(existing_anomalies),
+            "new_anomalies": len(new_anomalies),
+            "existing_anomalies": len(existing_anomalies),
+            "escalation_ids": new_anomalies,
             "observations": observations,
         }

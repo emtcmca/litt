@@ -1229,7 +1229,7 @@ export function DailyCloseoutBrief() {
   const timerRefs    = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const traceBottomRef = useRef<HTMLDivElement>(null);
 
-  async function loadBrief() {
+  const loadBrief = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -1239,7 +1239,16 @@ export function DailyCloseoutBrief() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  // Silent background refresh — no loading spinner, used after action animations
+  const refreshBrief = useCallback(async () => {
+    try {
+      setBrief(await getBrief(FIRM_ID, ATTORNEY_ID));
+    } catch (_) {
+      // don't disrupt UI for a background refresh failure
+    }
+  }, []);
 
   async function handleSweep() {
     setSweeping(true);
@@ -1264,8 +1273,7 @@ export function DailyCloseoutBrief() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadBrief(); }, []);
+  useEffect(() => { loadBrief(); }, [loadBrief]);
 
   // Feed timeline observations into rail at 250ms/obs
   useEffect(() => {
@@ -1313,7 +1321,7 @@ export function DailyCloseoutBrief() {
     setModal(null);
     setSourceItem(null);
 
-    // receipted → collapsing → resolved
+    // receipted → collapsing → resolved → silent brief refresh
     setReceiptedIds(prev => new Set([...prev, sectionId]));
     const t1 = setTimeout(() => {
       setCollapsingIds(prev => new Set([...prev, sectionId]));
@@ -1321,11 +1329,12 @@ export function DailyCloseoutBrief() {
         setResolved(prev => new Set([...prev, sectionId]));
         setReceiptedIds(prev => { const s = new Set(prev); s.delete(sectionId); return s; });
         setCollapsingIds(prev => { const s = new Set(prev); s.delete(sectionId); return s; });
+        refreshBrief(); // sync center column to true Firestore state after animation
       }, 600);
       timerRefs.current.set(`${sectionId}-2`, t2);
     }, 1250);
     timerRefs.current.set(`${sectionId}-1`, t1);
-  }, []);
+  }, [refreshBrief]);
 
   const closeModal  = useCallback(() => setModal(null),       []);
   const closeDrawer = useCallback(() => setAuditDrawer(null), []);

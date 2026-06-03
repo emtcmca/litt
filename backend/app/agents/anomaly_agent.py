@@ -358,7 +358,8 @@ class AnomalyAgent:
             ))
 
         # Log via tool layer (idempotent per entity+type)
-        logged: List[str] = []
+        new_logged: List[str] = []
+        existing_logged: List[str] = []
         for signal in signals:
             idem = f"sweep-anomaly-{signal.entity_id}-{signal.anomaly_type}"
             result = log_anomaly(
@@ -372,23 +373,35 @@ class AnomalyAgent:
                 matter_id=signal.matter_id,
             )
             if hasattr(result, "entity_id"):
-                logged.append(result.entity_id)
+                # New creation: entity_id ≠ audit_event_id. Idempotency hit: they match.
+                if result.entity_id != result.audit_event_id:
+                    new_logged.append(result.entity_id)
+                else:
+                    existing_logged.append(result.entity_id)
 
-        final_level = CommitmentLevel.REVIEW_REQUIRED if logged else CommitmentLevel.AUTO_SAFE
+        final_level = CommitmentLevel.REVIEW_REQUIRED if new_logged else CommitmentLevel.AUTO_SAFE
+        existing_note = f" · {len(existing_logged)} existing already under review" if existing_logged else ""
         observations.append(_obs(
             observation_type=ObservationType.RESULT,
             commitment_level=final_level,
             description=(
                 f"Pattern scan complete: {len(signals)} signal(s) detected, "
-                f"{len(logged)} anomal{'ies' if len(logged) != 1 else 'y'} logged"
+                f"{len(new_logged)} new anomal{'ies' if len(new_logged) != 1 else 'y'} logged"
+                + existing_note
             ),
-            data={"signals_detected": len(signals), "anomalies_logged": len(logged)},
+            data={
+                "signals_detected": len(signals),
+                "new_anomalies": len(new_logged),
+                "existing_anomalies": len(existing_logged),
+            },
         ))
 
         return {
             "agent": self.name,
             "signals_detected": len(signals),
-            "anomalies_logged": len(logged),
-            "escalation_ids": logged,
+            "anomalies_logged": len(new_logged) + len(existing_logged),
+            "new_anomalies": len(new_logged),
+            "existing_anomalies": len(existing_logged),
+            "escalation_ids": new_logged,
             "observations": observations,
         }

@@ -73,7 +73,11 @@ def log_escalation(
     """Create an Escalation record with a structured brief."""
     existing = check_idempotency(firm_id, idempotency_key)
     if existing:
-        return ToolResult(entity_id=existing, entity_type="escalation", audit_event_id=existing)
+        # Allow re-escalation if the prior record was dismissed — the underlying issue may persist
+        existing_doc = collection_ref(firm_id, "escalations").document(existing).get()
+        if not (existing_doc.exists and existing_doc.to_dict().get("status") == EscalationStatus.DISMISSED.value):
+            return ToolResult(entity_id=existing, entity_type="escalation", audit_event_id=existing)
+        # Fall through to create a fresh PENDING escalation (overwrites idempotency key below)
 
     now = get_effective_datetime()
     esc_id = f"esc-{uuid.uuid4().hex[:10]}"

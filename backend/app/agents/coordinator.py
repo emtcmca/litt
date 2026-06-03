@@ -160,20 +160,30 @@ class Coordinator:
         anomaly_result = self._anomaly.run(firm_id, run_id=run_id)
         sub_obs.extend(anomaly_result.get("observations", []))
 
-        # --- Counts ---
+        # --- Counts (new vs. existing-idempotency-hit) ---
 
-        total_anomalies = (
-            billing_result["anomalies_logged"] + anomaly_result["anomalies_logged"]
+        new_anomalies = (
+            billing_result.get("new_anomalies", billing_result["anomalies_logged"])
+            + anomaly_result.get("new_anomalies", anomaly_result["anomalies_logged"])
         )
-        total_escalations = deadline_result["escalations_created"] + total_anomalies
+        existing_anomalies = (
+            billing_result.get("existing_anomalies", 0)
+            + anomaly_result.get("existing_anomalies", 0)
+        )
+        new_escalations = deadline_result["escalations_created"] + new_anomalies
 
         # --- Post-run: 2 coordinator observations ---
 
-        gate_level = CommitmentLevel.ESCALATION if total_escalations > 0 else CommitmentLevel.AUTO_SAFE
+        gate_level = CommitmentLevel.ESCALATION if new_escalations > 0 else CommitmentLevel.AUTO_SAFE
         attorney_action = (
-            f"Review {total_escalations} escalation(s) in Daily Closeout Brief before approving any actions."
-            if total_escalations > 0
+            f"Review {new_escalations} new escalation(s) in Daily Closeout Brief before approving any actions."
+            if new_escalations > 0
             else None
+        )
+
+        existing_note = (
+            f" · {existing_anomalies} existing already under review (idempotency skip)"
+            if existing_anomalies > 0 else ""
         )
 
         post_obs: List[AgentObservation] = [
@@ -181,16 +191,17 @@ class Coordinator:
                 observation_type=ObservationType.RESULT,
                 commitment_level=gate_level,
                 description=(
-                    f"Sub-agents complete: {total_escalations} escalation(s), "
-                    f"{total_anomalies} anomal{'ies' if total_anomalies != 1 else 'y'}"
+                    f"Sub-agents complete: {new_escalations} new escalation(s), "
+                    f"{new_anomalies} new anomal{'ies' if new_anomalies != 1 else 'y'}"
+                    + existing_note
                 ),
                 data={
-                    "billing_anomalies": billing_result["anomalies_logged"],
+                    "billing_new_anomalies": billing_result.get("new_anomalies", 0),
                     "deadline_escalations": deadline_result["escalations_created"],
                     "comms_created": comms_result["comms_created"],
-                    "anomaly_anomalies": anomaly_result["anomalies_logged"],
-                    "total_escalations": total_escalations,
-                    "total_anomalies": total_anomalies,
+                    "anomaly_new_anomalies": anomaly_result.get("new_anomalies", 0),
+                    "total_new_escalations": new_escalations,
+                    "existing_anomalies_skipped": existing_anomalies,
                 },
             ),
             _obs(
@@ -198,9 +209,18 @@ class Coordinator:
                 commitment_level=gate_level,
                 description=(
                     f"Gate: {gate_level.value} — "
-                    f"{'attorney review required' if total_escalations > 0 else 'no action required'}"
+                    + (
+                        f"{new_escalations} new item(s) require attorney review"
+                        if new_escalations > 0
+                        else "no new items — all existing or resolved"
+                        + (f" ({existing_anomalies} already under review)" if existing_anomalies else "")
+                    )
                 ),
-                data={"gate": gate_level.value, "escalations_count": total_escalations},
+                data={
+                    "gate": gate_level.value,
+                    "new_escalations_count": new_escalations,
+                    "existing_anomalies_skipped": existing_anomalies,
+                },
                 attorney_next_action=attorney_action,
             ),
         ]
@@ -219,7 +239,7 @@ class Coordinator:
             elapsed_seconds=elapsed_s,
             observations=all_observations,
             brief_items_count=0,  # updated by route after brief assembly
-            escalations_count=total_escalations,
+            escalations_count=new_escalations,
         )
 
         # TELEMETRY EXCEPTION: coordinator writes agent_runs directly.
