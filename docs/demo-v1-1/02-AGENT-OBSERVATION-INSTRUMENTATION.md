@@ -15,7 +15,7 @@ Apply these corrections before translating any sample code into the repo:
 - Treat observations as **explanatory telemetry**, not a second write path. Tools remain the only Firestore write path for business entities, and all writes still call `log_audit_event()`.
 - Keep confidence semantics crisp: deterministic checks should be displayed as `source=deterministic` or `confidence=1.0`; LLM-assisted extraction/drafting should show model name, source packet IDs, and confidence.
 - Add `work_kind` to observations so judges can see the boundary: `deterministic`, `llm_assisted`, `tool_write`, or `human_gate`.
-- Add `attorney_next_action` to observations that produce brief items. A timeline that says "escalated" is useful; a timeline that says "Sarah must confirm deadline date before filing" is demo-grade.
+- Add `attorney_next_action` to observations that produce brief items. A timeline that says "escalated" is useful; a timeline that says "Dana must confirm deadline date before filing" is demo-grade.
 - The existing agents are named `deadline_agent`, `billing_agent`, `comms_agent`, and `anomaly_agent`. Prefer those names in implementation and display unless code is renamed.
 
 ---

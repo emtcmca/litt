@@ -154,7 +154,7 @@
 | Full deadline timeline page | DOES NOT SHIP | v1.1 |
 | Full audit log page | SHIPS REAL | /audit — filterable by tier, entity_type, actor; expandable before/after state; append-only note visible |
 | Legal defensibility export UI | DOES NOT SHIP | v1.1 |
-| LEDES export UI | SHIPS STUBBED | Endpoint exists; download button in demo |
+| LEDES export UI | SHIPS REAL | GET /billing/ledes-export generates real LEDES 1998B from APPROVED/BILLED entries; topbar button triggers browser download |
 | Source email viewer | SHIPS REAL | DeadlineModal shows full source email body for conflict_flagged deadlines |
 | A/R dashboard | SHIPS STUBBED | Data computed; UI is single card in brief |
 

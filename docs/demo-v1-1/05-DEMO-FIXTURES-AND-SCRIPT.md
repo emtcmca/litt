@@ -80,7 +80,7 @@ DEMO_FIRM = {
     "attorneys": [
         {
             "id": "attorney_001",
-            "name": "Sarah Strand",
+            "name": "Dana Strand",
             "rate": 350,
             "seniority": "partner",
             "email": "sarah@strand-okafor.law"
@@ -486,7 +486,7 @@ def reset_demo_data(firestore_client, firm_id: str = DEMO_FIRM_ID) -> None:
 
 **Visual:**
 - Web browser showing Litt dashboard (Daily Closeout Brief view)
-- Attorney name: Sarah Strand
+- Attorney name: Dana Strand
 - Firm: Strand & Okafor LLP
 - Time: 4:29 PM, May 29, 2026 (one minute before closeout)
 
@@ -505,7 +505,7 @@ def reset_demo_data(firestore_client, firm_id: str = DEMO_FIRM_ID) -> None:
 
 Litt is an autonomous operations agent for that gap. It doesn't replace lawyers. It watches the firm's operational surface area, finds what needs attorney attention, and produces a source-backed Daily Closeout Brief with an audit trail.
 
-Here's Sarah Strand at Strand & Okafor LLP. It's 4:29 PM, and she's about to run closeout."
+Here's Dana Strand at Strand & Okafor LLP. It's 4:29 PM, and she's about to run closeout."
 
 **ACTION:**
 - Show dashboard with four active matters on screen
@@ -515,10 +515,10 @@ Here's Sarah Strand at Strand & Okafor LLP. It's 4:29 PM, and she's about to run
 ### 0:08-0:12 — Trigger the Sweep
 
 **ACTION:**
-Sarah clicks "Run Closeout" button.
+Dana clicks "Run Closeout" button.
 
 **NARRATOR:**
-"When Sarah clicks Run Closeout, Litt starts observing the firm like an operations layer, not a chatbot."
+"When Dana clicks Run Closeout, Litt starts observing the firm like an operations layer, not a chatbot."
 
 ### 0:12-0:48 — Timeline Auto-Scrolls (Primary Demo)
 
@@ -595,7 +595,7 @@ The backend completed the sweep in about two seconds; the UI is replaying the tr
 Timeline completes. Daily Closeout Brief appears below.
 
 **NARRATOR:**
-"Now Sarah gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
+"Now Dana gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
 
 The hero item is the ambiguous deadline. It says 'tomorrow,' but the source is opposing counsel and there is no court order in the firm's sources. Litt escalates because guessing would create liability."
 
@@ -637,7 +637,7 @@ Click on one escalation item to show the audit trail.
 
 That is the boundary. Gemini helps with extraction, drafting, and explanation. Python controls routing, budget math, scrubber checks, state transitions, and gates.
 
-The audit trail shows what Litt observed, which source it used, why it escalated, what confidence it had, and what Sarah decided. That is how an attorney can rely on the system without turning it into an unreviewed black box."
+The audit trail shows what Litt observed, which source it used, why it escalated, what confidence it had, and what Dana decided. That is how an attorney can rely on the system without turning it into an unreviewed black box."
 
 **Show on screen:**
 Audit log entry for the escalated deadline:
@@ -668,7 +668,7 @@ Human decision audit event: [Pending]
 Show the dashboard with all items resolved (some approved, some escalated).
 
 **NARRATOR:**
-"Sarah did not have to search her inbox, compare calendars against billing, remember which client went quiet, or manually reconstruct why an item was risky.
+"Dana did not have to search her inbox, compare calendars against billing, remember which client went quiet, or manually reconstruct why an item was risky.
 
 Litt brought her the decisions, the evidence, and the guardrails: deadline risk surfaced, billing leakage caught, client relationship maintained, budget pressure visible, and every action documented.
 

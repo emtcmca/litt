@@ -175,6 +175,43 @@ Every subsequent feature deploys into this already-running environment. Daily re
 
 ---
 
+---
+
+### Change 14: Demo Corpus Expanded — 5 Agent Coverage Gaps Added
+
+**Original plan:** Demo corpus covered 5 required readiness conditions: `dl-mercer-001`, `te-005`, `te-001`, `acme-commercial`, `whitmore-employment-2026`.  
+**Revised plan:** Five additional scenarios seeded to demonstrate broader agent capability surface.
+
+**Additions:**
+- `te-010` (Acme Commercial) — `client_ai_disclosure_status: None` on an AI-assisted entry, triggering `AI_DISCLOSURE_GAP` anomaly detection
+- `te-011` — duplicate of `te-001` (same attorney, matter, date, hours), triggering `DUPLICATE_ENTRY_CANDIDATE` detector
+- `acme-commercial` budget — `budget_billed` raised from 11,000 to 13,100; with 700 in approved-unbilled, total committed = 13,800 / 15,000 = **92% CRITICAL** (was 78% WARN)
+- `mercer-industries` and `mercer-v-dunlap` — `last_client_contact` moved from 7 days ago to 20 days ago, triggering client silence detection on the firm's highest-pressure matter
+- Rivera deadline — `verification_status: conflict_flagged`, seeded `source_emails` document `email-rivera-opp-20260528`, full Gemini extraction pipeline surfacing deadline in brief with source grounding
+
+**Why:** Original corpus was minimal — each detector fired once with no compound signals. Expanded corpus demonstrates multi-signal escalation (Mercer), CRITICAL threshold behavior (Acme), and proof-of-work on Gemini-assisted extraction with full source trail (Rivera).
+
+---
+
+### Change 15: Four v1.1 Features Pulled Into v1.0 Demo
+
+**Original plan:** Source email viewer, Verify action, LEDES download, and audit log page were scoped as v1.1.  
+**Revised plan:** All four implemented and shipped in v1.0 before submission.
+
+**Items:**
+
+1. **Source email viewer** — `GET /api/source-email/{email_id}` endpoint; DeadlineModal rewritten to include "View source email" toggle for `conflict_flagged` deadlines; shows full email headers, Gemini extraction confidence badge (0.92), and scrollable body. Demonstrates the evidence chain behind AI-assisted deadline detection.
+
+2. **Verify action wired** — `conflict_flagged` deadlines show "Verify" tab (amber) calling `POST /actions/deadline/verify`, which transitions the deadline to `attorney_verified` via the `verify_deadline` tool. Previously the modal showed tabs but the verify path hit `confirm_deadline` instead. Now the correct state transition fires and is reflected in the audit trail.
+
+3. **Real LEDES 1998B export** — `GET /billing/ledes-export` generates a proper pipe-delimited LEDES 1998B file from all APPROVED/BILLED entries, grouped by client with synthetic pre-bill invoice numbers. `downloadLedesExport()` in `api.ts` fetches and triggers a browser download. "LEDES Export" button in topbar. Previously this endpoint returned a stub string.
+
+4. **Full audit log page** — `/audit` route with dedicated `AuditLog.tsx` page. Backend: `GET /api/audit-log` queries `firms/{firm_id}/audit_log`, normalizes Firestore timestamps, filters by `tier` / `entity_type` / `actor`, returns newest-first up to 300 events. Frontend: sticky topbar with three filter dropdowns, tier legend tiles (clickable as filters), per-event expandable `before_state` / `after_state` JSON, idempotency key display, and append-only provenance notice. "Audit Log" link added to main topbar.
+
+**Why:** These four items directly demonstrate the claims judges will scrutinize: (1) the evidence trail behind AI-assisted detection, (2) that actions produce correct state transitions, (3) that billing data is e-billing compatible, and (4) that the "defensible audit trail" claim is physically inspectable — not just asserted.
+
+---
+
 ## Revised Daily Goals
 
 ### Day 1 (revised)

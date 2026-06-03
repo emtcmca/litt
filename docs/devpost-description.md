@@ -98,7 +98,15 @@ Litt enables ADK's built-in trace exporter to emit structured agent execution tr
 
 Litt's core value claim is a defensible audit trail behind every operational decision. The `audit_log` records every write with `tier` (engineering | operational | legal_defensibility), `before_state`, `after_state`, `actor`, and `event_type`. If there is ever a malpractice claim or fee dispute, the firm can produce a complete chronological record of every action taken and every escalation fired.
 
-The audit log is append-only at the application and Firestore security-rule layer. Production deployments add Cloud Audit Logs, restricted IAM roles, and periodic export to archival storage for full chain-of-custody defensibility.
+The audit log is append-only at the application and Firestore security-rule layer. A dedicated `/audit` page exposes the full log to attorneys with filters for tier, entity type, and actor — expandable before/after state diffs make every state transition directly inspectable. Production deployments add Cloud Audit Logs, restricted IAM roles, and periodic export to archival storage for full chain-of-custody defensibility.
+
+### Source-Grounded AI Detection
+
+When Litt detects a deadline from an external source (opposing counsel email, calendar invite), it surfaces the source alongside the alert — not just the conclusion. The deadline modal shows the full source email body, the extracted date with Gemini confidence score, and the discrepancy that triggered escalation. Attorneys verify against the actual evidence, not against Litt's interpretation of it. This is the difference between AI-assisted detection and AI-obscured detection.
+
+### E-Billing Compatibility (LEDES 1998B)
+
+Time entry data is structured from capture to export for legal e-billing compatibility. The `GET /billing/ledes-export` endpoint generates a fully compliant LEDES 1998B file from all approved entries, with correct field separation (`LINE_ITEM_TASK_CODE` vs `LINE_ITEM_ACTIVITY_CODE`), proper `LINE_ITEM_NUMBER` sequential generation, and client-grouped synthetic invoice structure. Attorneys can download the export directly from the dashboard. This is the pipeline that makes Litt's billing capture usable with any e-billing platform a client requires.
 
 ---
 

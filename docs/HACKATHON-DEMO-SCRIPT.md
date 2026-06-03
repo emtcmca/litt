@@ -39,7 +39,7 @@ Run these before every take:
 >
 > Litt is an autonomous operations agent for that gap. It watches the firm's operational surface, finds what needs attorney attention, and produces a source-backed Daily Closeout Brief with an audit trail.
 >
-> Sarah Strand at Strand & Okafor LLP. 4:29 PM. She clicks Run Closeout."
+> Dana Strand at Strand & Okafor LLP. 4:29 PM. She clicks Run Closeout."
 
 **ACTION:** Click the "Run Closeout" button.
 
@@ -71,7 +71,7 @@ The timeline auto-scrolls. 22 observations drip in at 250 ms each (~5.5 seconds 
 Timeline shows `complete`. Daily Closeout Brief populates below.
 
 **NARRATOR:**
-> "Now Sarah gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
+> "Now Dana gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
 >
 > The hero item is the Rivera deadline. It says 'tomorrow' — from opposing counsel, with no court order in the firm's sources. Litt escalates because guessing creates liability.
 >
@@ -81,31 +81,38 @@ Timeline shows `complete`. Daily Closeout Brief populates below.
 
 ---
 
-### 1:15–1:30 — Audit Trail
+### 1:15–1:35 — Audit Trail
 
 **ACTION:** Click Rivera deadline item → modal opens → click "View source email" → show full opposing counsel email body. Point to the extracted text and confidence score.
 
 **NARRATOR:**
-> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'May 30' with 92% confidence, and refused to verify it without attorney review. Sarah clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence. Every step is in the audit trail."
+> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'May 30' with 92% confidence, and refused to verify it without attorney review. Dana clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence."
 
-**Show:** Full source email (from: jcolbert@colbertmarsh.com, subject: Rivera v. Holbrook — Discovery Responses Due, body with "tomorrow (Friday)" text). Then Verify action completing with AuditEventDrawer confirmation.
+**Show:** Full source email (from: jcolbert@colbertmarsh.com, subject: Rivera v. Holbrook — Discovery Responses Due, body with "tomorrow (Friday)" text). Then Verify action completing with AuditEventDrawer confirmation (audit_event_id visible).
+
+**ACTION:** Click "Audit Log" button in topbar → `/audit` page opens → point to legal_defensibility tier entries; expand one `before_state` / `after_state` diff.
+
+**NARRATOR:**
+> "Every action Dana takes — and every action Litt takes — is a CREATE-only entry in the audit log. Two tiers: operational for billing and deadline decisions, legal defensibility for anything that could appear in a fee dispute or malpractice review. If a client ever asks 'why was this billed this way?' or 'when did you know about this deadline?' — the answer is here, immutable, timestamped."
 
 ---
 
-### 1:30–1:45 — Close
+### 1:35–1:50 — Close
+
+**ACTION:** Navigate back to brief (`← Brief` link). Zoom out to show full dashboard — all sections populated.
 
 **NARRATOR:**
-> "Sarah did not search her inbox, compare calendars to billing records, remember which client went quiet, or reconstruct why an entry looked risky.
+> "Dana did not search her inbox, compare calendars to billing records, remember which client went quiet, or reconstruct why an entry looked risky.
 >
-> Litt brought her the decisions, the evidence, and the guardrails: deadline risk surfaced, billing leakage caught, client relationship maintained, budget pressure visible, every action documented.
+> Litt brought her the decisions, the evidence, and the guardrails: deadline risk surfaced with source proof, billing leakage caught before invoicing, client relationship flagged before it became a complaint, budget pressure visible before it became a dispute, every action logged with full provenance.
 >
 > That's Litt — autonomous operations with legal-grade safety."
 
-**ACTION:** Zoom out to show full dashboard. Fade or cut to black.
+**ACTION:** Fade or cut to black.
 
 ---
 
-### 1:45–2:00 — Title card (optional — use remaining time)
+### 1:50–2:00 — Title card (optional — use remaining time)
 
 ```
 Litt
@@ -143,12 +150,17 @@ github.com/emtcmca/litt
 - [ ] Empty dashboard + "Run Closeout" button visible
 - [ ] Timeline starts (`signal_received` first observation)
 - [ ] Rivera deadline ESCALATION (amber badge, 70% confidence visible)
-- [ ] Rivera source email body visible (opposing counsel text, extracted date)
-- [ ] Rivera "Verify" action completing (AuditEventDrawer shows audit_event_id)
+- [ ] Rivera "SOURCE CONFLICT" badge in DeadlineModal header
+- [ ] Rivera source email body visible (from: jcolbert@colbertmarsh.com, body with "tomorrow (Friday)" text)
+- [ ] Gemini extraction badge (confidence 0.92) visible in email viewer
+- [ ] Rivera "Verify" tab selected (amber), action completing with AuditEventDrawer
+- [ ] AuditEventDrawer: audit_event_id visible
 - [ ] BLOCKED observation for Whitmore comms
 - [ ] Timeline shows `complete` status pill
-- [ ] Brief fully populated (all 4–5 sections visible)
-- [ ] Audit trail entry (observation_id + source_excerpt)
+- [ ] Brief fully populated (deadlines, WIP, budget, silence, anomalies all visible)
+- [ ] Audit Log page (`/audit`) — legal_defensibility tier entries visible
+- [ ] Expanded before/after state diff in audit log
+- [ ] LEDES Export button visible in topbar (bonus shot if time allows)
 - [ ] Final frame or title card
 
 ---
