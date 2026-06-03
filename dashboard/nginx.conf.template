@@ -5,20 +5,24 @@ server {
     index index.html;
 
     # Proxy /api and /health to the backend Cloud Run service.
-    # BACKEND_URL is injected at container startup via envsubst.
+    # BACKEND_URL and BACKEND_HOST are injected at container startup via entrypoint.sh.
     location /api/ {
         proxy_pass BACKEND_URL_PLACEHOLDER/api/;
-        proxy_set_header Host $http_host;
+        proxy_set_header Host BACKEND_HOST_PLACEHOLDER;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 30s;
-        proxy_connect_timeout 10s;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 15s;
     }
 
     location /health {
         proxy_pass BACKEND_URL_PLACEHOLDER/health;
-        proxy_set_header Host $http_host;
+        proxy_set_header Host BACKEND_HOST_PLACEHOLDER;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
     }
 
     # SPA routing — all non-file paths serve index.html
