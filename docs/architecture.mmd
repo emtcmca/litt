@@ -3,38 +3,39 @@ graph TD
     subgraph INPUTS["Data Sources · OAuth adapters"]
         GM["Gmail\nCourt orders · Opposing counsel email"]
         CAL["Google Calendar\nMeeting events"]
-        FS_IN["Firestore seed\nMatters · Clients · Time entries"]
+        FS_IN["Firestore seed\nMatters · Clients · Time entries\nSource emails"]
     end
 
     subgraph CORE["Litt Backend — Cloud Run · Python · FastAPI"]
         COORD["Coordinator\nPython router · SIGNAL_ROUTING dict\nNo LLM routing"]
 
         subgraph AGENTS["Sub-Agents · Google ADK"]
-            BA["billing_agent\nCalendar gap detection\nPre-bill scrubber · Budget utilization"]
-            DA["deadline_agent\nDate extraction\nSource conflict detection\nAttorney verification gate"]
-            CA["comms_agent\nClient silence detection\nDraft generation · Delivery gate"]
-            AA["anomaly_agent\nReconstruction risk scoring\nRound-hours detection"]
+            BA["billing_agent\nCalendar gap detection · Pre-bill scrubber\nBudget utilization · LEDES export"]
+            DA["deadline_agent\nDate extraction from source email\nSource conflict detection\nAttorney verification gate"]
+            CA["comms_agent\nClient silence detection\nFactPacket draft generation\nDelivery gate — BLOCKED until approved"]
+            AA["anomaly_agent\n13 detectors: reconstruction risk · round hours\nAI disclosure gap · duplicate entry\nblock billing · stale entries · rate deviation"]
         end
 
         subgraph TOOLS["Tool Layer — only Firestore write path"]
-            AT["audit.py\nlog_audit_event\ncalled on every write"]
-            TL["billing tools\ndeadline tools\ncomms tools\nanomaly tools"]
+            AT["audit.py\nlog_audit_event · tier: engineering\noperational · legal_defensibility"]
+            TL["billing tools · deadline tools\ncomms tools · anomaly tools\nverify_deadline · export_ledes"]
         end
 
-        BRIEF["Brief Assembler\nassembler.py"]
+        BRIEF["Brief Assembler\nassembler.py\n5 sections · source grounding"]
     end
 
     subgraph AI["Gemini 2.5 Pro · Vertex AI"]
-        GEM["Probabilistic only\nDeadline extraction · Billing narrative drafts\nClient update drafts · Escalation explanations"]
+        GEM["Probabilistic only\nDeadline date extraction · source email body\nClient update drafts · FactPacket citations\nEscalation brief narrative"]
     end
 
     subgraph FIRESTORE["Firestore · firms/strand-okafor"]
-        COL["deadlines · time_entries · matters · clients\nagent_runs · audit_log\nclient_communications · escalations"]
+        COL["deadlines · time_entries · matters · clients\nagent_runs · audit_log · source_emails\nclient_communications · escalations\nidempotency_keys · ingestion_signals"]
     end
 
     subgraph FRONTEND["Dashboard — Cloud Run · React"]
-        AGT["AgentRunTimeline\n250ms progressive playback\n4-gate badge model"]
-        DCB["DailyCloseoutBrief\nApproval actions · Audit drawer"]
+        AGT["ProofRail · AgentRunTimeline\n4-gate badge model: AUTO_SAFE · REVIEW_REQUIRED\nESCALATION · BLOCKED · work_kind indicator"]
+        DCB["DailyCloseoutBrief\nDeadlineModal · source email viewer · Verify action\nBillingWIPModal · ClientCommsModal\nAuditEventDrawer · LEDES export download"]
+        AUDITPAGE["AuditLog page /audit\nFilterable: tier · entity_type · actor\nExpandable before/after state diffs\nAppend-only provenance"]
     end
 
     GM --> COORD
@@ -51,17 +52,23 @@ graph TD
     CA -->|tool calls| TL
     AA -->|tool calls| TL
 
-    DA -->|natural language| GEM
-    CA -->|natural language| GEM
+    DA -->|source email body| GEM
+    CA -->|FactPacket| GEM
     BA -->|narrative draft| GEM
+    COORD -->|brief synthesis| GEM
 
     TL --> AT
     AT --> FIRESTORE
     TL --> FIRESTORE
 
     COORD --> BRIEF
-    BRIEF -->|GET api/brief| DCB
-    COORD -->|POST api/sweep| AGT
+    BRIEF -->|GET /api/brief| DCB
+    COORD -->|POST /api/sweep| AGT
+
+    DCB -->|POST /api/actions/*| TL
+    FIRESTORE -->|GET /api/source-email| DCB
+    FIRESTORE -->|GET /api/audit-log| AUDITPAGE
+    BA -->|GET /billing/ledes-export| DCB
 
     style INPUTS fill:#1e293b,stroke:#334155,color:#94a3b8
     style CORE fill:#0f172a,stroke:#334155,color:#f8fafc
