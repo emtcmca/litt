@@ -437,26 +437,29 @@ def seed_firm_data(db=None) -> None:
     })
 
     # -- client communications --
+    # comm-001: prior sent update — SENT_CONFIRMED (terminal) so sweep re-triggers silence
+    # and fires the BLOCKED gate when it creates a new draft.
     _col(db, "client_communications").document("comm-001").set({
         "id": "comm-001", "firm_id": FIRM_ID,
         "matter_id": "whitmore-employment-2026", "client_id": "whitmore-group",
         "trigger": "DAYS_SINCE_CONTACT",
         "draft_body": (
             "Dear Sandra,\n\n"
-            "I wanted to reach out with a brief update on the Whitmore Group employment advisory matter. [f1]\n\n"
-            "Our team has completed the initial review of the employment handbook and drafted recommended policy amendments. [f2] "
-            "We are prepared to schedule a call at your convenience to walk through the proposed changes.\n\n"
+            "I wanted to reach out with a brief update on the Whitmore Group employment advisory matter.\n\n"
+            "Our team has completed the initial review of the employment handbook and drafted recommended "
+            "policy amendments. We are prepared to schedule a call at your convenience to walk through "
+            "the proposed changes.\n\n"
             "Please let us know a time that works for your schedule.\n\n"
             "Best regards,\nDana Strand"
         ),
         "source_map": [
             {
                 "fact_id": "f1",
-                "fact_text": "No confirmed client contact since May 13, 2026 — 16 days ago.",
+                "fact_text": "No confirmed client contact since May 2, 2026.",
                 "sentence_in_draft": "I wanted to reach out with a brief update on the Whitmore Group employment advisory matter.",
                 "source_type": "firestore",
                 "source_id": "matters/whitmore-employment-2026",
-                "source_excerpt": "last_client_contact: 2026-05-13",
+                "source_excerpt": "last_client_contact: 2026-05-02",
             },
             {
                 "fact_id": "f2",
@@ -467,10 +470,12 @@ def seed_firm_data(db=None) -> None:
                 "source_excerpt": "Reviewed employment handbook provisions and drafted recommended policy amendments",
             },
         ],
-        "status": "DRAFT_GENERATED",
-        "approved_by": None, "approved_at": None, "queued_at": None,
-        "sent_confirmed_at": None, "dismissal_reason": None,
-        "version": 1, "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        "status": "SENT_CONFIRMED",
+        "approved_by": "dana-strand", "approved_at": _dt(2026, 5, 14, 9),
+        "queued_at": _dt(2026, 5, 14, 9, 5),
+        "sent_confirmed_at": _dt(2026, 5, 14, 9, 10),
+        "dismissal_reason": None,
+        "version": 3, "created_at": _dt(2026, 5, 13, 17), "updated_at": _dt(2026, 5, 14, 9, 10),
     })
 
     # -- invoice --
