@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BriefDeadlineItem, ToolResult } from '../../types';
 import { confirmDeadline, extendDeadline, dismissDeadline } from '../../api';
 
@@ -44,6 +44,7 @@ function inputStyle(focused: boolean) {
 }
 
 export function DeadlineModal({ item, action: initialAction, firmId, attorneyId, onClose, onSuccess }: Props) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [activeAction, setActiveAction] = useState<DeadlineAction>(initialAction);
   const [newDueDate, setNewDueDate] = useState('');
   const [reason, setReason] = useState('');
@@ -55,6 +56,11 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
   const action = activeAction;
   const title = { confirm: 'Confirm deadline', extend: 'Extend deadline', dismiss: 'Dismiss deadline' }[action];
   const badge = CLASS_BADGE_STYLE[item.classification] ?? { bg: 'var(--color-ramp-gray-200)', color: 'var(--color-ramp-gray-900)', weight: 500 };
+  const titleId = 'deadline-modal-title';
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
 
   async function handleSubmit() {
     if (action === 'extend' && (!newDueDate || !reason.trim())) { setError('New date and reason required'); return; }
@@ -79,11 +85,11 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ maxWidth: 540, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} style={{ maxWidth: 540, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
+          <h2 id={titleId} style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
+          <button ref={closeButtonRef} onClick={onClose} aria-label="Close dialog" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
         </div>
 
         {/* Body */}
@@ -129,11 +135,31 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
               <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.deadline_id}</span>
             </div>
             <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.description}</p>
-            <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+            <div style={{ display: 'flex', gap: 16, fontSize: 13, flexWrap: 'wrap' }}>
               <span><span style={{ color: 'var(--color-text-secondary)' }}>Due:</span> <span style={{ fontWeight: 500 }}>{item.due_date}</span></span>
               <span><span style={{ color: 'var(--color-text-secondary)' }}>Days out:</span> <span style={{ fontWeight: 500 }}>{item.days_out}</span></span>
               <span><span style={{ color: 'var(--color-text-secondary)' }}>Matter:</span> <span style={{ fontWeight: 500 }}>{item.matter_name}</span></span>
             </div>
+            {item.source_document_id && (
+              <div style={{ marginTop: 12, borderTop: '0.5px solid var(--color-border-tertiary)', paddingTop: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-background-success)', color: 'var(--color-text-success)', border: '0.5px solid var(--color-border-success)', borderRadius: 3, padding: '1px 5px' }}>
+                    {(item.source_type ?? 'source').replace(/_/g, ' ')}
+                  </span>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
+                    {item.source_document_id}
+                    {item.court ? ` · ${item.court}` : ''}
+                    {item.jurisdiction ? ` · ${item.jurisdiction}` : ''}
+                    {item.detected_at ? ` · Detected ${item.detected_at.slice(0, 10)}` : ''}
+                  </span>
+                </div>
+                {item.source_excerpt && (
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5, borderLeft: '2px solid var(--color-border-success)', paddingLeft: 8 }}>
+                    "{item.source_excerpt}"
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {action === 'confirm' && (

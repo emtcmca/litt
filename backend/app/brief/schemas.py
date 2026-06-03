@@ -43,6 +43,13 @@ class BriefDeadlineItem(BaseModel):
     last_confirmed_at: Optional[str] = None
     is_unconfirmed: bool   # attorney_verified but never confirmed
     escalation_level: Optional[str] = None  # 7_DAY | 3_DAY | 1_DAY | CRITICAL
+    # Source grounding — links item back to the document that generated it
+    source_type: Optional[str] = None          # court_order | contract | email | calendar
+    source_document_id: Optional[str] = None   # document/email ID from ingestion
+    source_excerpt: Optional[str] = None       # verbatim text extracted from source
+    court: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    detected_at: Optional[str] = None          # ISO datetime when ingested
 
 
 class DeadlineSection(BaseModel):

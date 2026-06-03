@@ -35,6 +35,12 @@ export interface BriefDeadlineItem {
   last_confirmed_at: string | null;
   is_unconfirmed: boolean;
   escalation_level: "CRITICAL" | "1_DAY" | "3_DAY" | "7_DAY" | "14_DAY" | null;
+  source_type: string | null;
+  source_document_id: string | null;
+  source_excerpt: string | null;
+  court: string | null;
+  jurisdiction: string | null;
+  detected_at: string | null;
 }
 
 export interface DeadlineSection {

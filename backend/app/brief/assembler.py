@@ -108,6 +108,7 @@ def _build_deadlines_section(
         client = clients.get(matter.get("client_id", ""), {})
 
         confirmed_dt = _parse_dt(dl.get("last_confirmed_at"))
+        detected_dt = _parse_dt(dl.get("created_at"))
 
         items.append(BriefDeadlineItem(
             deadline_id=dl["id"],
@@ -126,6 +127,12 @@ def _build_deadlines_section(
             last_confirmed_at=confirmed_dt.isoformat() if confirmed_dt else None,
             is_unconfirmed=dl.get("last_confirmed_by") is None,
             escalation_level=_escalation_level(days_out),
+            source_type=dl.get("source_type"),
+            source_document_id=dl.get("source_document_id"),
+            source_excerpt=dl.get("source_excerpt"),
+            court=dl.get("court"),
+            jurisdiction=dl.get("jurisdiction"),
+            detected_at=detected_dt.isoformat() if detected_dt else None,
         ))
 
     items.sort(key=lambda x: x.days_out)

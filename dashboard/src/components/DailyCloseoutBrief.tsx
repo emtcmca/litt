@@ -79,6 +79,14 @@ interface ResolvedItem {
   resolvedAt:   string;
 }
 
+interface SourceRef {
+  type:       string;   // court_order | contract | email | calendar
+  docId:      string;
+  excerpt:    string;
+  court?:     string;
+  detectedAt: string;   // ISO date slice
+}
+
 interface DecisionRow {
   id:                  string;
   gate:                GateLevel;
@@ -93,6 +101,7 @@ interface DecisionRow {
   onAction:            () => void;
   isEscalationDeadline?: boolean;
   extraTags?:          string[];
+  sourceRef?:          SourceRef;
 }
 
 interface PressureSignalItem {
@@ -310,6 +319,13 @@ function buildDecisionRows(
 
   for (const d of deadlines.items) {
     const isEsc = d.classification === 'HARD_LEGAL' && d.is_unconfirmed;
+    const sourceRef: SourceRef | undefined = d.source_document_id ? {
+      type:       d.source_type ?? 'document',
+      docId:      d.source_document_id,
+      excerpt:    d.source_excerpt ?? '',
+      court:      d.court ?? undefined,
+      detectedAt: d.detected_at ? d.detected_at.slice(0, 10) : '',
+    } : undefined;
     rows.push({
       id:          d.deadline_id,
       section:     'deadline',
@@ -318,22 +334,20 @@ function buildDecisionRows(
                  : (d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
                    ? 'REVIEW_REQUIRED' : 'AUTO_SAFE',
       title:       isEsc
-                 ? `${d.matter_name} deadline unresolved`
+                 ? `${d.matter_name} — unconfirmed HARD_LEGAL deadline`
                  : `${d.matter_name} — ${d.days_out}d deadline${d.is_unconfirmed ? ' unconfirmed' : ''}`,
-      description: isEsc
-                 ? `Opposing counsel email indicates response due, but no court order found in firm sources. Litt escalates rather than guessing.`
-                 : `${d.description}. ${d.days_out} days until ${d.due_date}. Attorney confirmation required before closeout.`,
+      description: `${d.description}. ${d.days_out} days until ${d.due_date}.${d.is_unconfirmed ? ' Not yet confirmed for this closeout period.' : ''}`,
       matterRisk:  'risk: malpractice exposure / missed filing deadline',
-      ...(isEsc && { confidence: { pct: 70, source: 'opposing counsel email', missing: 'court order' } }),
       boundary: {
-        label: isEsc ? 'Transparent Confidence' : 'Python boundary',
+        label: 'Python boundary',
         route: 'deadline_agent',
         llm:   'none',
-        extra: isEsc ? 'decision=ESCALATION' : 'tool=confirm_deadline',
+        extra: isEsc ? 'gate=ESCALATION · confirm required' : 'tool=confirm_deadline',
       },
       actionLabel:         isEsc ? 'Review' : 'Confirm',
       onAction:            () => openModal({ type: 'deadline', item: d, action: 'confirm' }),
       isEscalationDeadline: isEsc,
+      sourceRef,
     });
   }
 
@@ -873,6 +887,25 @@ function DecisionRowItem({
                 borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)', fontSize: 10,
               }}>{tag}</span>
             ))}
+          </div>
+        )}
+        {row.sourceRef && !isReceipted && (
+          <div style={{ marginTop: 9, borderLeft: `2px solid rgba(29,158,117,.35)`, paddingLeft: 9 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ background: 'rgba(29,158,117,.1)', color: C.teal, border: `1px solid rgba(29,158,117,.2)`, borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {row.sourceRef.type.replace(/_/g, ' ')}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: C.muted }}>
+                {row.sourceRef.docId}
+                {row.sourceRef.court ? ` · ${row.sourceRef.court}` : ''}
+                {row.sourceRef.detectedAt ? ` · Detected ${row.sourceRef.detectedAt}` : ''}
+              </span>
+            </div>
+            {row.sourceRef.excerpt && (
+              <p style={{ margin: 0, fontSize: 12, color: C.muted, fontStyle: 'italic', lineHeight: 1.4 }}>
+                "{row.sourceRef.excerpt}"
+              </p>
+            )}
           </div>
         )}
         {row.confidence && !isReceipted && (
