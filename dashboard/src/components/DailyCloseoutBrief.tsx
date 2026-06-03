@@ -375,14 +375,14 @@ function buildDecisionRows(
       clientId: e.client_id,
       gate:    e.has_block ? 'BLOCKED' : 'REVIEW_REQUIRED',
       title: blockFlag
-        ? `Billing scrubber hit: "${blockFlag.matched_text ?? 'blocked phrase'}"`
+        ? `${e.matter_name} — billing entry blocked`
         : !e.narrative
-        ? `Time entry missing narrative — ${e.matter_name}`
-        : `Billing entry pending approval — ${e.matter_name}`,
+        ? `${e.matter_name} — entry missing narrative`
+        : `${e.matter_name} — billing entry pending`,
       description: e.has_block
-        ? 'Likely LEDES rejection with write-down and narrative repair paths available.'
+        ? `Scrubber flagged: "${blockFlag!.matched_text ?? 'blocked phrase'}". Likely LEDES rejection — narrative repair or write-down required.`
         : !e.narrative
-        ? 'No narrative — reconstruction risk. Add before approving.'
+        ? 'No narrative — reconstruction risk. Add description before approving.'
         : `${e.hours}h · ${e.matter_name} · $${e.amount.toFixed(0)}`,
       matterRisk: e.has_block
         ? 'risk: invoice rejection / delayed cash collection'
@@ -1452,28 +1452,28 @@ export function DailyCloseoutBrief() {
           {/* ── Topbar ── */}
           <div className="litt-topbar" style={{ display: 'grid', gridTemplateColumns: '286px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
             {/* Logo + firm identity */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span
                 className="litt-logo"
                 role="img"
                 aria-label="Litt"
                 style={{
                   display:          'block',
-                  width:            180,
-                  height:           48,
+                  flexShrink:       0,
+                  width:            72,
+                  height:           40,
                   backgroundImage:  'url("/icons-logo/litt_logo_main_no_tagline.png")',
-                  backgroundSize:   '220px auto',
+                  backgroundSize:   '88px auto',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'left center',
                   mixBlendMode:     'multiply',
                 }}
               />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: C.forest, letterSpacing: '-0.01em' }}>
+              <div style={{ borderLeft: `1px solid ${C.line}`, paddingLeft: 12 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.forest, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                   {brief.firm_name}
                 </span>
-                <span style={{ color: C.line, fontSize: 14 }}>·</span>
-                <span style={{ fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)' }}>
+                <span style={{ display: 'block', fontSize: 10, color: C.muted, fontFamily: 'var(--font-mono)', marginTop: 2, letterSpacing: '0.04em' }}>
                   {brief.attorney_name}
                 </span>
               </div>
@@ -1483,7 +1483,7 @@ export function DailyCloseoutBrief() {
               {([
                 criticalCount > 0 ? { value: String(criticalCount), label: 'escalation', color: C.danger, bg: C.dangerSoft } : null,
                 { value: String(allVisible.length), label: 'decisions', color: C.ink, bg: 'transparent' },
-                wipUsd > 0 ? { value: `$${wipUsd.toLocaleString()}`, label: 'wip pending', color: C.gold, bg: 'transparent' } : null,
+                wipUsd > 0 ? { value: `$${wipUsd.toLocaleString()}`, label: 'wip', color: C.gold, bg: 'transparent' } : null,
                 { value: '5', label: 'agents', color: C.muted, bg: 'transparent' },
                 resolvedItems.length > 0 ? { value: String(resolvedItems.length), label: 'receipts', color: C.teal, bg: 'transparent' } : null,
               ] as ({ value: string; label: string; color: string; bg: string } | null)[]).filter(Boolean).map((stat, i, arr) => (
