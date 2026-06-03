@@ -1479,26 +1479,33 @@ export function DailyCloseoutBrief() {
               </div>
             </div>
 
-            <div className="litt-status-pills" style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {criticalCount > 0 && (
-                <span style={{ border: '1px solid rgba(155,45,35,.35)', borderRadius: 999, padding: '5px 8px', color: C.danger, background: C.dangerSoft, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap' }}>
-                  {criticalCount} critical
-                </span>
-              )}
-              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                {allVisible.length} decisions
-              </span>
-              {wipUsd > 0 && (
-                <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                  ${wipUsd.toLocaleString()} WIP
-                </span>
-              )}
-              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                5 agents
-              </span>
-              <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                {resolvedItems.length} receipts
-              </span>
+            <div className="litt-status-pills" style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: 0 }}>
+              {([
+                criticalCount > 0 ? { value: String(criticalCount), label: 'escalation', color: C.danger, bg: C.dangerSoft } : null,
+                { value: String(allVisible.length), label: 'decisions', color: C.ink, bg: 'transparent' },
+                wipUsd > 0 ? { value: `$${wipUsd.toLocaleString()}`, label: 'wip pending', color: C.gold, bg: 'transparent' } : null,
+                { value: '5', label: 'agents', color: C.muted, bg: 'transparent' },
+                resolvedItems.length > 0 ? { value: String(resolvedItems.length), label: 'receipts', color: C.teal, bg: 'transparent' } : null,
+              ] as ({ value: string; label: string; color: string; bg: string } | null)[]).filter(Boolean).map((stat, i, arr) => (
+                <div key={stat!.label} style={{
+                  display:        'flex',
+                  flexDirection:  'column',
+                  alignItems:     'center',
+                  justifyContent: 'center',
+                  padding:        '0 18px',
+                  borderRight:    i < arr.length - 1 ? `1px solid ${C.line}` : 'none',
+                  borderLeft:     i === 0 ? `1px solid ${C.line}` : 'none',
+                  background:     stat!.bg,
+                  minWidth:       52,
+                }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: stat!.color, lineHeight: 1.1 }}>
+                    {stat!.value}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.09em', color: C.muted, marginTop: 2 }}>
+                    {stat!.label}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
