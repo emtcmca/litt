@@ -252,7 +252,16 @@ def _build_client_silence_section(
     matters: Dict[str, dict],
     clients: Dict[str, dict],
     today: date,
+    comms: Optional[List[dict]] = None,
 ) -> ClientSilenceSection:
+    # Build matter_id → draft_id for any pending draft (DRAFT_GENERATED only)
+    draft_by_matter: Dict[str, str] = {}
+    for comm in (comms or []):
+        if comm.get("status") == "DRAFT_GENERATED":
+            mid = comm.get("matter_id")
+            if mid:
+                draft_by_matter[mid] = comm.get("id", comm.get("draft_id", ""))
+
     items: List[BriefClientSilenceItem] = []
 
     for matter_id, matter in matters.items():
@@ -282,7 +291,7 @@ def _build_client_silence_section(
             days_since_contact=days_since,
             threshold_days=threshold,
             last_contact_date=last_contact_str,
-            comm_draft_id=None,
+            comm_draft_id=draft_by_matter.get(matter_id),
         ))
 
     items.sort(key=lambda x: x.days_since_contact, reverse=True)
@@ -337,6 +346,7 @@ def assemble_brief(firm_id: str, attorney_id: str = "dana-strand") -> BriefRespo
     time_entries = [doc.to_dict() for doc in collection_ref(firm_id, "time_entries").stream()]
     deadlines = [doc.to_dict() for doc in collection_ref(firm_id, "deadlines").stream()]
     escalations = [doc.to_dict() for doc in collection_ref(firm_id, "escalations").stream()]
+    comms = [doc.to_dict() for doc in collection_ref(firm_id, "client_communications").stream()]
 
     attorney = attorneys.get(attorney_id, {})
 
@@ -351,7 +361,7 @@ def assemble_brief(firm_id: str, attorney_id: str = "dana-strand") -> BriefRespo
             deadlines=_build_deadlines_section(deadlines, matters, clients, today),
             time_entries=_build_time_entries_section(time_entries, matters, clients),
             budget_risks=_build_budget_section(time_entries, clients),
-            client_silence=_build_client_silence_section(matters, clients, today),
+            client_silence=_build_client_silence_section(matters, clients, today, comms),
             anomalies=_build_anomalies_section(escalations),
         ),
         resolved_today=[],

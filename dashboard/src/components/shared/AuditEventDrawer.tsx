@@ -24,7 +24,7 @@ export function AuditEventDrawer({ result, onClose }: Props) {
     <div style={{
       position: 'fixed',
       bottom: 24,
-      right: 24,
+      left: 24,
       zIndex: 60,
       width: 360,
       borderRadius: 12,

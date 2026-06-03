@@ -1266,7 +1266,7 @@ export function DailyCloseoutBrief() {
   const [isPlaying,      setIsPlaying]     = useState(false);
   const [isSweepComplete, setIsSweepComplete] = useState(false);
   const [activeView,     setActiveView]    = useState<ActiveView>('docket');
-  const [railOpen,       setRailOpen]      = useState(true);
+  const [railOpen,       setRailOpen]      = useState(false);
   const timerRefs    = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const traceBottomRef = useRef<HTMLDivElement>(null);
 
@@ -1298,6 +1298,7 @@ export function DailyCloseoutBrief() {
     setDisplayed([]);
     setIsPlaying(false);
     setIsSweepComplete(false);
+    setRailOpen(true);
     try {
       const result = await runSweep(FIRM_ID);
       if (result.timeline?.observations?.length) {
