@@ -479,7 +479,7 @@ interface NavPanelProps {
   pressure: PressureData;
 }
 
-function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName: _firmName, attorneyName: _attorneyName, pressure }: NavPanelProps) {
+function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName: _firmName, attorneyName: _attorneyName, pressure: _pressure }: NavPanelProps) {
   const { deadlines, time_entries, client_silence } = brief.sections;
 
   const labelStyle: CSSProperties = {
