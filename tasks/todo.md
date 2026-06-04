@@ -343,7 +343,363 @@
 
 ---
 
-## Summary Counts
+## Timer HUD — Feature Sprint (June 4–9, 2026)
+*Submission extended to June 11. HUD closes the capture-to-audit loop for judges.*  
+*All existing tasks remain. These tasks are additive.*
+
+---
+
+### Phase 1 — Backend (no UI, testable with curl)
+
+#### T1: GET /api/matters endpoint
+**File:** `backend/app/routes/brief.py`  
+**Description:** New endpoint returns all active matters for a firm with client display name. Populates the TimerHUD matter dropdown.
+
+- [ ] HUD-T1-01 Add `GET /api/matters` route to `brief.py`
+  - Query `firms/{firm_id}/matters` collection, stream all documents
+  - For each matter, look up `firms/{firm_id}/clients/{client_id}` to get `client_name`
+  - Return `List[{id, name, client_id, client_name}]` sorted by `name`
+  - No rate field in response — rate stays on the backend
+  - Use existing `collection_ref()` helper (no new Firestore patterns)
+
+**Acceptance criteria:**
+- [ ] `GET /api/matters?firm_id=strand-okafor` returns JSON array with ≥4 matters
+- [ ] Each item has `id`, `name`, `client_id`, `client_name`
+- [ ] `rivera-v-holbrook` present with `client_name: "Marcus Rivera"`
+- [ ] Returns `[]` (not error) if firm has no matters
+
+**Verification:** `curl "http://localhost:8002/api/matters?firm_id=strand-okafor"` returns non-empty array
+
+---
+
+#### T2: POST /api/actions/timer/capture endpoint
+**File:** `backend/app/routes/actions.py`  
+**Description:** Receives completed timer session, looks up attorney rate internally, calls `write_time_entry()`. Attorney never sees the rate; backend owns the calculation.
+
+- [ ] HUD-T2-01 Add `TimerCaptureRequest` Pydantic model to `actions.py`
+  ```python
+  class TimerCaptureRequest(BaseModel):
+      firm_id: str
+      matter_id: str
+      attorney_id: str
+      session_minutes: int  # raw minutes from timer (must be >= 1)
+      narrative: str        # Gemini-normalized or raw, attorney-reviewed
+      used_gemini: bool = False
+      idempotency_key: Optional[str] = None
+  ```
+- [ ] HUD-T2-02 Add `POST /api/actions/timer/capture` route
+  - Look up `firms/{firm_id}/matters/{matter_id}` → get `client_id`
+  - Look up `firms/{firm_id}/attorneys/{attorney_id}` → get `hourly_rate` field; fallback: `350.0`
+  - Validate `session_minutes >= 1`; return 400 if zero
+  - Call `write_time_entry(firm_id, matter_id, client_id, attorney_id, entry_date=config.get_effective_date(), session_minutes=session_minutes, rate=Decimal(str(rate)), actor=attorney_id, idempotency_key=_idem(req.idempotency_key), narrative=narrative, ai_assisted=req.used_gemini, ai_tool="litt-narrative-normalizer" if used_gemini else None, model=config.GEMINI_MODEL if used_gemini else None)`
+  - Return `_tool_resp(result)` — same shape as all other action endpoints
+
+**Acceptance criteria:**
+- [ ] `POST /api/actions/timer/capture` with valid payload returns `{"success": true, "entity_id": "te-...", ...}`
+- [ ] Entry appears in Firestore `firms/strand-okafor/time_entries` with `status: "PENDING"`
+- [ ] `audit_log` has `ENTRY_CREATED` event with `actor: "dana-strand"`
+- [ ] `entry_date` matches `LITT_DEMO_DATE` (2026-05-29), not today's real date
+- [ ] `ai_assisted: true` when `used_gemini: true` in request
+- [ ] Idempotent: sending same `idempotency_key` twice returns same `entity_id` without creating duplicate
+
+**Verification:** `curl -X POST .../api/actions/timer/capture -d '{"firm_id":"strand-okafor","matter_id":"rivera-v-holbrook","attorney_id":"dana-strand","session_minutes":7,"narrative":"test","used_gemini":false}' -H "Content-Type: application/json"` → success + entry in Firestore console
+
+---
+
+#### T3: POST /api/actions/timer/normalize-narrative endpoint
+**File:** `backend/app/routes/actions.py`  
+**Description:** Calls Gemini to normalize raw attorney note into professional billing narrative. Read-only — no Firestore writes, no audit event. Graceful fallback if Gemini unavailable.
+
+- [ ] HUD-T3-01 Add `TimerNormalizeRequest` Pydantic model to `actions.py`
+  ```python
+  class TimerNormalizeRequest(BaseModel):
+      firm_id: str
+      attorney_id: str
+      matter_id: str
+      matter_name: str
+      raw_description: str
+      session_minutes: int
+  ```
+- [ ] HUD-T3-02 Add `_normalize_with_gemini(matter_name, raw_description, session_minutes)` helper function in `actions.py`
+  - Uses same pattern as `comms_agent._call_gemini()`: `vertexai.init()` + `GenerativeModel` + `generate_content()`
+  - System prompt (hardcoded string, no branching logic):
+    `"You are a legal billing assistant. Convert the attorney's raw session note into a professional billing narrative suitable for a legal invoice. Maximum 200 characters. Return only the narrative — no preamble, no explanation. Do not invent facts not present in the input. If the note is already professional, return it unchanged."`
+  - User prompt: `f"Matter: {matter_name}\nSession: {session_minutes} min\nNote: {raw_description}"`
+  - Returns `str | None` — None on any exception (never raises to caller)
+- [ ] HUD-T3-03 Add `POST /api/actions/timer/normalize-narrative` route
+  - Call `_normalize_with_gemini()` — if returns None, return `{"normalized_narrative": req.raw_description, "used_gemini": false, "model_used": null}`
+  - If returns string, return `{"normalized_narrative": result, "used_gemini": true, "model_used": config.GEMINI_MODEL}`
+  - No Firestore writes in this endpoint
+
+**Acceptance criteria:**
+- [ ] `POST /api/actions/timer/normalize-narrative` with valid payload returns `{"normalized_narrative": "...", "used_gemini": true, ...}`
+- [ ] Returns 200 even if Gemini call fails (fallback to `raw_description`, `"used_gemini": false`)
+- [ ] `normalized_narrative` is ≤ 200 characters
+- [ ] No Firestore documents created by this call
+
+**Verification:** `curl -X POST .../api/actions/timer/normalize-narrative -d '{"firm_id":"strand-okafor","attorney_id":"dana-strand","matter_id":"rivera-v-holbrook","matter_name":"Rivera v. Holbrook","raw_description":"Reviewed depo outline","session_minutes":7}' -H "Content-Type: application/json"` → 200 with normalized text
+
+---
+
+**CHECKPOINT A — Backend complete**
+- [ ] T1: `curl .../api/matters?firm_id=strand-okafor` → ≥4 matters in array
+- [ ] T2: Capture endpoint creates PENDING entry in Firestore with demo date
+- [ ] T3: Normalize endpoint returns 200 even with invalid Gemini config
+- [ ] No existing tests broken (`pytest backend/` passes)
+
+---
+
+### Phase 2 — TypeScript Types + API Client (no visual changes)
+
+#### T4: TypeScript type definitions
+**File:** `dashboard/src/types.ts`
+
+- [ ] HUD-T4-01 Add timer-related types to `types.ts`:
+  ```typescript
+  export interface MatterSummary {
+    id: string;
+    name: string;
+    client_id: string;
+    client_name: string;
+  }
+
+  export interface TimerCaptureRequest {
+    firm_id: string;
+    matter_id: string;
+    attorney_id: string;
+    session_minutes: number;
+    narrative: string;
+    used_gemini: boolean;
+    idempotency_key?: string;
+  }
+
+  export interface TimerNormalizeRequest {
+    firm_id: string;
+    attorney_id: string;
+    matter_id: string;
+    matter_name: string;
+    raw_description: string;
+    session_minutes: number;
+  }
+
+  export interface TimerNormalizeResponse {
+    normalized_narrative: string;
+    used_gemini: boolean;
+    model_used: string | null;
+  }
+  ```
+
+**Acceptance criteria:**
+- [ ] `npm run build` passes after adding types
+- [ ] No `any` types introduced
+
+---
+
+#### T5: API client functions
+**File:** `dashboard/src/api.ts`
+
+- [ ] HUD-T5-01 Add three functions to `api.ts`:
+  ```typescript
+  export function getMatters(firmId: string): Promise<MatterSummary[]>
+  // GET /api/matters?firm_id={firmId}
+
+  export function normalizeNarrative(req: TimerNormalizeRequest): Promise<TimerNormalizeResponse>
+  // POST /api/actions/timer/normalize-narrative
+
+  export function captureTimerEntry(req: TimerCaptureRequest): Promise<ActionResult>
+  // POST /api/actions/timer/capture
+  ```
+  All three follow the existing `get<T>()` / `post<T>()` patterns already in `api.ts`.
+
+**Acceptance criteria:**
+- [ ] `npm run build` passes
+- [ ] All three functions use the existing `get()` / `post()` helpers — no raw `fetch()` calls
+- [ ] `getMatters` uses `get<MatterSummary[]>()` with correct path and params shape
+
+---
+
+### Phase 3 — Widget Shell (visual, no backend wiring yet)
+
+#### T6: TimerHUD component — idle + running states
+**File:** `dashboard/src/components/TimerHUD.tsx` (new file)
+
+- [ ] HUD-T6-01 Create `TimerHUD.tsx` with:
+  - `TimerStatus` type: `'idle' | 'running' | 'stopped' | 'confirming' | 'done'`
+  - `TimerState` interface matching localStorage schema in plan.md
+  - `STORAGE_KEY = 'litt_timer_state'`
+  - `loadTimerState()` helper: parse localStorage, try/catch returns idle state on corrupt data
+  - `saveTimerState()` helper: write to localStorage on every state change
+- [ ] HUD-T6-02 Idle state render: pill button "▶ Start Timer", forest green, fixed bottom-right 24px margin, z-index 9999
+- [ ] HUD-T6-03 Running state render: expanded card (300px wide, ~160px tall), pulsing dot, matter name in brass, monospace timer display (MM:SS or H:MM:SS), editable description input, Stop button
+- [ ] HUD-T6-04 `useEffect` tick: `setInterval` every 1000ms when `status === 'running'`; clears on status change
+- [ ] HUD-T6-05 `useEffect` localStorage restore: on mount, call `loadTimerState()` and restore state
+- [ ] HUD-T6-06 `useEffect` localStorage sync: write on every state change
+- [ ] HUD-T6-07 Idle → running transition: clicking Start when idle opens running state with hardcoded matter `"Rivera v. Holbrook"` / `"rivera-v-holbrook"` (temporary for shell testing; replaced in T8)
+- [ ] HUD-T6-08 Running → stopped transition: clicking Stop sets status to `'stopped'`; description required (show validation error if empty)
+- [ ] HUD-T6-09 Discard flow: confirmation dialog `"Discard {MM:SS} of recorded time?"` → yes → reset to idle; works from any non-idle state
+
+**Acceptance criteria:**
+- [ ] `npm run build` passes
+- [ ] Idle pill visible in bottom-right corner of dashboard
+- [ ] Click Start → card expands, timer starts counting
+- [ ] Timer display updates every second
+- [ ] Refresh page while running → timer resumes from where it was (localStorage restore)
+- [ ] Click Stop → status changes to stopped (no modal yet — stops at stopped state)
+- [ ] Discard from running with confirmation → resets to idle
+- [ ] Widget never overlaps open modals (modals use higher z-index)
+- [ ] IBM Plex Sans font throughout
+
+---
+
+#### T7: Mount TimerHUD in App.tsx
+**File:** `dashboard/src/App.tsx`
+
+- [ ] HUD-T7-01 Import `TimerHUD` in `App.tsx`
+- [ ] HUD-T7-02 Render `<TimerHUD firmId="strand-okafor" attorneyId="dana-strand" />` outside `<Routes>` block so it persists across all route navigation
+
+**Acceptance criteria:**
+- [ ] Timer visible on `/` (main brief page)
+- [ ] Timer visible on `/audit` (audit log page)
+- [ ] Timer visible on `/email-preview`
+- [ ] Navigating between pages does NOT reset the timer (state persists via localStorage)
+
+---
+
+**CHECKPOINT B — Visual timer complete**
+- [ ] Timer pill visible on all pages
+- [ ] Start/Stop/Discard flow works without any backend calls
+- [ ] localStorage persistence verified: start timer, reload page, timer is still running with correct elapsed time
+- [ ] No existing dashboard functionality broken
+
+---
+
+### Phase 4 — Full Vertical Slice (backend wired end-to-end)
+
+#### T8: Wire matter dropdown to GET /api/matters
+**File:** `dashboard/src/components/TimerHUD.tsx`
+
+- [ ] HUD-T8-01 Add `matters` state: `MatterSummary[] | null` (null = not yet loaded)
+- [ ] HUD-T8-02 Load matters from `getMatters(firmId)` on first expansion of the idle widget (lazy load — do not call on mount; call when idle pill is clicked)
+- [ ] HUD-T8-03 Replace hardcoded matter with `<select>` dropdown populated from `matters`
+- [ ] HUD-T8-04 Require matter selection before Start is enabled; show `"Select a matter to start timing"` placeholder
+- [ ] HUD-T8-05 On matter select: update `matterId`, `matterName`, `clientId` in state (and localStorage)
+- [ ] HUD-T8-06 Add loading state for dropdown: show "Loading matters..." while `getMatters()` in flight
+
+**Acceptance criteria:**
+- [ ] Clicking idle pill opens dropdown populated with real matters from API
+- [ ] Can select "Rivera v. Holbrook" and start timer
+- [ ] `matterId`, `matterName`, `clientId` all persist in localStorage after selection
+- [ ] Start button disabled until matter selected
+
+---
+
+#### T9: Wire Stop → normalize-narrative → confirming state
+**File:** `dashboard/src/components/TimerHUD.tsx`
+
+- [ ] HUD-T9-01 On Stop click: validate description is non-empty; if empty, show inline error "Description required before stopping"
+- [ ] HUD-T9-02 After Stop validation passes: compute `session_minutes = Math.max(1, Math.round(elapsedMs / 60000))`; set status to `'confirming'`; call `normalizeNarrative()` simultaneously (do not block transition on Gemini call)
+- [ ] HUD-T9-03 Show confirming state immediately with spinner on the Litt narrative section while Gemini call in flight
+- [ ] HUD-T9-04 On normalize success: populate `normalizedNarrative` in state; spinner replaced by Litt-badged narrative text (editable)
+- [ ] HUD-T9-05 On normalize failure (error or timeout): populate `normalizedNarrative` with raw description; show subtle note "Could not normalize — using your original text"; `used_gemini` flag stays false
+- [ ] HUD-T9-06 Confirming state displays: matter name + computed hours (rounded), raw description section, Litt-badged normalized narrative (editable), Edit button, Discard button, Confirm button (disabled until narrative non-empty)
+
+**Acceptance criteria:**
+- [ ] Stop click with empty description → error shown, timer stays running
+- [ ] Stop click with description → transitions to confirming, spinner shows
+- [ ] After Gemini returns → normalized narrative appears with `✦ Litt:` badge
+- [ ] Normalized narrative is editable (attorney can override)
+- [ ] If Gemini fails → raw description shown, no error state, Confirm still available
+- [ ] Hours display rounds correctly: 7 min → "0.2 hrs", 12 min → "0.2 hrs", 13 min → "0.3 hrs"
+
+---
+
+#### T10: Wire Confirm → capture → done state
+**File:** `dashboard/src/components/TimerHUD.tsx`
+
+- [ ] HUD-T10-01 Generate idempotency key on entering confirming state: `timer-${Date.now()}-${Math.random().toString(36).slice(2,8)}` — store in state so Confirm is idempotent even if clicked twice
+- [ ] HUD-T10-02 On Confirm click: disable button, show spinner, call `captureTimerEntry()`
+- [ ] HUD-T10-03 On capture success: set status to `'done'`, store `entry_id` from `result.entity_id`, clear timer data from localStorage (reset to idle schema)
+- [ ] HUD-T10-04 Done state render: green card, "✓ Entry created", entry ID, "Appears in next sweep", 3-second auto-dismiss countdown
+- [ ] HUD-T10-05 After 3 seconds: reset widget to idle state; done card fades out
+- [ ] HUD-T10-06 On capture failure: show error message inline in confirming state, Confirm button re-enables for retry (idempotency key ensures no double-create)
+
+**Acceptance criteria:**
+- [ ] Clicking Confirm calls `POST /api/actions/timer/capture`
+- [ ] Done state shows real `entity_id` from the response (`te-xxxxxxxx`)
+- [ ] Widget resets to idle after 3 seconds
+- [ ] Entry is visible in Firestore `time_entries` with `status: PENDING`
+- [ ] Running `GET /api/brief` after capture includes the new entry in `time_entries` section
+- [ ] Capture failure shows error, doesn't reset; retry works
+
+---
+
+**CHECKPOINT C — Full E2E complete**
+- [ ] Full flow: Start → select matter → run timer → Stop → normalize → review → Confirm → entry in Firestore
+- [ ] Entry appears in brief on next load (do `GET /api/brief` manually or click "Run Closeout")
+- [ ] `audit_log` has `ENTRY_CREATED` event from this capture
+- [ ] `entry_date` is `2026-05-29` (demo clock), not today
+- [ ] Timer resets to idle after confirm
+- [ ] All existing brief/modal/audit functionality still works
+
+---
+
+### Phase 5 — Polish + Demo Hardening
+
+#### T11: Demo reset clears timer localStorage
+**File:** `dashboard/src/components/DemoResetButton.tsx`
+
+- [ ] HUD-T11-01 After successful demo reset API call, also call `localStorage.removeItem('litt_timer_state')` (or set to idle JSON)
+- [ ] HUD-T11-02 After localStorage clear, optionally set a demo-seeded running timer: `{ status: 'running', matterId: 'rivera-v-holbrook', matterName: 'Rivera v. Holbrook', clientId: 'rivera-personal', description: 'Reviewed Rivera depo outline with Omar', startedAtEpochMs: Date.now() - (7 * 60 * 1000 + 23 * 1000), elapsedMsAccumulated: 0, normalizedNarrative: null }` — this pre-seeds the timer for the demo scene
+
+**Acceptance criteria:**
+- [ ] After `POST /api/demo/reset`, timer widget shows as running with 7:23 elapsed, matter "Rivera v. Holbrook"
+- [ ] Timer is counting up from that baseline
+- [ ] No manual DevTools step required before demo recording
+
+---
+
+#### T12: Error handling hardening
+**File:** `dashboard/src/components/TimerHUD.tsx`
+
+- [ ] HUD-T12-01 Wrap all localStorage operations in try/catch; on parse error log to console and reset to idle
+- [ ] HUD-T12-02 Handle `getMatters()` failure: show "Unable to load matters" with retry button; timer start disabled until matters load
+- [ ] HUD-T12-03 Handle `captureTimerEntry()` network failure: show "Save failed — check connection" with retry; keep timer data in state (not lost)
+- [ ] HUD-T12-04 Gemini normalize timeout (>8 seconds): abort and fallback to raw description automatically
+
+**Acceptance criteria:**
+- [ ] Manually corrupt `litt_timer_state` in localStorage → widget resets to idle on next load, no crash
+- [ ] Offline simulate (DevTools Network: Offline) → capture error shown, timer data preserved in state
+
+---
+
+#### T13: Demo scene documentation
+**File:** `docs/HACKATHON-DEMO-SCRIPT.md`
+
+- [ ] HUD-T13-01 Add "Timer Scene" section to demo script (15–20 seconds)
+  - Pre-demo setup instructions (demo reset now auto-seeds the timer, no manual DevTools needed)
+  - Narration text with timing marks
+  - What the judge sees at each step
+  - How to recover if Gemini normalization is slow (fallback → still usable)
+- [ ] HUD-T13-02 Update demo script total runtime estimate (add 15–20 seconds to previous script)
+- [ ] HUD-T13-03 Update `devpost-description.md` to mention timer capture as a shipped feature (not v1.1)
+
+**Acceptance criteria:**
+- [ ] Demo script includes timer scene with timing marks
+- [ ] Total estimated demo time still ≤ 2:00 (trim elsewhere if needed to fit)
+- [ ] Devpost description no longer says "manual timer" is v1.1
+
+---
+
+**CHECKPOINT D — Demo ready**
+- [ ] `POST /api/demo/reset` → timer widget shows as running (7:23, Rivera v. Holbrook)
+- [ ] Full timer scene completed in ≤ 20 seconds on dry run
+- [ ] Entry created in Firestore after scene; appears in brief on next sweep
+- [ ] No existing demo conditions broken (`GET /api/demo/ready` still passes all 5 checks)
+- [ ] Full demo (timer scene + existing brief walkthrough) runs in ≤ 2:00
+
+---
+
+## Updated Summary Counts
 
 | Day | Tasks | Critical path |
 |-----|-------|---------------|
@@ -353,4 +709,9 @@
 | 4 | 13 | demo/ready all passing |
 | 5 | 17 | Full demo path in browser + design system |
 | 6 | 41 | Agent visibility + deploy + video + submitted |
-| **Total** | **127** | |
+| HUD Phase 1 | 9 | Backend endpoints curl-testable |
+| HUD Phase 2 | 5 | Types + API client compiles |
+| HUD Phase 3 | 11 | Visual timer works, persists across refresh |
+| HUD Phase 4 | 15 | Full E2E capture → Firestore |
+| HUD Phase 5 | 8 | Demo scene ready, script updated |
+| **Total** | **175** | |

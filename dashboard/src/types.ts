@@ -395,6 +395,42 @@ export type ActionResult = ToolResult | ToolError;
 // Demo
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Timer HUD
+// ---------------------------------------------------------------------------
+
+export interface MatterSummary {
+  id: string;
+  name: string;
+  client_id: string;
+  client_name: string;
+}
+
+export interface TimerCaptureRequest {
+  firm_id: string;
+  matter_id: string;
+  attorney_id: string;
+  session_minutes: number;
+  narrative: string;
+  used_gemini: boolean;
+  idempotency_key?: string;
+}
+
+export interface TimerNormalizeRequest {
+  firm_id: string;
+  attorney_id: string;
+  matter_id: string;
+  matter_name: string;
+  raw_description: string;
+  session_minutes: number;
+}
+
+export interface TimerNormalizeResponse {
+  normalized_narrative: string;
+  used_gemini: boolean;
+  model_used: string | null;
+}
+
 export interface DemoCheck {
   pass: boolean;
   detail: string;

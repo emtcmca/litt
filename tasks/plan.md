@@ -669,3 +669,453 @@ litt/
 ├── Dockerfile.dashboard
 └── .env.example
 ```
+
+---
+
+---
+
+# Timer HUD — Feature Plan
+
+**Added:** June 4, 2026 (deadline extension to June 11 unlocks this)  
+**Status:** Pre-build — plan approved, no code written  
+**Scope:** New floating time-capture widget wired into existing billing pipeline  
+**Demo slot:** 15–20 seconds inserted before the main brief walkthrough  
+
+---
+
+## What We're Building and Why
+
+Litt currently only *reviews* time entries — the billing pipeline starts at `PENDING`, already written by someone else. That leaves a gap: where do the entries come from? For the hackathon demo, they come from seed data. For real attorneys, they come from the timer in their billing software.
+
+The Timer HUD closes that loop. A floating widget, always visible, lets Dana click Start → work → Stop → confirm a Gemini-normalized narrative → entry lands in `PENDING` and flows into the next sweep. Judges see the full capture-to-audit trail in one 15-second sequence.
+
+This is a dashboard-native React component — not a browser extension (explicitly cut from scope in cutline.md). Timer state persists in `localStorage` so a page navigation or refresh does not kill an in-progress entry.
+
+---
+
+## Architecture Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Widget placement | Rendered in `App.tsx` **outside** `<Routes>` | Persists across `/`, `/audit`, `/email-preview` without re-mounting |
+| Matter list source | New `GET /api/matters` endpoint in `brief.py` | Minimal backend addition; matters collection is already seeded and consistent |
+| Rate lookup | Backend fetches from `attorneys` collection during capture | Never expose billing rate in the UI; backend owns the calculation |
+| Gemini narrative normalization | New `POST /api/actions/timer/normalize-narrative` in `actions.py` | Uses same `_call_gemini()` pattern as `comms_agent.py`; isolated endpoint = easy to mock in tests |
+| Gemini failure handling | Fallback to raw description if call fails | Demo must not block on a network error; attorney still sees their raw text |
+| Entry write | `POST /api/actions/timer/capture` → `write_time_entry()` | Reuses existing tool function unchanged; same idempotency + audit trail |
+| `entry_date` | `config.get_effective_date()` on backend, never from browser clock | Enforces demo clock rule; matches all other entries in the system |
+| Demo pre-seeding | Document localStorage seed as a manual pre-demo step; optionally clear in `DemoResetButton.tsx` | Simplest path; no new API needed |
+| `ai_assisted` flag | `True` when Gemini normalization was used | Enables `AI_DISCLOSURE_GAP` anomaly detector to fire on timer entries just like on other entries |
+
+---
+
+## State Machine
+
+```
+                        ┌──────────────────────────────────┐
+                        ▼                                  │ Edit (back to stopped)
+ [idle] ──Start──► [running] ──Stop──► [stopped] ──normalizing──► [confirming]
+   ▲                   │                   │                          │
+   │                   │                   │                          │ Confirm
+   │                Discard             Discard                       ▼
+   └────────────────────────────────────────────────────── [done] ──3s──► [idle]
+```
+
+State transitions:
+- `idle → running`: user clicks Start, matter is selected (required before timer starts)
+- `running → stopped`: user clicks Stop; description is required if not already filled
+- `stopped → confirming`: POST normalize-narrative called; spinner shows during Gemini call
+- `confirming → idle`: user clicks Confirm; POST capture fires; entry_id returned; done flash
+- `confirming → stopped`: user clicks "Edit" — back to stopped with editable description
+- `any → idle`: user clicks Discard/Cancel (with confirmation dialog if timer > 0)
+
+---
+
+## localStorage Schema
+
+Key: `litt_timer_state`
+
+```json
+{
+  "status": "idle | running | stopped | confirming",
+  "matter_id": "string | null",
+  "matter_name": "string | null",
+  "client_id": "string | null",
+  "description": "string",
+  "started_at_epoch_ms": "number | null",
+  "elapsed_ms_accumulated": "number",
+  "normalized_narrative": "string | null"
+}
+```
+
+Computing current elapsed when status is `running`:
+```
+current_elapsed = elapsed_ms_accumulated + (Date.now() - started_at_epoch_ms)
+```
+
+`elapsed_ms_accumulated` holds prior elapsed time (supports pause-resume in future; for v1.0 it is always 0 at start).
+
+On confirm success: clear localStorage to `{ status: "idle", ... nulls, elapsed: 0 }`.  
+On corrupt/unparseable localStorage: reset to idle silently.
+
+---
+
+## UI Layout — State by State
+
+All states: `position: fixed`, bottom-right, 24px margin, z-index 9999. IBM Plex Sans throughout. Uses existing CSS variables from the dashboard design system (`--color-background-primary`, `--color-text-primary`, etc.).
+
+### Idle State
+```
+┌──────────────────────┐
+│  ▶  Start Timer      │
+└──────────────────────┘
+```
+- Pill button, ~170px wide, 40px tall
+- Background: `#14221F` (forest), text: white
+- Hover: slight opacity lift
+- Click → opens expanded running state (matter must be selected first if not pre-set)
+
+### Running State
+```
+┌──────────────────────────────────┐
+│  ● RECORDING          [Discard] │
+│  Rivera v. Holbrook              │
+│  ─────────────────────────────  │
+│  00:07:23                        │
+│  ─────────────────────────────  │
+│  Reviewed Rivera depo outline..  │
+│  (click to edit)                 │
+│                        [Stop ■] │
+└──────────────────────────────────┘
+```
+- 300px wide, fixed height ~160px
+- Pulsing red dot + "RECORDING" label (CSS animation)
+- Matter name in `#D6C181` (brass)
+- Timer display: `font-family: monospace`, 28px, bold
+- Description: single-line input, editable inline, gray placeholder if empty
+- Stop button: red background, white text
+
+### Confirming State (review before submit)
+```
+┌──────────────────────────────────┐
+│  REVIEW ENTRY           [Edit]  │
+│  Rivera v. Holbrook · 0.2 hrs   │
+│  ─────────────────────────────  │
+│  Raw:  "Reviewed Rivera depo    │
+│         outline with Omar"       │
+│  ─────────────────────────────  │
+│  ✦ Litt: "Reviewed Rivera v.    │
+│    Holbrook deposition outline   │
+│    and discovery strategy with   │
+│    O. Okafor" (editable)         │
+│  ─────────────────────────────  │
+│       [Discard]    [Confirm ✓]  │
+└──────────────────────────────────┘
+```
+- Litt-normalized narrative shown with `✦` badge (brass color)
+- Narrative is editable before confirm — attorney override allowed
+- Hours displayed (rounded to 6-min increment, computed client-side for preview: `Math.ceil(elapsed_ms / 60000 / 6) * 6 / 60`)
+- Confirm button: forest green. Discard: gray text link.
+
+### Done State (auto-dismisses after 3 seconds)
+```
+┌──────────────────────────────────┐
+│  ✓  Entry created                │
+│  te-a3f7c2d1 · PENDING           │
+│  Appears in next sweep           │
+└──────────────────────────────────┘
+```
+- Green background (`#1D9E75`), white text
+- Entry ID displayed for reference
+- 3-second countdown, then fades to idle
+
+---
+
+## Dependency Graph
+
+```
+GET /api/matters (new backend endpoint)
+    │
+    └── Matter dropdown in TimerHUD
+
+POST /api/actions/timer/normalize-narrative (new backend endpoint)
+    │
+    └── Stopped → Confirming transition in TimerHUD
+
+POST /api/actions/timer/capture (new backend endpoint)
+    │   └── write_time_entry() [existing — unchanged]
+    │       └── log_audit_event() [existing — unchanged]
+    │
+    └── Confirm action in TimerHUD → done state → AuditEventDrawer
+
+TimerHUD.tsx (new component)
+    │
+    └── App.tsx (mount outside <Routes>)
+```
+
+Implementation order follows the graph bottom-up: backend endpoints first, then types, then API client, then widget shell, then wire to backend.
+
+---
+
+## File Change Summary
+
+| File | Change | Size |
+|------|--------|------|
+| `backend/app/routes/brief.py` | Add `GET /api/matters` | XS |
+| `backend/app/routes/actions.py` | Add `POST /api/actions/timer/normalize-narrative` and `POST /api/actions/timer/capture` | S |
+| `dashboard/src/types.ts` | Add `MatterSummary`, `TimerCaptureRequest`, `TimerCaptureResponse`, `TimerNormalizeRequest`, `TimerNormalizeResponse` | XS |
+| `dashboard/src/api.ts` | Add `getMatters()`, `normalizeNarrative()`, `captureTimerEntry()` | XS |
+| `dashboard/src/components/TimerHUD.tsx` | **New file** — full widget, all states | M |
+| `dashboard/src/App.tsx` | Mount `<TimerHUD>` outside `<Routes>`, pass `firmId` + `attorneyId` | XS |
+| `dashboard/src/components/DemoResetButton.tsx` | Clear `litt_timer_state` from localStorage on reset | XS |
+
+Total: 7 file changes, 1 new file. No changes to existing tools, models, tests, or the brief assembler.
+
+---
+
+## Backend Endpoint Specs
+
+### GET /api/matters
+
+Location: `backend/app/routes/brief.py`
+
+Request: `?firm_id=strand-okafor`
+
+Response:
+```json
+[
+  {
+    "id": "mercer-industries",
+    "name": "Mercer Industries — General Counsel",
+    "client_id": "mercer-industries",
+    "client_name": "Mercer Industries"
+  },
+  {
+    "id": "rivera-v-holbrook",
+    "name": "Rivera v. Holbrook",
+    "client_id": "rivera-personal",
+    "client_name": "Marcus Rivera"
+  }
+]
+```
+
+Implementation: Read `firms/{firm_id}/matters` collection. For each matter, read `client_id`, look up `client_name` from `firms/{firm_id}/clients/{client_id}`. Return sorted by `name`. No rate exposed in response (backend handles rate at capture time).
+
+### POST /api/actions/timer/normalize-narrative
+
+Location: `backend/app/routes/actions.py`
+
+Request:
+```json
+{
+  "firm_id": "strand-okafor",
+  "attorney_id": "dana-strand",
+  "matter_id": "rivera-v-holbrook",
+  "matter_name": "Rivera v. Holbrook",
+  "raw_description": "Reviewed Rivera depo outline with Omar",
+  "session_minutes": 7
+}
+```
+
+Response:
+```json
+{
+  "normalized_narrative": "Reviewed Rivera v. Holbrook deposition outline and discovery strategy with O. Okafor",
+  "used_gemini": true,
+  "model_used": "gemini-2.5-pro"
+}
+```
+
+Implementation: Calls `_call_gemini_normalize()` (local helper, same pattern as `comms_agent._call_gemini()`). If Gemini returns None, returns `{"normalized_narrative": raw_description, "used_gemini": false, "model_used": null}` — graceful fallback, never errors.
+
+System prompt (hardcoded, not configurable):
+```
+You are a legal billing assistant. Convert the attorney's raw session note into a
+professional billing narrative suitable for a legal invoice. Maximum 200 characters.
+Return only the narrative — no preamble, no explanation. Do not invent facts not
+present in the input. If the note is already professional, return it unchanged.
+```
+
+User prompt: `Matter: {matter_name}\nSession: {session_minutes} min\nNote: {raw_description}`
+
+This endpoint does NOT write to Firestore. It is read-only from a data perspective. No audit event.
+
+### POST /api/actions/timer/capture
+
+Location: `backend/app/routes/actions.py`
+
+Request:
+```json
+{
+  "firm_id": "strand-okafor",
+  "matter_id": "rivera-v-holbrook",
+  "attorney_id": "dana-strand",
+  "session_minutes": 7,
+  "narrative": "Reviewed Rivera v. Holbrook deposition outline and discovery strategy with O. Okafor",
+  "used_gemini": true,
+  "idempotency_key": "timer-abc123"
+}
+```
+
+Response: Standard `ToolResult` (same shape as all other action endpoints):
+```json
+{
+  "success": true,
+  "entity_id": "te-a3f7c2d1",
+  "entity_type": "time_entry",
+  "audit_event_id": "audit-xyz"
+}
+```
+
+Implementation:
+1. Look up matter → get `client_id`
+2. Look up `firms/{firm_id}/attorneys/{attorney_id}` → get `hourly_rate` (fallback: 350.0)
+3. Call `write_time_entry(firm_id, matter_id, client_id, attorney_id, entry_date=config.get_effective_date(), session_minutes=session_minutes, rate=Decimal(str(rate)), actor=attorney_id, idempotency_key=idempotency_key, narrative=narrative, ai_assisted=used_gemini, ai_tool="litt-narrative-normalizer" if used_gemini else None, model=config.GEMINI_MODEL if used_gemini else None)`
+4. Return result as-is
+
+The entry is created with `status="PENDING"`. It will appear in the brief's `time_entries` section on the next `GET /api/brief` or sweep.
+
+---
+
+## Frontend Component Spec — TimerHUD.tsx
+
+Location: `dashboard/src/components/TimerHUD.tsx`
+
+Props:
+```typescript
+interface TimerHUDProps {
+  firmId: string;
+  attorneyId: string;
+}
+```
+
+Internal state (also mirrored to localStorage):
+```typescript
+type TimerStatus = 'idle' | 'running' | 'stopped' | 'confirming' | 'done';
+
+interface TimerState {
+  status: TimerStatus;
+  matterId: string | null;
+  matterName: string | null;
+  clientId: string | null;
+  description: string;
+  startedAtEpochMs: number | null;
+  elapsedMsAccumulated: number;
+  normalizedNarrative: string | null;
+}
+```
+
+Hooks used:
+- `useState` for `TimerState`
+- `useEffect` for the tick interval (1-second `setInterval` when `status === 'running'`)
+- `useEffect` for localStorage sync (write on every state change)
+- `useEffect` on mount for localStorage restore
+
+Key behaviors:
+- `setInterval` starts on `running`, clears on stop — display updates every second
+- Display format: `elapsed_ms < 3600000` → `MM:SS`, else `H:MM:SS`
+- Matter dropdown populated from `GET /api/matters` on first open (cached in state)
+- Normalize called automatically on `running → stopped` transition; spinner blocks UI during call
+- `captureTimerEntry` called on Confirm; `AuditEventDrawer` hook NOT used (widget shows its own done state)
+- Idempotency key generated client-side: `timer-${Date.now()}-${Math.random().toString(36).slice(2,8)}`
+
+---
+
+## Demo Scene — 15–20 Seconds
+
+**Insert this scene BEFORE "0:00–0:10 Hook" in the existing demo script, or as a standalone pre-brief opener.**
+
+Recommended position: After clicking "Run Closeout" but before the timeline finishes — or more cleanly, as a separate scene before the main demo sequence:
+
+```
+[Pre-brief scene, ~15 seconds]
+
+NARRATOR:
+"Before Dana checks the brief, she just finished a call.
+The timer's been running in the corner."
+
+ACTION: Timer HUD visible — running, "Rivera v. Holbrook", showing 00:07:23
+
+ACTION: Dana clicks Stop.
+  → Description box shows "Reviewed Rivera depo outline with Omar"
+  → Spinner appears briefly (Gemini normalization)
+  → Confirming state appears:
+    Raw: "Reviewed Rivera depo outline with Omar"
+    ✦ Litt: "Reviewed Rivera v. Holbrook deposition outline and discovery strategy with O. Okafor"
+
+NARRATOR:
+"Litt normalizes the billing narrative. Dana clicks Confirm."
+
+ACTION: Confirm clicked → done state: "✓ Entry created · te-a3f7c2 · PENDING"
+
+NARRATOR:
+"That entry is now PENDING. It'll surface in the next sweep."
+```
+
+**Pre-demo setup for timer scene:**
+Set this in browser localStorage before each take (or automate in DemoResetButton):
+```javascript
+localStorage.setItem('litt_timer_state', JSON.stringify({
+  status: 'running',
+  matterId: 'rivera-v-holbrook',
+  matterName: 'Rivera v. Holbrook',
+  clientId: 'rivera-personal',
+  description: 'Reviewed Rivera depo outline with Omar',
+  startedAtEpochMs: Date.now() - (7 * 60 * 1000 + 23 * 1000),
+  elapsedMsAccumulated: 0,
+  normalizedNarrative: null
+}));
+```
+This seeds the timer to show 7:23 elapsed. Run this in browser DevTools console after demo reset.
+
+---
+
+## Risks and Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Gemini normalize-narrative call is slow (>3s) | High — stalls demo | Show spinner; if >5s timeout, fall back to raw description automatically |
+| Gemini returns hallucinated content | Medium | System prompt explicitly forbids inventing facts; fallback to raw description |
+| `write_time_entry` requires attorney rate from Firestore | High — entry fails if attorney doc missing | Backend falls back to `350.0`; attorney doc is always seeded |
+| Timer localStorage corrupted after failed capture | Medium | On mount, wrap parse in try/catch; reset to idle on error |
+| Timer widget overlaps modal content | Medium | `z-index: 9999` on widget; modals use `z-index: 10000` to appear above it |
+| Demo timer pre-seed forgotten before recording | High | Add localStorage seed to DemoResetButton so demo reset also resets the timer state |
+
+---
+
+## Build Order (Task Dependencies)
+
+```
+T1: GET /api/matters         ──────────────┐
+T2: POST /timer/capture       ─────────────┤
+T3: POST /timer/normalize     ─────────────┤
+                                           ▼
+T4: TypeScript types (types.ts)           T8: Wire matter dropdown
+T5: API client functions (api.ts) ────────►
+                                           T9: Wire Stop → normalize → confirming
+T6: TimerHUD.tsx shell (idle+running)     T10: Wire Confirm → capture → done
+T7: Mount in App.tsx          ────────────►
+                                           T11: Demo reset clears timer localStorage
+[Checkpoint A: visual timer works]         T12: Error handling (Gemini fallback)
+                                           T13: Demo scene pre-configuration
+
+                                           [Checkpoint B: full E2E works]
+                                           [Checkpoint C: demo scene dry run]
+```
+
+Tasks T1–T7 have no inter-dependencies within their phase and can proceed sequentially. T8–T10 each depend on their predecessor in the wire-up phase. T11–T13 are independent polish tasks.
+
+---
+
+## Updated File Structure (additions only)
+
+```
+dashboard/src/components/
+├── TimerHUD.tsx              ← NEW
+├── DemoResetButton.tsx       ← add localStorage clear
+...
+
+backend/app/routes/
+├── brief.py                  ← add GET /api/matters
+├── actions.py                ← add POST /api/actions/timer/{normalize-narrative,capture}
+```

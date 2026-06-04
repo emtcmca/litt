@@ -132,6 +132,28 @@ def get_audit_log(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.get("/matters")
+def get_matters(firm_id: str):
+    """Returns all matters for a firm with client display names. Used by the Timer HUD."""
+    try:
+        clients = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "clients").stream()}
+        result = []
+        for doc in collection_ref(firm_id, "matters").stream():
+            m = doc.to_dict()
+            client_id = m.get("client_id", "")
+            client_name = clients.get(client_id, {}).get("name", client_id)
+            result.append({
+                "id": m.get("id", doc.id),
+                "name": m.get("name", doc.id),
+                "client_id": client_id,
+                "client_name": client_name,
+            })
+        result.sort(key=lambda x: x["name"])
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.get("/sweep/{run_id}", response_model=AgentRunTimeline)
 def get_sweep_timeline(run_id: str, firm_id: str):
     """

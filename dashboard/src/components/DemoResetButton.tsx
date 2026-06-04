@@ -16,6 +16,23 @@ export function DemoResetButton({ firmId, onReset }: Props) {
     setError(null);
     try {
       await resetDemo(firmId);
+      // Seed timer state so demo opens with a running timer (Rivera, 7m23s elapsed)
+      try {
+        localStorage.setItem('litt_timer_state', JSON.stringify({
+          status: 'running',
+          matterId: 'rivera-v-holbrook',
+          matterName: 'Rivera v. Holbrook',
+          clientId: 'rivera-personal',
+          description: 'Reviewed Rivera depo outline with Omar',
+          startedAtEpochMs: Date.now() - (7 * 60 * 1000 + 23 * 1000),
+          elapsedMsAccumulated: 0,
+          normalizedNarrative: null,
+          usedGemini: false,
+          idempotencyKey: `timer-demo-${Date.now()}`,
+        }));
+      } catch {
+        // localStorage unavailable — demo timer won't be pre-seeded
+      }
       onReset();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Reset failed');

@@ -20,6 +20,7 @@ from app.tools.billing import (
     update_entry_narrative,
     write_down_entry,
     write_off_entry,
+    write_time_entry,
 )
 from app.tools.comms import (
     approve_client_comm_draft,
@@ -443,4 +444,96 @@ def alert_dismiss(req: AlertDismiss):
         actor=req.attorney_id,
         reason=req.reason,
         idempotency_key=_idem(req.idempotency_key),
+    ))
+
+
+# ---------------------------------------------------------------------------
+# Timer HUD actions
+# ---------------------------------------------------------------------------
+
+_NORMALIZE_SYSTEM_PROMPT = (
+    "You are a legal billing assistant. Convert the attorney's raw session note into a "
+    "professional billing narrative suitable for a legal invoice. Maximum 200 characters. "
+    "Return only the narrative — no preamble, no explanation. Do not invent facts not "
+    "present in the input. If the note is already professional, return it unchanged."
+)
+
+
+def _normalize_with_gemini(matter_name: str, raw_description: str, session_minutes: int) -> Optional[str]:
+    try:
+        import vertexai
+        from vertexai.generative_models import GenerativeModel
+        from app import config as _cfg
+        vertexai.init(project=_cfg.GOOGLE_CLOUD_PROJECT, location=_cfg.VERTEX_AI_LOCATION)
+        model = GenerativeModel(
+            model_name=_cfg.GEMINI_MODEL,
+            system_instruction=[_NORMALIZE_SYSTEM_PROMPT],
+        )
+        prompt = f"Matter: {matter_name}\nSession: {session_minutes} min\nNote: {raw_description}"
+        text = model.generate_content(prompt).text.strip()
+        return text[:200] if text else None
+    except Exception:
+        return None
+
+
+class TimerNormalizeRequest(BaseModel):
+    firm_id: str
+    attorney_id: str
+    matter_id: str
+    matter_name: str
+    raw_description: str
+    session_minutes: int
+
+
+class TimerCaptureRequest(BaseModel):
+    firm_id: str
+    matter_id: str
+    attorney_id: str
+    session_minutes: int
+    narrative: str
+    used_gemini: bool = False
+    idempotency_key: Optional[str] = None
+
+
+@router.post("/actions/timer/normalize-narrative")
+def timer_normalize_narrative(req: TimerNormalizeRequest):
+    result = _normalize_with_gemini(req.matter_name, req.raw_description, req.session_minutes)
+    if result:
+        from app import config as _cfg
+        return {"normalized_narrative": result, "used_gemini": True, "model_used": _cfg.GEMINI_MODEL}
+    return {"normalized_narrative": req.raw_description, "used_gemini": False, "model_used": None}
+
+
+@router.post("/actions/timer/capture")
+def timer_capture(req: TimerCaptureRequest):
+    from app import config as _cfg
+    if req.session_minutes < 1:
+        return {"success": False, "error_type": "VALIDATION_FAILED",
+                "message": "session_minutes must be >= 1", "detail": {}}
+
+    matter_doc = collection_ref(req.firm_id, "matters").document(req.matter_id).get()
+    if not matter_doc.exists:
+        return {"success": False, "error_type": "NOT_FOUND",
+                "message": f"matter {req.matter_id} not found", "detail": {}}
+    client_id = matter_doc.to_dict().get("client_id", "")
+
+    attorney_doc = collection_ref(req.firm_id, "attorneys").document(req.attorney_id).get()
+    rate = 350.0
+    if attorney_doc.exists:
+        rate = float(attorney_doc.to_dict().get("hourly_rate", 350.0))
+
+    return _tool_resp(write_time_entry(
+        firm_id=req.firm_id,
+        matter_id=req.matter_id,
+        client_id=client_id,
+        attorney_id=req.attorney_id,
+        entry_date=_cfg.get_effective_date(),
+        session_minutes=req.session_minutes,
+        rate=Decimal(str(rate)),
+        actor=req.attorney_id,
+        idempotency_key=_idem(req.idempotency_key),
+        narrative=req.narrative,
+        ai_assisted=req.used_gemini,
+        ai_tool="litt-narrative-normalizer" if req.used_gemini else None,
+        model=_cfg.GEMINI_MODEL if req.used_gemini else None,
     ))

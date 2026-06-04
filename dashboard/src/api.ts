@@ -21,9 +21,13 @@ import type {
   DeadlineVerifyRequest,
   DemoReadyResponse,
   DemoResetResponse,
+  MatterSummary,
   ScrubberFlag,
   SourceEmail,
   SweepRunResponse,
+  TimerCaptureRequest,
+  TimerNormalizeRequest,
+  TimerNormalizeResponse,
 } from "./types";
 
 const BASE = "/api";
@@ -172,6 +176,22 @@ export async function downloadLedesExport(firmId: string): Promise<void> {
   a.download = `strand-okafor-ledes-${new Date().toISOString().slice(0, 10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Timer HUD
+// ---------------------------------------------------------------------------
+
+export function getMatters(firmId: string): Promise<MatterSummary[]> {
+  return get<MatterSummary[]>("/matters", { firm_id: firmId });
+}
+
+export function normalizeNarrative(req: TimerNormalizeRequest): Promise<TimerNormalizeResponse> {
+  return post<TimerNormalizeResponse>("/actions/timer/normalize-narrative", req);
+}
+
+export function captureTimerEntry(req: TimerCaptureRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/timer/capture", req);
 }
 
 // ---------------------------------------------------------------------------

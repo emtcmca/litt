@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
 import { EmailPreview } from './pages/EmailPreview';
 import { AuditLog } from './pages/AuditLog';
+import { TimerHUD } from './components/TimerHUD';
+
+const FIRM_ID = 'strand-okafor';
+const ATTORNEY_ID = 'dana-strand';
 
 export default function App() {
   return (
@@ -19,6 +23,7 @@ export default function App() {
           </div>
         } />
       </Routes>
+      <TimerHUD firmId={FIRM_ID} attorneyId={ATTORNEY_ID} />
     </BrowserRouter>
   );
 }
