@@ -111,18 +111,23 @@ export function ClientCommsModal({ item, firmId, attorneyId, onClose, onSuccess 
       <div style={{ maxWidth: 620, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-              Client silence — outreach
-            </h2>
-            {hasDraft && (
-              <span style={{ background: 'var(--color-background-success)', color: 'var(--color-text-success)', border: '0.5px solid var(--color-border-success)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
-                DRAFT READY
-              </span>
-            )}
+        <div style={{ padding: '18px 24px 14px', borderTop: '3px solid #D6C181', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>
+                Client outreach
+              </h2>
+              {hasDraft && (
+                <span style={{ background: 'rgba(169,132,53,.1)', color: '#A98435', border: '0.5px solid rgba(169,132,53,.25)', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  DRAFT READY
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              {item.client_name} · {item.matter_name}
+            </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px', marginLeft: 12, flexShrink: 0 }}>×</button>
         </div>
 
         {/* Matter summary strip */}

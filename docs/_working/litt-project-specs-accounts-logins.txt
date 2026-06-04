@@ -6,3 +6,21 @@ Dashboard: https://litt-dashboard-1073532050878.us-central1.run.app
 
 Jam login:
 	Sign-in with Google: emtcmca@gmail.com
+
+
+
+The confirmation dialog box when resolving closeout issues is nearly invisible due to it showing up in the lower right corner of the browser window over top of the black sweep/audit trail column on the right side of the browser window. Either make the confirmation box a different color/shade so it's more visible, or we change the color of the sweep column card. Also, the sweep column card should be expandable and collapsible-- it currently spans the length of the page even when idle/empty and looks unfinished/incomplete.
+
+Draft generation is not visible (maybe not operational?) on any item caught by the comms_agent. User should be able to generate a draft on demand, when clicking the "view" button on the review required card. Once a draft is generated, the user should be able to approve and send the draft on the spot. An email client window (mocked up for demo purposes) should appear, auto-populated with the draft, email subject, proper to/from email addresses, etc.
+
+The left side column is not operational, and it needs to be. User should be able to click on any of the items listed on the left side to pull up (in the center column) a sorted, orderly list. Only "Decision docket" is available currently.
+
+We need session timer and work performed/documents touched data to be shown in the billing items. That's a big feature of the Litt platform and we currently aren't showcasing it at all.
+
+Narrative edit option for billing items needs to be more robust. This ties into featuring the session timer/data more prominently. Also, the user should have the ability to edit more than one category on any billing item (i.e. edit hours worked AND edit narrative before submitting/approving).
+
+UTMBS codes?
+
+Operational Pressure index-- add the ability to sort this by client, in addition to an overall score. The breakdown numbers shown on the overall index should be more useful, possibly by featuring an average of all client index figures or something to that effect. Currently those figures are meaningless, other than the WIP billing figure.  Let's review this index overall and plan out an overhaul. I like the index, we just have to make it useful and meaningful to a user.
+
+Feature the demo law firm's name more prominently, possibly in the header bar? Also should show the name of the logged in demo user/demo attorney who is responsible for this demo work/data within the Litt demo. 

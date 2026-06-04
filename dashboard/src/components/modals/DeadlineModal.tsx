@@ -117,16 +117,22 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
       <div role="dialog" aria-modal="true" aria-labelledby={titleId} style={{ maxWidth: 580, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 id={titleId} style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
-            {isConflict && (
-              <span style={{ background: '#FFF3CD', color: '#856404', border: '0.5px solid #FFCA2C', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                SOURCE CONFLICT
+        <div style={{ padding: '18px 24px 14px', borderTop: '3px solid #D6C181', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'start', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+              <h2 id={titleId} style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>{title}</h2>
+              <span style={{ display: 'inline-flex', background: badge.bg, color: badge.color, padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: badge.weight, fontFamily: 'var(--font-mono)', letterSpacing: '0.03em', flexShrink: 0 }}>
+                {CLASS_LABEL[item.classification] ?? item.classification}
               </span>
-            )}
+              {isConflict && (
+                <span style={{ background: '#FFF3CD', color: '#856404', border: '0.5px solid #FFCA2C', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  SOURCE CONFLICT
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>{item.matter_name}</p>
           </div>
-          <button ref={closeButtonRef} onClick={onClose} aria-label="Close dialog" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
+          <button ref={closeButtonRef} onClick={onClose} aria-label="Close dialog" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px', marginLeft: 12, flexShrink: 0 }}>×</button>
         </div>
 
         {/* Scrollable body */}
@@ -139,9 +145,9 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
                 key={a}
                 onClick={() => { setActiveAction(a); setError(null); setNewDueDate(''); setReason(''); }}
                 style={{
-                  flex: 1, padding: '7px 4px', fontSize: 12,
+                  flex: 1, padding: '7px 4px', fontSize: 13,
                   fontWeight: activeAction === a ? 600 : 400,
-                  fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                  fontFamily: 'var(--font-sans)', textTransform: 'capitalize',
                   border: `1px solid ${activeAction === a
                     ? (a === 'dismiss' ? 'var(--color-border-danger)' : a === 'verify' ? 'var(--color-border-warning)' : 'var(--color-border-info)')
                     : 'var(--color-border-tertiary)'}`,
@@ -166,7 +172,7 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
               <span style={{ display: 'inline-block', background: badge.bg, color: badge.color, padding: '3px 8px', borderRadius: 'var(--border-radius-md)', fontSize: 11, fontWeight: badge.weight, marginRight: 8 }}>
                 {CLASS_LABEL[item.classification] ?? item.classification}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.deadline_id}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '1px 6px' }}>{item.deadline_id}</span>
             </div>
             <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.description}</p>
             <div style={{ display: 'flex', gap: 16, fontSize: 13, flexWrap: 'wrap' }}>
@@ -179,7 +185,7 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
             {item.source_document_id && (
               <div style={{ marginTop: 12, borderTop: '0.5px solid var(--color-border-tertiary)', paddingTop: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-background-success)', color: 'var(--color-text-success)', border: '0.5px solid var(--color-border-success)', borderRadius: 3, padding: '1px 5px' }}>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'rgba(169,132,53,.1)', color: '#A98435', border: '0.5px solid rgba(169,132,53,.25)', borderRadius: 3, padding: '1px 5px' }}>
                     {(item.source_type ?? 'source').replace(/_/g, ' ')}
                   </span>
                   <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
@@ -190,7 +196,7 @@ export function DeadlineModal({ item, action: initialAction, firmId, attorneyId,
                   </span>
                 </div>
                 {item.source_excerpt && (
-                  <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5, borderLeft: '2px solid var(--color-border-success)', paddingLeft: 8 }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic', lineHeight: 1.5, borderLeft: '2px solid rgba(169,132,53,.4)', paddingLeft: 8 }}>
                     "{item.source_excerpt}"
                   </p>
                 )}

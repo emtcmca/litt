@@ -29,13 +29,29 @@ function EmailItem({ accent, children }: { accent: string; children: ReactNode }
 export function EmailPreview() {
   const [brief, setBrief] = useState<BriefResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getBrief(FIRM_ID, ATTORNEY_ID).then(setBrief).finally(() => setLoading(false));
+    getBrief(FIRM_ID, ATTORNEY_ID)
+      .then(setBrief)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load brief.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ padding: 32, color: 'var(--color-text-tertiary)', fontSize: 14 }}>Loading...</div>;
-  if (!brief) return <div style={{ padding: 32, color: 'var(--color-text-danger)', fontSize: 14 }}>Failed to load brief.</div>;
+  if (loading) {
+    return (
+      <div role="status" style={{ minHeight: '100vh', display: 'grid', placeItems: 'start center', padding: 32, color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+        Preparing daily closeout email preview...
+      </div>
+    );
+  }
+  if (error || !brief) {
+    return (
+      <div role="alert" style={{ minHeight: '100vh', display: 'grid', placeItems: 'start center', padding: 32, color: 'var(--color-text-danger)', fontSize: 14 }}>
+        {error ?? 'Failed to load brief.'}
+      </div>
+    );
+  }
 
   const s = brief.sections;
   const date = brief.generated_at.slice(0, 10);

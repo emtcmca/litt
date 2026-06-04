@@ -380,7 +380,7 @@ function buildDecisionRows(
         ? `${e.matter_name} — entry missing narrative`
         : `${e.matter_name} — billing entry pending`,
       description: e.has_block
-        ? `Scrubber flagged: "${blockFlag!.matched_text ?? 'blocked phrase'}". Likely LEDES rejection — narrative repair or write-down required.`
+        ? `Narrative contains flagged language. LEDES rejection risk — repair or write-down required before approval.`
         : !e.narrative
         ? 'No narrative — reconstruction risk. Add description before approving.'
         : `${e.hours}h · ${e.matter_name} · $${e.amount.toFixed(0)}`,
@@ -476,9 +476,10 @@ interface NavPanelProps {
   onViewChange: (v: ActiveView) => void;
   firmName: string;
   attorneyName: string;
+  pressure: PressureData;
 }
 
-function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName, attorneyName }: NavPanelProps) {
+function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName: _firmName, attorneyName: _attorneyName, pressure }: NavPanelProps) {
   const { deadlines, time_entries, client_silence } = brief.sections;
 
   const labelStyle: CSSProperties = {
@@ -506,19 +507,56 @@ function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName, at
       gap:            15,
       overflowY:      'auto',
     }}>
-      {/* Firm + attorney identity card */}
-      <div style={{ background: C.paper, border: `1px solid ${C.line}`, borderRadius: 12, padding: 10, display: 'flex', gap: 10, alignItems: 'center' }}>
-        <img src="/icons-logo/prepare-icon.png" alt="" style={{ width: 44, height: 44, objectFit: 'contain', mixBlendMode: 'multiply', flexShrink: 0 }} />
-        <div style={{ minWidth: 0 }}>
-          <strong style={{ display: 'block', fontSize: 12, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firmName}</strong>
-          <span style={{ display: 'block', marginTop: 2, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {attorneyName}
-          </span>
-          <span style={{ display: 'block', marginTop: 1, color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Ops control layer
-          </span>
-        </div>
-      </div>
+      {/* Session status card */}
+      {(() => {
+        const nextHard = [...brief.sections.deadlines.items]
+          .filter(d => d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
+          .sort((a, b) => a.days_out - b.days_out)[0];
+        const daysColor = !nextHard ? C.auditMuted
+          : nextHard.days_out <= 3 ? C.danger
+          : nextHard.days_out <= 7 ? C.gold
+          : C.auditAccent;
+        const sweepDate = brief.generated_at.slice(0, 10);
+        const matterShort = nextHard
+          ? (nextHard.matter_name.length > 20 ? nextHard.matter_name.slice(0, 20) + '…' : nextHard.matter_name)
+          : null;
+        return (
+          <div style={{ background: C.forest, border: `1px solid rgba(214,193,129,.2)`, borderRadius: 12, padding: '10px 12px', display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: C.auditMuted, fontSize: 10 }}>
+                Closeout session
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: C.auditAccent }}>
+                {sweepDate}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gap: 8, paddingTop: 8, borderTop: `1px solid rgba(214,193,129,.18)` }}>
+              <div>
+                {nextHard ? (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 700, color: daysColor, lineHeight: 1 }}>{nextHard.days_out}d</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: C.brass, lineHeight: 1 }}>{matterShort}</span>
+                  </div>
+                ) : (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: C.teal }}>No hard deadlines</span>
+                )}
+                <span style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.auditMuted, marginTop: 3 }}>
+                  Next hard deadline
+                </span>
+              </div>
+              <div style={{ borderTop: `1px solid rgba(214,193,129,.1)`, paddingTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: C.auditAccent }}>↺</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: C.brass }}>{sweepDate}</span>
+                </div>
+                <span style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.auditMuted, marginTop: 2 }}>
+                  Brief current
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Nav items */}
       <div style={{ display: 'grid', gap: 6 }}>
@@ -898,9 +936,9 @@ function DecisionRowItem({
           </div>
         )}
         {row.sourceRef && !isReceipted && (
-          <div style={{ marginTop: 9, borderLeft: `2px solid rgba(29,158,117,.35)`, paddingLeft: 9 }}>
+          <div style={{ marginTop: 9, borderLeft: `2px solid rgba(169,132,53,.35)`, paddingLeft: 9 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ background: 'rgba(29,158,117,.1)', color: C.teal, border: `1px solid rgba(29,158,117,.2)`, borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              <span style={{ background: 'rgba(169,132,53,.1)', color: C.gold, border: `1px solid rgba(169,132,53,.25)`, borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                 {row.sourceRef.type.replace(/_/g, ' ')}
               </span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: C.muted }}>
@@ -928,9 +966,9 @@ function DecisionRowItem({
                 onClick={onOpenSourceDrawer}
                 style={{
                   marginTop:    8,
-                  border:       '1px solid rgba(29,158,117,.3)',
-                  background:   C.tealSoft,
-                  color:        C.teal,
+                  border:       '1px solid rgba(169,132,53,.3)',
+                  background:   'rgba(169,132,53,.08)',
+                  color:        C.gold,
                   borderRadius: 999,
                   padding:      '5px 8px',
                   fontFamily:   'var(--font-mono)',
@@ -945,13 +983,24 @@ function DecisionRowItem({
         )}
       </div>
 
-      <div style={{ display: 'grid', gap: 4, color: isReceipted ? C.auditMuted : C.muted, fontFamily: 'var(--font-mono)', fontSize: 10 }}>
-        <strong style={{ color: isReceipted ? '#F5F0DC' : C.ink, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
-          {row.boundary.label}
-        </strong>
-        <span>route={row.boundary.route}</span>
-        <span>llm={row.boundary.llm}</span>
-        <span>{row.boundary.extra}</span>
+      <div style={{ display: 'grid', gap: 5 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: isReceipted ? C.auditMuted : C.muted }}>
+          Routing
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {([row.boundary.route, `llm: ${row.boundary.llm}`, row.boundary.extra] as string[]).filter(Boolean).map(tag => (
+            <span key={tag} style={{
+              background: isReceipted ? 'rgba(255,255,255,.06)' : 'rgba(20,34,31,.07)',
+              color:      isReceipted ? C.auditAccent : C.forest,
+              border:     `1px solid ${isReceipted ? 'rgba(158,225,199,.2)' : 'rgba(20,34,31,.18)'}`,
+              borderRadius: 4,
+              padding:    '2px 7px',
+              fontFamily: 'var(--font-mono)',
+              fontSize:   10,
+              whiteSpace: 'nowrap',
+            }}>{tag}</span>
+          ))}
+        </div>
       </div>
 
       <button
@@ -1450,7 +1499,7 @@ export function DailyCloseoutBrief() {
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
 
           {/* ── Topbar ── */}
-          <div className="litt-topbar" style={{ display: 'grid', gridTemplateColumns: '286px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
+          <div className="litt-topbar" style={{ display: 'grid', gridTemplateColumns: '320px 1fr auto', alignItems: 'center', gap: 18, padding: '12px 18px', background: C.paper, borderBottom: `1px solid ${C.line}` }}>
             {/* Logo + firm identity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span
@@ -1460,20 +1509,20 @@ export function DailyCloseoutBrief() {
                 style={{
                   display:          'block',
                   flexShrink:       0,
-                  width:            72,
-                  height:           40,
+                  width:            84,
+                  height:           46,
                   backgroundImage:  'url("/icons-logo/litt_logo_main_no_tagline.png")',
-                  backgroundSize:   '88px auto',
+                  backgroundSize:   '102px auto',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'left center',
                   mixBlendMode:     'multiply',
                 }}
               />
               <div style={{ borderLeft: `1px solid ${C.line}`, paddingLeft: 12 }}>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.forest, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: C.forest, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
                   {brief.firm_name}
                 </span>
-                <span style={{ display: 'block', fontSize: 10, color: C.muted, fontFamily: 'var(--font-mono)', marginTop: 2, letterSpacing: '0.04em' }}>
+                <span style={{ display: 'block', fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)', marginTop: 2, letterSpacing: '0.04em' }}>
                   {brief.attorney_name}
                 </span>
               </div>
@@ -1571,7 +1620,7 @@ export function DailyCloseoutBrief() {
           </div>
 
           {/* ── 3-column body ── */}
-          <div className="litt-body-grid" style={{ display: 'grid', gridTemplateColumns: `286px 1fr ${railOpen ? '392px' : '40px'}`, minHeight: 860, transition: 'grid-template-columns 0.25s ease' }}>
+          <div className="litt-body-grid" style={{ display: 'grid', gridTemplateColumns: `320px 1fr ${railOpen ? '392px' : '40px'}`, minHeight: 860, transition: 'grid-template-columns 0.25s ease' }}>
 
             <NavPanel
               brief={brief}
@@ -1580,6 +1629,7 @@ export function DailyCloseoutBrief() {
               onViewChange={setActiveView}
               firmName={brief.firm_name}
               attorneyName={brief.attorney_name}
+              pressure={pressure}
             />
 
             {/* Main workbench */}
@@ -1592,13 +1642,36 @@ export function DailyCloseoutBrief() {
             }}>
               {/* Work header */}
               <div className="litt-work-header" style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'end', borderBottom: `1px solid ${C.line}`, paddingBottom: 15 }}>
-                <div>
-                  <h2 className="litt-work-title" style={{ margin: 0, fontSize: 34, lineHeight: 1, letterSpacing: '-0.02em', color: C.ink }}>
+                <div style={{ paddingLeft: activeView === 'docket' ? 0 : 0 }}>
+                  <h2 className="litt-work-title" style={{
+                    margin: 0,
+                    fontSize: activeView === 'docket' ? 42 : 34,
+                    lineHeight: 1,
+                    letterSpacing: '-0.03em',
+                    color: C.ink,
+                    borderLeft: activeView === 'docket' ? `3px solid ${C.brass}` : 'none',
+                    paddingLeft: activeView === 'docket' ? 14 : 0,
+                  }}>
                     {VIEW_META[activeView].title}
                   </h2>
-                  <p style={{ margin: '7px 0 0', color: C.muted, maxWidth: 720, lineHeight: 1.45, fontSize: 14 }}>
-                    {VIEW_META[activeView].desc}
-                  </p>
+                  {activeView === 'docket' ? (() => {
+                    const nearestHD = [...brief.sections.deadlines.items]
+                      .filter(d => d.classification === 'HARD_LEGAL' || d.classification === 'HARD_CONTRACTUAL')
+                      .sort((a, b) => a.days_out - b.days_out)[0];
+                    const parts: string[] = [];
+                    if (criticalCount > 0) parts.push(`${criticalCount} escalation${criticalCount > 1 ? 's' : ''} require attorney decision`);
+                    if (nearestHD) parts.push(`${nearestHD.days_out}d to ${nearestHD.matter_name}`);
+                    if (wipUsd > 0) parts.push(`$${wipUsd.toLocaleString()} WIP pending approval`);
+                    return (
+                      <p style={{ margin: '9px 0 0', paddingLeft: 17, color: C.ink, fontSize: 14, lineHeight: 1.45, fontWeight: 500 }}>
+                        {parts.join(' · ')}
+                      </p>
+                    );
+                  })() : (
+                    <p style={{ margin: '7px 0 0', color: C.muted, maxWidth: 720, lineHeight: 1.45, fontSize: 14 }}>
+                      {VIEW_META[activeView].desc}
+                    </p>
+                  )}
                 </div>
                 <span style={{ border: `1px solid ${C.line}`, borderRadius: 999, padding: '5px 8px', color: C.muted, background: C.surface, fontFamily: 'var(--font-mono)', fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {brief.generated_at.slice(0, 10)}

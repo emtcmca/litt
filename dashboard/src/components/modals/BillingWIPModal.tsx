@@ -139,9 +139,17 @@ export function BillingWIPModal({ item, action: initialAction, firmId, attorneyI
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ maxWidth: 560, width: '100%', background: 'var(--color-background-primary)', borderRadius: 'var(--border-radius-lg)', border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
-        <div style={{ padding: '20px 24px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px' }}>×</button>
+        <div style={{ padding: '18px 24px 14px', borderTop: '3px solid #D6C181', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>{title}</h2>
+              {item.has_block && <span style={{ background: 'var(--color-ramp-red-400)', color: '#FFFFFF', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>BLOCK</span>}
+              {item.has_warn && !item.has_block && <span style={{ background: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-mono)' }}>WARN</span>}
+              {!item.has_block && !item.has_warn && <span style={{ background: 'var(--color-ramp-blue-200)', color: 'var(--color-ramp-blue-900)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-mono)' }}>PENDING</span>}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>{item.matter_name}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--color-text-tertiary)', lineHeight: 1, padding: '0 4px', marginLeft: 12, flexShrink: 0 }}>×</button>
         </div>
 
         <div style={{ padding: 24 }}>
@@ -156,9 +164,9 @@ export function BillingWIPModal({ item, action: initialAction, firmId, attorneyI
                   key={a}
                   onClick={() => { setActiveAction(a); setError(null); setReason(''); setNewHours(String(item.hours)); setNarrative(item.narrative ?? ''); }}
                   style={{
-                    flex: 1, padding: '7px 4px', fontSize: 12,
+                    flex: 1, padding: '7px 4px', fontSize: 13,
                     fontWeight: isActive ? 600 : 400,
-                    fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                    fontFamily: 'var(--font-sans)', textTransform: 'capitalize',
                     border: `1px solid ${isActive
                       ? isd ? 'var(--color-border-danger)'
                       : ise ? 'var(--color-border-warning)'
@@ -190,7 +198,7 @@ export function BillingWIPModal({ item, action: initialAction, firmId, attorneyI
               {item.has_block && <span style={{ display: 'inline-block', background: 'var(--color-ramp-red-400)', color: '#FFFFFF', padding: '3px 8px', borderRadius: 'var(--border-radius-md)', fontSize: 11, fontWeight: 600 }}>BLOCK</span>}
               {item.has_warn && !item.has_block && <span style={{ display: 'inline-block', background: 'var(--color-ramp-amber-200)', color: 'var(--color-ramp-amber-900)', padding: '3px 8px', borderRadius: 'var(--border-radius-md)', fontSize: 11, fontWeight: 500 }}>WARN</span>}
               {!item.has_block && !item.has_warn && <span style={{ display: 'inline-block', background: 'var(--color-ramp-blue-200)', color: 'var(--color-ramp-blue-900)', padding: '3px 8px', borderRadius: 'var(--border-radius-md)', fontSize: 11, fontWeight: 500 }}>PENDING</span>}
-              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)' }}>{item.entry_id}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 4, padding: '1px 6px' }}>{item.entry_id}</span>
             </div>
 
             <p style={{ margin: '0 0 10px', fontSize: 14, color: item.narrative ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)', fontStyle: item.narrative ? 'normal' : 'italic', lineHeight: 1.5 }}>
