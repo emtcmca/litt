@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { MatterSummary, TimerCaptureRequest, TimerNormalizeRequest } from '../types';
-import { captureTimerEntry, getMatters, normalizeNarrative } from '../api';
+import { captureTimerEntry, getMatters, getScrubber, normalizeNarrative } from '../api';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -132,6 +132,7 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [descError, setDescError] = useState(false);
   const [doneEntryId, setDoneEntryId] = useState<string | null>(null);
+  const [scrubberWarnings, setScrubberWarnings] = useState(0);
 
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; }, [state]);
@@ -158,6 +159,7 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
       setState(IDLE_STATE);
       setExpanded(false);
       setDoneEntryId(null);
+      setScrubberWarnings(0);
     }, 3000);
     return () => clearTimeout(id);
   }, [state.status]);
@@ -175,10 +177,17 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
     }
   }, [firmId, matters, mattersLoading]);
 
-  function handleIdleClick() {
-    setExpanded(true);
-    loadMatters();
-  }
+  // Listen for toolbar button trigger
+  useEffect(() => {
+    function handleExternalOpen() {
+      if (stateRef.current.status === 'idle') {
+        setExpanded(true);
+        loadMatters();
+      }
+    }
+    window.addEventListener('litt:timer:open', handleExternalOpen);
+    return () => window.removeEventListener('litt:timer:open', handleExternalOpen);
+  }, [loadMatters]);
 
   function handleMatterChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const selected = matters?.find(m => m.id === e.target.value) ?? null;
@@ -230,7 +239,10 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
         raw_description: state.description,
         session_minutes: sessionMinutes,
       };
-      const result = await normalizeNarrative(req);
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('normalize timeout')), 8000)
+      );
+      const result = await Promise.race([normalizeNarrative(req), timeout]);
       setState(prev => ({
         ...prev,
         normalizedNarrative: result.normalized_narrative,
@@ -258,6 +270,7 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
         attorney_id: attorneyId,
         session_minutes: sessionMinutes,
         narrative: state.normalizedNarrative || state.description,
+        raw_note: state.description,
         used_gemini: state.usedGemini,
         idempotency_key: state.idempotencyKey ?? generateKey(),
       };
@@ -265,6 +278,9 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
       if (result.success) {
         setDoneEntryId(result.entity_id);
         setState({ ...IDLE_STATE, status: 'done' });
+        getScrubber(firmId, result.entity_id)
+          .then(r => setScrubberWarnings(r.flags.length))
+          .catch(() => { /* non-blocking — scrubber feedback is informational only */ });
       } else {
         setCaptureError(result.message || 'Save failed');
       }
@@ -325,47 +341,33 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
   if (state.status === 'done') {
     return (
       <div style={base}>
-        <div style={{ ...card, background: C.teal, border: 'none', padding: '14px 16px' }}>
+        <div style={{ ...card, background: scrubberWarnings > 0 ? C.gold : C.teal, border: 'none', padding: '14px 16px' }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
             ✓ Entry created
           </div>
           <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginBottom: 2 }}>
             {doneEntryId} · PENDING
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>
-            Appears in next sweep
-          </div>
+          {scrubberWarnings > 0 ? (
+            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11 }}>
+              {scrubberWarnings} scrubber warning{scrubberWarnings !== 1 ? 's' : ''} — review in brief
+            </div>
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>
+              Appears in next sweep
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   // ---------------------------------------------------------------------------
-  // IDLE — pill button only
+  // IDLE — trigger lives in toolbar; nothing to render here
   // ---------------------------------------------------------------------------
 
   if (state.status === 'idle' && !expanded) {
-    return (
-      <div style={base}>
-        <button
-          onClick={handleIdleClick}
-          style={{
-            ...btnBase,
-            background: C.forest,
-            color: '#fff',
-            borderRadius: 20,
-            padding: '10px 18px',
-            fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
-          }}
-        >
-          ▶ Start Timer
-        </button>
-      </div>
-    );
+    return null;
   }
 
   // ---------------------------------------------------------------------------

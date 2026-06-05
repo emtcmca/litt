@@ -1559,6 +1559,27 @@ export function DailyCloseoutBrief() {
 
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('litt:timer:open'))}
+                style={{
+                  border:       `1px solid ${C.line}`,
+                  borderRadius: 8,
+                  background:   C.surface,
+                  color:        C.ink,
+                  padding:      '10px 14px',
+                  fontWeight:   500,
+                  fontSize:     12,
+                  cursor:       'pointer',
+                  whiteSpace:   'nowrap',
+                  fontFamily:   'var(--font-sans)',
+                  display:      'inline-flex',
+                  alignItems:   'center',
+                  gap:          6,
+                }}
+                title="Start timing work on a matter"
+              >
+                ▶ Timer
+              </button>
               <Link
                 to="/audit"
                 style={{
