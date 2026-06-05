@@ -200,3 +200,19 @@ Five demo conditions must pass `GET /api/demo/ready` before any recording:
 - All commits must be after April 22, 2026 (contest rule)
 - All agent reasoning uses Gemini 2.5 Pro via Vertex AI (contest rule — not Claude)
 - Required submission elements: live Cloud Run URL, demo video (2-min max), architecture diagram (`docs/architecture.png`)
+
+---
+
+## Build & Deploy
+
+- Always run `tsc --noEmit` (or `npm run typecheck`) before committing or deploying; fix unused variables and declaration-order issues proactively.
+- Deployment target is Cloud Run / GCR. Verify the correct GCR project (`GOOGLE_CLOUD_PROJECT`) before pushing. Exclude the `tools` directory in `tsconfig.json` to avoid Cloud Build type-check failures.
+- The `dashboard/` worktree may be missing the TypeScript package. Run type checks using the main project compiler (`cd dashboard && npx tsc --noEmit`) — do not rely on a globally installed `tsc`.
+
+---
+
+## UI / Frontend Conventions
+
+- Apply existing design system tokens for all UI work — do not introduce ad-hoc colors, spacing, or typography values.
+- Verify UI changes with a screenshot before committing.
+- Default font for buttons: IBM Plex Sans / monospace styling per current mockups.
