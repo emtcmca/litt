@@ -677,7 +677,7 @@ function PressureSection({ pressure, decisionRows }: { pressure: PressureData; d
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8,1fr)', gap: 3 }}>
             {Array.from({ length: 8 }, (_, i) => (
-              <span key={i} style={{ height: 8, borderRadius: 3, background: cellColor(i) }} />
+              <span key={i} style={{ height: 12, borderRadius: 3, background: cellColor(i) }} />
             ))}
           </div>
           {topSignal && (
@@ -717,7 +717,7 @@ function PressureSection({ pressure, decisionRows }: { pressure: PressureData; d
                 const color = SIG_COLOR[sig.key];
                 const pct = sig.maxPts > 0 ? Math.min((sig.pts / sig.maxPts) * 100, 100) : 0;
                 return (
-                  <div key={sig.key} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, padding: 12, background: '#fbf8f0', display: 'grid', gap: 8 }}>
+                  <div key={sig.key} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, padding: 12, background: C.paper, display: 'grid', gap: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 6 }}>
                       <div>
                         <span style={{ display: 'block', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 9 }}>{sig.label}</span>
@@ -782,7 +782,7 @@ function PressureSection({ pressure, decisionRows }: { pressure: PressureData; d
                 const dotColor = level === 'high' ? C.danger : level === 'med' ? C.gold : C.teal;
                 const clientRows = decisionRows.filter(r => r.clientId === client.clientId);
                 return (
-                  <div key={client.clientId} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, background: '#fbf8f0', overflow: 'hidden' }}>
+                  <div key={client.clientId} style={{ border: `1px solid ${C.soft}`, borderRadius: 10, background: C.paper, overflow: 'hidden' }}>
                     <button
                       onClick={() => setExpandedClient(isExpanded ? null : client.clientId)}
                       style={{ width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', textAlign: 'left' }}
@@ -898,7 +898,7 @@ function DecisionRowItem({
   const rowStyle: CSSProperties = {
     position:    'relative',
     display:     'grid',
-    gridTemplateColumns: '128px 1fr 220px 100px',
+    gridTemplateColumns: 'minmax(80px, auto) 1fr 220px 100px',
     gap:         14,
     alignItems:  'center',
     padding:     isCollapsing ? '0 14px' : 14,
@@ -1228,71 +1228,346 @@ function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decision
 // ─── SourceDrawer ─────────────────────────────────────────────────────────────
 
 function SourceDrawer({
-  item, onClose, onConfirm,
+  item, onClose, onAction,
 }: {
-  item:      BriefDeadlineItem | null;
-  onClose:   () => void;
-  onConfirm: () => void;
+  item:     BriefDeadlineItem | null;
+  onClose:  () => void;
+  onAction: (action: DeadlineAction) => void;
 }) {
-  const isOpen = !!item;
-  if (!isOpen) return null;
+  if (!item) return null;
+
+  const isConflict    = item.verification_status === 'conflict_flagged';
+  const primaryAction = isConflict ? 'verify' : 'confirm';
+  const isEmail       = item.source_type === 'email';
+
+  // Derive confidence from item state
+  const confPct   = isConflict ? 65
+    : item.is_unconfirmed && isEmail    ? 70
+    : item.is_unconfirmed && item.source_document_id ? 75
+    : item.is_unconfirmed               ? 45 : 92;
+  const confBasis = isConflict
+    ? 'Conflicting sources — source conflict flagged'
+    : item.is_unconfirmed && isEmail
+    ? 'Email language and matter timing'
+    : item.is_unconfirmed
+    ? 'Matter context only; no source document'
+    : 'Attorney-confirmed';
+  const confCapped = isConflict || item.is_unconfirmed;
+
+  const headerBorderColor = item.classification === 'HARD_LEGAL'       ? C.danger
+    : item.classification === 'HARD_CONTRACTUAL' ? C.brass
+    : C.teal;
+
+  const clsBg    = item.classification === 'HARD_LEGAL' ? C.danger
+    : item.classification === 'HARD_CONTRACTUAL' ? C.brass
+    : item.classification === 'SOFT_INTERNAL'    ? C.teal
+    : 'var(--color-ramp-gray-300)';
+  const clsColor = item.classification === 'HARD_CONTRACTUAL' ? C.forest : '#FFFFFF';
+
+  const daysUrgentBg    = item.days_out <= 3 ? 'rgba(155,45,35,.1)' : item.days_out <= 7 ? 'rgba(214,193,129,.2)' : 'rgba(20,34,31,.06)';
+  const daysUrgentColor = item.days_out <= 3 ? C.danger : item.days_out <= 7 ? C.gold : C.ink;
+  const daysUrgentBorder= item.days_out <= 3 ? 'rgba(155,45,35,.3)' : item.days_out <= 7 ? 'rgba(169,132,53,.3)' : C.line;
+  const daysLabel       = item.days_out === 0 ? 'DUE TODAY' : item.days_out === 1 ? 'DUE TOMORROW' : `${item.days_out}d OUT`;
+
+  const confBarColor = confPct >= 80 ? C.teal : confPct >= 60 ? C.gold : C.danger;
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'auto', zIndex: 20 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,23,19,.24)', opacity: 1, transition: 'opacity 0.22s ease' }} />
-      <aside style={{
-        position:   'absolute',
-        top:        0,
-        right:      0,
-        height:     '100%',
-        width:      'min(460px, 92vw)',
-        background: C.paper,
-        borderLeft: `1px solid ${C.line}`,
-        boxShadow:  '-22px 0 54px rgba(20,27,23,.18)',
-        transform:  'translateX(0)',
-        transition: 'transform 0.28s ease',
-        padding:    22,
-        display:    'grid',
-        alignContent: 'start',
-        gap:        16,
-        overflowY:  'auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 14, borderBottom: `1px solid ${C.line}`, paddingBottom: 14 }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.muted, fontSize: 10, marginBottom: 4 }}>
-              Transparent Confidence
+      {/* Scrim */}
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(16,23,19,.28)' }} />
+
+      {/* Drawer */}
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.matter_name} assessment`}
+        style={{
+          position:      'absolute',
+          top:           0,
+          right:         0,
+          height:        '100%',
+          width:         'min(480px, 94vw)',
+          background:    C.paper,
+          borderLeft:    `1px solid ${C.line}`,
+          boxShadow:     '-16px 0 48px rgba(20,27,23,.2)',
+          display:       'flex',
+          flexDirection: 'column',
+          overflow:      'hidden',
+        }}
+      >
+
+        {/* ── Section 1: Identity ─────────────────────────────────────────── */}
+        <div style={{
+          borderTop:    `4px solid ${headerBorderColor}`,
+          padding:      '16px 22px 14px',
+          borderBottom: `1px solid ${C.line}`,
+          flexShrink:   0,
+        }}>
+          {/* Badges + close */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{
+                background: clsBg, color: clsColor,
+                padding: '3px 8px', borderRadius: 5,
+                fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em',
+              }}>
+                {item.classification.replace(/_/g, ' ')}
+              </span>
+              <span style={{
+                background: item.classification === 'HARD_LEGAL' ? 'rgba(155,45,35,.12)' : 'rgba(20,34,31,.07)',
+                color:      item.classification === 'HARD_LEGAL' ? C.danger : C.ink,
+                border:     `1px solid ${item.classification === 'HARD_LEGAL' ? 'rgba(155,45,35,.3)' : C.line}`,
+                padding: '3px 8px', borderRadius: 5,
+                fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em',
+              }}>
+                ESCALATION
+              </span>
+              {isConflict && (
+                <span style={{
+                  background: '#FFF3CD', color: '#856404',
+                  border: '1px solid #FFCA2C',
+                  padding: '3px 8px', borderRadius: 5,
+                  fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.05em',
+                }}>
+                  SOURCE CONFLICT
+                </span>
+              )}
             </div>
-            <h3 style={{ margin: 0, fontSize: 24, color: C.ink }}>
-              {item?.matter_name ?? 'Deadline'} source reasoning
-            </h3>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                border: `1px solid ${C.line}`, background: C.surface,
+                borderRadius: 8, width: 32, height: 32,
+                cursor: 'pointer', fontSize: 18, lineHeight: 1, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >×</button>
           </div>
-          <button onClick={onClose} aria-label="Close drawer" style={{ border: `1px solid ${C.line}`, background: C.surface, borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>
-            ×
-          </button>
+
+          {/* Matter name + description */}
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.ink, lineHeight: 1.2, marginBottom: 4 }}>
+            {item.matter_name}
+          </div>
+          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.4, marginBottom: 10 }}>
+            {item.description}
+          </div>
+
+          {/* Due date row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{
+              background: daysUrgentBg, color: daysUrgentColor,
+              border: `1px solid ${daysUrgentBorder}`,
+              borderRadius: 6, padding: '4px 10px',
+              fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700,
+            }}>
+              {daysLabel}
+            </span>
+            <span style={{ fontSize: 13, color: C.muted, fontFamily: 'var(--font-mono)' }}>
+              {item.due_date}
+            </span>
+            {(item.court || item.jurisdiction) && (
+              <span style={{ fontSize: 11, color: C.muted, fontFamily: 'var(--font-mono)' }}>
+                {[item.court, item.jurisdiction].filter(Boolean).join(' · ')}
+              </span>
+            )}
+          </div>
         </div>
 
-        {[
-          { key: 'source_found',   value: '"Due tomorrow, Friday"',   desc: 'Rivera opposing counsel email received 2026-05-28. Useful signal, but not an authoritative deadline source.' },
-          { key: 'source_missing', value: 'Court order not found',     desc: 'No court notice, docket entry, or attorney confirmation exists in firm sources.' },
-          { key: 'gate_decision',  value: 'ESCALATION',               desc: 'Litt cannot confirm this autonomously. It surfaces the risk and refuses to resolve without attorney review.' },
-          { key: 'confidence',     value: '70%',                      desc: 'Basis: email language and matter timing. Confidence is capped because no court document was found.' },
-        ].map(({ key, value, desc }) => (
-          <div key={key} style={{ border: `1px solid ${C.line}`, borderRadius: 12, background: C.surface, padding: 12, display: 'grid', gap: 6 }}>
-            <span style={{ color: C.muted, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{key}</span>
-            <strong style={{ fontSize: 16, color: C.ink }}>{value}</strong>
-            <p style={{ margin: 0, color: C.muted, lineHeight: 1.42, fontSize: 13 }}>{desc}</p>
-          </div>
-        ))}
+        {/* ── Section 2: Assessment (scrollable) ─────────────────────────── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
 
-        <button
-          onClick={onConfirm}
-          style={{ border: 0, borderRadius: 8, background: C.forest, color: '#FFFFFF', padding: '12px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
-        >
-          Log attorney decision
-        </button>
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase',
+            letterSpacing: '0.08em', color: C.muted, marginBottom: 12,
+          }}>
+            Why Litt escalated this
+          </div>
+
+          {/* Source quality */}
+          <div style={{
+            border: `1px solid ${C.line}`, borderRadius: 10,
+            background: C.surface, padding: '12px 14px', marginBottom: 10,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7, flexWrap: 'wrap' }}>
+              <span style={{
+                background: 'rgba(169,132,53,.1)', color: C.gold,
+                border: `1px solid rgba(169,132,53,.25)`,
+                borderRadius: 3, padding: '1px 5px',
+                fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}>
+                {item.source_type ? item.source_type.replace(/_/g, ' ') : 'source'}
+              </span>
+              {item.source_document_id && (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: C.muted }}>
+                  {item.source_document_id}
+                  {item.detected_at ? ` · Detected ${item.detected_at.slice(0, 10)}` : ''}
+                </span>
+              )}
+            </div>
+            {item.source_excerpt ? (
+              <p style={{
+                margin: '0 0 8px',
+                fontSize: 13, lineHeight: 1.45, color: C.ink, fontStyle: 'italic',
+                borderLeft: `2px solid rgba(169,132,53,.35)`, paddingLeft: 8,
+              }}>
+                "{item.source_excerpt}"
+              </p>
+            ) : (
+              <p style={{ margin: '0 0 8px', fontSize: 13, color: C.muted, lineHeight: 1.45 }}>
+                {isEmail
+                  ? 'Opposing counsel email — deadline language extracted by Gemini 2.5 Pro.'
+                  : 'Source referenced but excerpt not available in firm records.'}
+              </p>
+            )}
+            {isEmail && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                  background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+                  borderRadius: 3, padding: '1px 5px',
+                }}>
+                  Gemini 2.5 Pro
+                </span>
+                <span style={{ fontSize: 11, color: C.muted }}>
+                  Deadline extracted from email body — not a court document
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Missing authority / Conflict */}
+          <div style={{
+            border: `1px solid ${isConflict ? 'rgba(155,45,35,.25)' : C.line}`,
+            borderRadius: 10,
+            background: isConflict ? 'rgba(155,45,35,.04)' : C.surface,
+            padding: '12px 14px', marginBottom: 10,
+          }}>
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              color: isConflict ? C.danger : C.muted, marginBottom: 6,
+            }}>
+              {isConflict ? 'Source conflict' : 'Missing authority'}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+              {isConflict && item.conflict_detail
+                ? item.conflict_detail
+                : isConflict
+                ? 'Two or more sources reference conflicting deadline information. Attorney verification required before Litt can proceed.'
+                : 'No court notice, docket entry, or attorney confirmation found in firm records. Email source alone is insufficient for autonomous confirmation.'}
+            </p>
+          </div>
+
+          {/* Transparent Confidence™ */}
+          <div style={{
+            border: `1px solid rgba(169,132,53,.25)`,
+            borderRadius: 10,
+            background: 'rgba(169,132,53,.04)',
+            padding: '12px 14px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.08em', color: C.gold,
+              }}>
+                Transparent Confidence™
+              </span>
+              <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: C.gold, lineHeight: 1 }}>
+                {confPct}%
+              </strong>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(169,132,53,.15)', marginBottom: 8, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${confPct}%`,
+                background: confBarColor, borderRadius: 3,
+              }} />
+            </div>
+            <p style={{ margin: 0, fontSize: 12, color: C.muted, lineHeight: 1.45 }}>
+              {confBasis}
+              {confCapped && (
+                <> · <span style={{ color: C.danger }}>capped — no court document found</span></>
+              )}
+            </p>
+          </div>
+
+        </div>
+
+        {/* ── Section 3: Required action footer ───────────────────────────── */}
+        <div style={{
+          borderTop:  `1px solid ${C.line}`,
+          padding:    '16px 22px',
+          background: 'var(--color-background-secondary)',
+          flexShrink: 0,
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+            color: C.danger, marginBottom: 5,
+          }}>
+            Attorney review required
+          </div>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: C.muted, lineHeight: 1.45 }}>
+            {isConflict
+              ? 'Verify the correct deadline, extend if the date changed, or dismiss. Each decision is logged to the immutable audit trail.'
+              : 'Confirm this deadline is accurate, extend if the date changed, or dismiss if it no longer applies. Your decision is logged to the immutable audit trail.'}
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <button
+              onClick={() => onAction(primaryAction as DeadlineAction)}
+              style={{
+                border: 0, borderRadius: 8,
+                background: C.forest, color: '#FFFFFF',
+                padding: '10px 6px', fontWeight: 700, cursor: 'pointer',
+                fontSize: 12, fontFamily: 'var(--font-sans)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              }}
+            >
+              <span>✓</span>
+              <span style={{ textTransform: 'capitalize' }}>{primaryAction}</span>
+            </button>
+            <button
+              onClick={() => onAction('extend')}
+              style={{
+                border: `1px solid ${C.line}`, borderRadius: 8,
+                background: C.surface, color: C.ink,
+                padding: '10px 6px', fontWeight: 500, cursor: 'pointer',
+                fontSize: 12, fontFamily: 'var(--font-sans)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              }}
+            >
+              <span>→</span>
+              <span>Extend</span>
+            </button>
+            <button
+              onClick={() => onAction('dismiss')}
+              style={{
+                border: `1px solid rgba(155,45,35,.3)`, borderRadius: 8,
+                background: 'rgba(155,45,35,.06)', color: C.danger,
+                padding: '10px 6px', fontWeight: 500, cursor: 'pointer',
+                fontSize: 12, fontFamily: 'var(--font-sans)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              }}
+            >
+              <span>✕</span>
+              <span>Dismiss</span>
+            </button>
+          </div>
+        </div>
+
       </aside>
     </div>
   );
+}
+
+function fmtMs(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -1315,7 +1590,9 @@ export function DailyCloseoutBrief() {
   const [isPlaying,      setIsPlaying]     = useState(false);
   const [isSweepComplete, setIsSweepComplete] = useState(false);
   const [activeView,     setActiveView]    = useState<ActiveView>('docket');
-  const [railOpen,       setRailOpen]      = useState(false);
+  const [railOpen,       setRailOpen]      = useState(true);
+  const [timerRunning,   setTimerRunning]  = useState(false);
+  const [timerDisplay,   setTimerDisplay]  = useState('');
   const timerRefs    = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const traceBottomRef = useRef<HTMLDivElement>(null);
 
@@ -1400,6 +1677,28 @@ export function DailyCloseoutBrief() {
     return () => { timers.forEach(t => clearTimeout(t)); };
   }, []);
 
+  // Sync timer status from localStorage for topbar indicator
+  useEffect(() => {
+    function readTimer() {
+      try {
+        const raw = localStorage.getItem('litt_timer_state');
+        if (!raw) { setTimerRunning(false); setTimerDisplay(''); return; }
+        const s = JSON.parse(raw) as { status?: string; elapsedMsAccumulated?: number; startedAtEpochMs?: number };
+        if (s?.status === 'running' && s.startedAtEpochMs) {
+          const ms = (s.elapsedMsAccumulated ?? 0) + (Date.now() - s.startedAtEpochMs);
+          setTimerRunning(true);
+          setTimerDisplay(fmtMs(ms));
+        } else {
+          setTimerRunning(false);
+          setTimerDisplay('');
+        }
+      } catch { setTimerRunning(false); }
+    }
+    readTimer();
+    const id = setInterval(readTimer, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const handleSuccess = useCallback((result: ToolResult, sectionId: string) => {
     setResolvedItems(prev => [...prev, {
       sectionId,
@@ -1455,8 +1754,50 @@ export function DailyCloseoutBrief() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 14, color: C.muted }}>Loading brief…</p>
+      <div style={{ minHeight: '100vh', background: C.bg }}>
+        {/* Skeleton: amber demo banner */}
+        <div style={{ height: 33, background: 'var(--color-ramp-amber-200)' }} />
+        <div style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
+          <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
+            {/* Topbar skeleton */}
+            <div style={{ height: 62, background: C.paper, borderBottom: `1px solid ${C.line}`, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 84, height: 38, borderRadius: 6, background: C.bg }} />
+              <div style={{ width: 1, height: 32, background: C.line }} />
+              <div style={{ width: 140, height: 14, borderRadius: 4, background: C.bg }} />
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                {[110, 80, 56, 140].map(w => <div key={w} style={{ width: w, height: 34, borderRadius: 8, background: C.bg }} />)}
+              </div>
+            </div>
+            {/* 3-column body skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 392px', minHeight: 860 }}>
+              {/* Nav skeleton */}
+              <div style={{ background: C.navRail, borderRight: `1px solid ${C.line}`, padding: 16, display: 'grid', gap: 12, alignContent: 'start' }}>
+                <div style={{ height: 110, borderRadius: 12, background: 'rgba(0,0,0,.06)' }} />
+                {[140, 160, 150, 140].map((_w, i) => <div key={i} style={{ height: 36, borderRadius: 6, background: 'rgba(0,0,0,.05)' }} />)}
+              </div>
+              {/* Main skeleton */}
+              <div style={{ padding: 18, display: 'grid', gap: 16, alignContent: 'start' }}>
+                <div style={{ height: 56, borderRadius: 8, background: C.bg }} />
+                <div style={{ height: 180, borderRadius: 14, background: C.bg }} />
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 84, borderRadius: 8, background: C.bg }} />)}
+              </div>
+              {/* Rail skeleton */}
+              <div style={{ background: C.audit, borderLeft: `1px solid ${C.auditLine}`, padding: 16, display: 'grid', gap: 12, alignContent: 'start' }}>
+                <div style={{ height: 70, borderRadius: 10, background: 'rgba(255,255,255,.04)' }} />
+                <div style={{ height: 110, borderRadius: 10, background: 'rgba(255,255,255,.04)' }} />
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 72, borderRadius: 10, background: 'rgba(255,255,255,.04)' }} />)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          @keyframes litt-shimmer {
+            0%   { opacity: 0.55; }
+            50%  { opacity: 1; }
+            100% { opacity: 0.55; }
+          }
+          .litt-skeleton-pulse > * { animation: litt-shimmer 1.6s ease-in-out infinite; }
+        `}</style>
       </div>
     );
   }
@@ -1559,27 +1900,6 @@ export function DailyCloseoutBrief() {
 
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('litt:timer:open'))}
-                style={{
-                  border:       `1px solid ${C.line}`,
-                  borderRadius: 8,
-                  background:   C.surface,
-                  color:        C.ink,
-                  padding:      '10px 14px',
-                  fontWeight:   500,
-                  fontSize:     12,
-                  cursor:       'pointer',
-                  whiteSpace:   'nowrap',
-                  fontFamily:   'var(--font-sans)',
-                  display:      'inline-flex',
-                  alignItems:   'center',
-                  gap:          6,
-                }}
-                title="Start timing work on a matter"
-              >
-                ▶ Timer
-              </button>
               <Link
                 to="/audit"
                 style={{
@@ -1600,6 +1920,39 @@ export function DailyCloseoutBrief() {
               >
                 Audit Log
               </Link>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('litt:openTimer'))}
+                style={{
+                  border:       timerRunning ? 0 : `1px solid ${C.forest}`,
+                  borderRadius: 8,
+                  background:   timerRunning ? C.forest : 'transparent',
+                  color:        timerRunning ? '#fff' : C.forest,
+                  padding:      '10px 14px',
+                  fontWeight:   timerRunning ? 700 : 500,
+                  fontSize:     12,
+                  cursor:       'pointer',
+                  whiteSpace:   'nowrap',
+                  fontFamily:   'var(--font-sans)',
+                  display:      'flex',
+                  alignItems:   'center',
+                  gap:          6,
+                  minWidth:     timerRunning ? 90 : 'auto',
+                }}
+                title={timerRunning ? 'Timer running — click to open' : 'Start a new billable time entry'}
+              >
+                {timerRunning ? (
+                  <>
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: '#EF4444',
+                      display: 'inline-block',
+                      flexShrink: 0,
+                      animation: 'litt-pulse 1.4s ease-in-out infinite',
+                    }} />
+                    {timerDisplay}
+                  </>
+                ) : '⏱ Log Time'}
+              </button>
               <button
                 onClick={() => downloadLedesExport(FIRM_ID).catch(e => console.error('LEDES export failed', e))}
                 style={{
@@ -1631,11 +1984,26 @@ export function DailyCloseoutBrief() {
                   fontSize:     13,
                   fontFamily:   'var(--font-sans)',
                   cursor:       sweeping ? 'not-allowed' : 'pointer',
-                  opacity:      sweeping ? 0.82 : 1,
+                  opacity:      sweeping ? 0.7 : 1,
                   whiteSpace:   'nowrap',
+                  display:      'flex',
+                  alignItems:   'center',
+                  gap:          8,
                 }}
               >
-                {sweeping ? 'Running…' : 'Run closeout sweep'}
+                {sweeping && (
+                  <span style={{
+                    display:     'inline-block',
+                    width:       13,
+                    height:      13,
+                    border:      '2px solid rgba(255,255,255,0.35)',
+                    borderTop:   '2px solid #FFFFFF',
+                    borderRadius: '50%',
+                    animation:   'spin 0.7s linear infinite',
+                    flexShrink:  0,
+                  }} />
+                )}
+                {sweeping ? 'Running sweep…' : 'Run closeout sweep'}
               </button>
             </div>
           </div>
@@ -1760,10 +2128,10 @@ export function DailyCloseoutBrief() {
       <SourceDrawer
         item={sourceItem}
         onClose={() => setSourceItem(null)}
-        onConfirm={() => {
+        onAction={(action) => {
           if (sourceItem) {
             setSourceItem(null);
-            setModal({ type: 'deadline', item: sourceItem, action: 'confirm' });
+            setModal({ type: 'deadline', item: sourceItem, action });
           }
         }}
       />

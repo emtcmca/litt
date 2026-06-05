@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { MatterSummary, TimerCaptureRequest, TimerNormalizeRequest } from '../types';
-import { captureTimerEntry, getMatters, getScrubber, normalizeNarrative } from '../api';
+import { captureTimerEntry, getMatters, normalizeNarrative } from '../api';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -24,6 +24,31 @@ const C = {
   line:       'var(--color-border-tertiary)',
   soft:       'rgba(0,0,0,0.06)',
 } as const;
+
+// ---------------------------------------------------------------------------
+// Scrubber pre-check (mirrors backend block/warn patterns for live feedback)
+// ---------------------------------------------------------------------------
+
+const SCRUB_BLOCKS = [
+  /\breview\s+documents?\b/i,
+  /\breviewing?\s+docs?\b/i,
+  /\bsee\s+above\b/i,
+];
+const SCRUB_WARNS = [
+  /\bmisc(ellaneous)?\b/i,
+  /\bgeneral\b/i,
+  /\bwork(?:ed|ing)?\s+on\b/i,
+  /\bvarious\b/i,
+  /\bother\s+work\b/i,
+];
+
+function checkScrubber(desc: string): 'clean' | 'warn' | 'block' {
+  const t = desc.trim();
+  if (!t || t.length < 8) return 'warn';
+  if (SCRUB_BLOCKS.some(p => p.test(t))) return 'block';
+  if (SCRUB_WARNS.some(p => p.test(t))) return 'warn';
+  return 'clean';
+}
 
 // ---------------------------------------------------------------------------
 // State types
@@ -132,9 +157,10 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [descError, setDescError] = useState(false);
   const [doneEntryId, setDoneEntryId] = useState<string | null>(null);
-  const [scrubberWarnings, setScrubberWarnings] = useState(0);
+  const [opacity, setOpacity] = useState(1);
 
-  const stateRef = useRef(state);
+  const stateRef      = useRef(state);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { stateRef.current = state; }, [state]);
 
   // Persist state to localStorage on every change
@@ -159,10 +185,30 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
       setState(IDLE_STATE);
       setExpanded(false);
       setDoneEntryId(null);
-      setScrubberWarnings(0);
     }, 3000);
     return () => clearTimeout(id);
   }, [state.status]);
+
+  // Restore full opacity when leaving running state
+  useEffect(() => {
+    if (state.status !== 'running') {
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      setOpacity(1);
+    }
+  }, [state.status]);
+
+  // Open timer via topbar button — stable, only refs/setters (no loadMatters dep)
+  useEffect(() => {
+    function handleOpen() {
+      if (stateRef.current.status === 'idle') {
+        setExpanded(true); // triggers the 'load-on-expand' effect below
+      }
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      setOpacity(1);
+    }
+    window.addEventListener('litt:openTimer', handleOpen);
+    return () => window.removeEventListener('litt:openTimer', handleOpen);
+  }, []);
 
   const loadMatters = useCallback(async () => {
     if (matters !== null || mattersLoading) return;
@@ -177,17 +223,11 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
     }
   }, [firmId, matters, mattersLoading]);
 
-  // Listen for toolbar button trigger
+  // Load matters when HUD expands to idle-expanded state (triggered by topbar open event)
   useEffect(() => {
-    function handleExternalOpen() {
-      if (stateRef.current.status === 'idle') {
-        setExpanded(true);
-        loadMatters();
-      }
-    }
-    window.addEventListener('litt:timer:open', handleExternalOpen);
-    return () => window.removeEventListener('litt:timer:open', handleExternalOpen);
-  }, [loadMatters]);
+    if (expanded && state.status === 'idle') loadMatters();
+  }, [expanded, state.status, loadMatters]);
+
 
   function handleMatterChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const selected = matters?.find(m => m.id === e.target.value) ?? null;
@@ -239,10 +279,7 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
         raw_description: state.description,
         session_minutes: sessionMinutes,
       };
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('normalize timeout')), 8000)
-      );
-      const result = await Promise.race([normalizeNarrative(req), timeout]);
+      const result = await normalizeNarrative(req);
       setState(prev => ({
         ...prev,
         normalizedNarrative: result.normalized_narrative,
@@ -270,7 +307,6 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
         attorney_id: attorneyId,
         session_minutes: sessionMinutes,
         narrative: state.normalizedNarrative || state.description,
-        raw_note: state.description,
         used_gemini: state.usedGemini,
         idempotency_key: state.idempotencyKey ?? generateKey(),
       };
@@ -278,9 +314,6 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
       if (result.success) {
         setDoneEntryId(result.entity_id);
         setState({ ...IDLE_STATE, status: 'done' });
-        getScrubber(firmId, result.entity_id)
-          .then(r => setScrubberWarnings(r.flags.length))
-          .catch(() => { /* non-blocking — scrubber feedback is informational only */ });
       } else {
         setCaptureError(result.message || 'Save failed');
       }
@@ -289,6 +322,16 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
     } finally {
       setCapturing(false);
     }
+  }
+
+  function handleMouseEnter() {
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    setOpacity(1);
+  }
+
+  function handleMouseLeave() {
+    if (stateRef.current.status !== 'running') return;
+    inactivityRef.current = setTimeout(() => setOpacity(0.18), 8000);
   }
 
   function handleDiscard() {
@@ -341,29 +384,23 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
   if (state.status === 'done') {
     return (
       <div style={base}>
-        <div style={{ ...card, background: scrubberWarnings > 0 ? C.gold : C.teal, border: 'none', padding: '14px 16px' }}>
+        <div style={{ ...card, background: C.teal, border: 'none', padding: '14px 16px' }}>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
             ✓ Entry created
           </div>
           <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginBottom: 2 }}>
             {doneEntryId} · PENDING
           </div>
-          {scrubberWarnings > 0 ? (
-            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11 }}>
-              {scrubberWarnings} scrubber warning{scrubberWarnings !== 1 ? 's' : ''} — review in brief
-            </div>
-          ) : (
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>
-              Appears in next sweep
-            </div>
-          )}
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>
+            Appears in next sweep
+          </div>
         </div>
       </div>
     );
   }
 
   // ---------------------------------------------------------------------------
-  // IDLE — trigger lives in toolbar; nothing to render here
+  // IDLE — no floating pill; topbar "Log Time" button is the sole trigger
   // ---------------------------------------------------------------------------
 
   if (state.status === 'idle' && !expanded) {
@@ -462,9 +499,15 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
   // ---------------------------------------------------------------------------
 
   if (state.status === 'running') {
+    const scrubStatus = checkScrubber(state.description);
     return (
-      <div style={base}>
+      <div
+        style={{ ...base, opacity, transition: 'opacity 0.7s ease' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div style={card}>
+          {/* Header */}
           <div style={{ padding: '10px 14px 8px', background: C.forest, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{
@@ -483,13 +526,22 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
               Discard
             </button>
           </div>
+          {/* Body */}
           <div style={{ padding: '10px 14px' }}>
-            <div style={{ color: C.brass, fontSize: 12, fontWeight: 600, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {state.matterName}
+            {/* Matter name + billing increment */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ color: C.brass, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                {state.matterName}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: C.gold, flexShrink: 0, marginLeft: 8 }}>
+                {computeHoursLabel(displayMs)}
+              </div>
             </div>
-            <div style={{ fontFamily: 'monospace', fontSize: 30, fontWeight: 700, color: C.forest, letterSpacing: '0.02em', marginBottom: 10 }}>
+            {/* Timer */}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 700, color: C.forest, letterSpacing: '0.02em', marginBottom: 10 }}>
               {formatElapsed(displayMs)}
             </div>
+            {/* Description + live scrubber */}
             <div>
               <textarea
                 placeholder="What are you working on?"
@@ -509,8 +561,27 @@ export function TimerHUD({ firmId, attorneyId }: TimerHUDProps) {
                 }}
               />
               {descError && (
-                <div style={{ fontSize: 11, color: C.danger, marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: C.danger, marginBottom: 4 }}>
                   Description required before stopping
+                </div>
+              )}
+              {state.description.trim().length > 0 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  fontSize: 10, marginBottom: 6,
+                  color: scrubStatus === 'block' ? C.danger : scrubStatus === 'warn' ? C.gold : C.teal,
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                    display: 'inline-block',
+                    background: scrubStatus === 'block' ? C.danger : scrubStatus === 'warn' ? C.gold : C.teal,
+                  }} />
+                  {scrubStatus === 'block'
+                    ? 'Pattern flagged — edit before submitting'
+                    : scrubStatus === 'warn'
+                    ? 'Vague language — strengthen narrative'
+                    : 'Narrative clear'}
                 </div>
               )}
             </div>
