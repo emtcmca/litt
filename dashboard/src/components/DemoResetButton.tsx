@@ -20,10 +20,10 @@ export function DemoResetButton({ firmId, onReset }: Props) {
       try {
         localStorage.setItem('litt_timer_state', JSON.stringify({
           status: 'running',
-          matterId: 'rivera-v-holbrook',
-          matterName: 'Rivera v. Holbrook',
+          matterId: 'rivera-employment-2026',
+          matterName: 'Rivera Employment Matter',
           clientId: 'rivera-personal',
-          description: 'Reviewed Rivera depo outline with Omar',
+          description: 'Reviewed deposition outline and discovery strategy with Omar',
           startedAtEpochMs: Date.now() - (7 * 60 * 1000 + 23 * 1000),
           elapsedMsAccumulated: 0,
           normalizedNarrative: null,
