@@ -1,9 +1,9 @@
 # Litt — Hackathon Demo Script
 
-**Target duration:** 90 seconds  
 **Hard cap:** 2:00 (contest rule)  
 **Demo firm:** Strand & Okafor LLP (`strand-okafor`)  
-**Demo date anchor:** June 25, 2026, 4:29 PM
+**Demo date anchor:** June 25, 2026, 4:29 PM  
+**Sweep timing:** ~50 seconds (real Gemini calls: Rivera date extraction + comms drafts)
 
 ---
 
@@ -12,10 +12,11 @@
 Run these before every take:
 
 ```
-1. POST /api/demo/reset   {"firm_id": "strand-okafor", "confirm": true}
-2. GET  /api/demo/ready   → all 5 checks must show "pass": true
-3. Hard-refresh browser   → timeline is empty, brief shows loading state
-4. Audio check            → no background noise
+1. Click "Reset demo" in the dashboard toolbar (not API — button seeds the timer too)
+2. GET /api/demo/ready → all 5 checks must show "pass": true
+3. Hard-refresh browser → timeline is empty, brief shows loading state
+4. Verify: ▶ Timer button visible in toolbar, banner shows 2026-06-25
+5. Audio check → no background noise
 ```
 
 ---
@@ -26,85 +27,75 @@ Run these before every take:
 |---|---|
 | Top half | Agent Run Timeline (empty, "Run Closeout" button visible) |
 | Bottom half | Daily Closeout Brief (loading state) |
+| Topbar | Reset demo · **▶ Timer** · Audit Log · LEDES Export · Run Closeout |
 | Banner | `DEMO MODE — strand-okafor — 2026-06-25` |
+
+> **Note:** After Reset, the ▶ Timer button seeds a running timer (Rivera matter, ~7 min elapsed). It is visible throughout the demo as a passive demonstration of real-time billing capture. No dedicated scene needed — judges will notice it.
 
 ---
 
 ## Script with Timing Marks
 
-### 0:00–0:10 — Hook
+### 0:00–0:12 — Hook
 
 **NARRATOR:**
-> "Small law firms don't lose time in one system. They lose it between systems — email, calendar, billing, client updates, and deadlines.
+> "Small law firms don't lose time in one system — they lose it in the gaps between systems. Email, calendar, billing, client updates, deadlines — each a silo.
 >
-> Litt is an autonomous operations agent for that gap. It watches the firm's operational surface, finds what needs attorney attention, and produces a source-backed Daily Closeout Brief with an audit trail.
->
-> Dana Strand at Strand & Okafor LLP. Thursday, June 25. 4:29 PM. She clicks Run Closeout."
+> Litt is an autonomous operations agent for that gap. Dana Strand, Strand & Okafor LLP, Thursday June 25. She clicks Run Closeout."
 
 **ACTION:** Click the "Run Closeout" button.
 
 ---
 
-### 0:10–0:50 — Agent Run Timeline Plays
+### 0:12–1:08 — Sweep Loads + Timeline Plays
 
-The timeline auto-scrolls. 22 observations drip in at 250 ms each (~5.5 seconds total playback). **Do not skip ahead — let it play.**
+The backend runs four sub-agents — billing, deadline, comms, anomaly — including live Gemini calls. **The timeline is blank for ~50 seconds while the sweep runs. Fill every second with narration. Do not be silent.**
 
-**Key observations to highlight with narration:**
-
-| Approx time | Observation | What to say |
-|---|---|---|
-| 0:14 | `deadline_agent` / ESCALATION — Rivera deadline | **"Here. Litt used Gemini to extract 'due tomorrow, Friday' from an opposing counsel email. No court order in firm sources. Confidence: 70%. Litt flags it — never auto-verifies."** |
-| 0:22 | `billing_agent` / REVIEW_REQUIRED — 42-min gap | "Same run: 42-minute client call on calendar, no time entry." |
-| 0:28 | `billing_agent` / REVIEW_REQUIRED — scrubber hit | "Forbidden billing phrase caught before invoice review." |
-| 0:34 | `comms_agent` / BLOCKED — Whitmore draft | "Client update drafted. Delivery blocked until attorney approval." |
-| 0:40 | `anomaly_agent` / ESCALATION — reconstruction | "Reconstruction risk flagged on a time entry with no session provenance." |
-
-**NARRATOR (while timeline plays):**
-> "That is the product: autonomy with professional boundaries. The backend completed the sweep in about two seconds. The interface replays the trace slowly enough to inspect.
+**NARRATOR (during loading, 0:12–~1:02):**
+> "Litt just dispatched four sub-agents in parallel. The billing agent is scanning seven time entries against each client's billing guidelines — checking for forbidden phrases, missing narratives, round-hour anomalies with no session timer. The deadline agent is reading every active deadline — and for Rivera v. Holbrook, it's calling Gemini right now to extract a due date from an opposing counsel email, because no court order exists in firm records. The comms agent is checking how long since each client heard from the firm. The anomaly agent is scanning for billing patterns across everything.
 >
-> Notice the gate labels. AUTO_SAFE is informational. REVIEW_REQUIRED means Litt prepared work but needs approval. ESCALATION means professional judgment is required. BLOCKED means Litt cannot proceed."
+> Routing is a Python dictionary — not an LLM deciding which agents to call. Gemini only handles the probabilistic work: extracting dates from unstructured email text, drafting client updates. The state machine, scrubber rules, budget math, and gate logic are all deterministic code. That boundary is enforced in the codebase, not in a prompt."
+
+**[Timeline populates — observations animate ~1:02–1:08]**
+
+**NARRATOR (during animation, ~1:02–1:08):**
+> "Rivera v. Holbrook — ESCALATION. Forbidden billing phrase caught. Whitmore — BLOCKED send. AUTO_SAFE is informational. REVIEW_REQUIRED means Litt prepared work but needs approval. ESCALATION means attorney judgment required. BLOCKED means Litt cannot proceed."
 
 ---
 
-### 0:50–1:15 — Brief Appears
+### 1:08–1:26 — Brief Appears
 
 Timeline shows `complete`. Daily Closeout Brief populates below.
 
 **NARRATOR:**
-> "Now Dana gets the closeout brief. This is not a summary of chat output. These are attorney decisions Litt found across the firm's workflow.
+> "The closeout brief. Not a chat summary — these are attorney decisions Litt found autonomously across the firm's operational surface.
 >
-> The hero item is the Rivera deadline. It says 'tomorrow' — from opposing counsel, with no court order in the firm's sources. Litt escalates because guessing creates liability.
->
-> Gemini helps with extraction, drafting, and explanation. Python controls routing, budget math, scrubber checks, state transitions, and gates. That boundary is enforced in code, not in a prompt."
+> The hero item: Rivera, due tomorrow — from opposing counsel only, no court order. Acme Commercial: 92% of budget consumed, CRITICAL. Whitmore Group: 16 days since last contact."
 
-**ACTION:** Scroll brief to show: Rivera ESCALATION → Okafor billing gap → Whitmore BLOCKED send → Acme budget warning.
+**ACTION:** Scroll brief: Rivera deadline (amber, SOURCE CONFLICT badge) → Acme budget (CRITICAL) → Whitmore silence.
 
 ---
 
-### 1:15–1:35 — Audit Trail
+### 1:26–1:43 — Audit Trail
 
-**ACTION:** Click Rivera deadline item → modal opens → click "View source email" → show full opposing counsel email body. Point to the extracted text and confidence score.
-
-**NARRATOR:**
-> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'June 26' with 92% confidence, and refused to verify it without attorney review. Dana clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence."
-
-**Show:** Full source email (from: jcolbert@colbertmarsh.com, subject: Rivera v. Holbrook — Discovery Responses Due, body with "tomorrow (Friday)" text). Then Verify action completing with AuditEventDrawer confirmation (audit_event_id visible).
-
-**ACTION:** Click "Audit Log" button in topbar → `/audit` page opens → point to legal_defensibility tier entries; expand one `before_state` / `after_state` diff.
+**ACTION:** Click Rivera deadline item → modal opens → click "View source email."
 
 **NARRATOR:**
-> "Every action Dana takes — and every action Litt takes — is a CREATE-only entry in the audit log. Two tiers: operational for billing and deadline decisions, legal defensibility for anything that could appear in a fee dispute or malpractice review. If a client ever asks 'why was this billed this way?' or 'when did you know about this deadline?' — the answer is here, immutable, timestamped."
+> "The source. James Colbert, Colbert & Marsh — 'by tomorrow Friday, June 26.' No court order. Gemini extracted that date. Litt escalated instead of guessing. Dana clicks Verify."
+
+**ACTION:** Click Verify → AuditEventDrawer appears with audit_event_id visible. Hold 2 seconds.
+
+**NARRATOR:**
+> "Every action — attorney and agent — is a CREATE-only audit entry. Timestamped. Immutable. Before and after state. Fee dispute, malpractice review — the answer is here."
 
 ---
 
-### 1:35–1:50 — Close
+### 1:43–1:55 — Close
 
-**ACTION:** Navigate back to brief (`← Brief` link). Zoom out to show full dashboard — all sections populated.
+**ACTION:** Close modal. Zoom out to show full brief — all sections populated.
 
 **NARRATOR:**
-> "Dana did not search her inbox, compare calendars to billing records, remember which client went quiet, or reconstruct why an entry looked risky.
->
-> Litt brought her the decisions, the evidence, and the guardrails: deadline risk surfaced with source proof, billing leakage caught before invoicing, client relationship flagged before it became a complaint, budget pressure visible before it became a dispute, every action logged with full provenance.
+> "Dana didn't search her inbox, reconcile billing records, or remember which client went quiet. Litt brought the decisions, the evidence, and the guardrails.
 >
 > That's Litt — autonomous operations with legal-grade safety."
 
@@ -112,7 +103,7 @@ Timeline shows `complete`. Daily Closeout Brief populates below.
 
 ---
 
-### 1:50–2:00 — Title card (optional — use remaining time)
+### 1:55–2:00 — Title card
 
 ```
 Litt
@@ -126,10 +117,13 @@ github.com/emtcmca/litt
 
 ## Pacing Notes
 
-- **Do not rush the timeline.** 22 observations at 250 ms = ~5.5 seconds backend playback. Narration fills the gap.
-- **Pause on Rivera.** The ESCALATION observation with amber badge is the clearest proof-of-safety moment. Hold 2–3 seconds.
-- **Don't narrate every observation.** Let the labels speak. Call out only Rivera (deadline conflict), Okafor (billing gap), Whitmore (BLOCKED).
-- **Brief scroll should be slow.** Judges need to read the section headers.
+- **The loading wait is ~50 seconds. Fill every second.** The sweep is real AI running in real time — keep talking.
+- **Pause on Rivera.** The ESCALATION with amber SOURCE CONFLICT badge is the product's clearest proof-of-safety moment. Hold 2–3 seconds when it appears in the timeline.
+- **Three observations to call out during animation:** Rivera (ESCALATION), forbidden phrase (REVIEW_REQUIRED), Whitmore (BLOCKED). Skip the rest.
+- **Brief scroll: 2–3 seconds per section.** Judges read fast but need a beat to absorb section headers.
+- **AuditEventDrawer: hold 2 seconds** so the audit_event_id is readable. This is the legal defensibility proof.
+- **If the sweep finishes faster than expected** (could vary 40–55s), slow the animation by pausing between callouts. Never rush past Rivera.
+- **Timer in topbar:** The ▶ Timer button shows an active timer after Reset. Don't call it out explicitly — let judges notice it. If pressed for time, skip entirely.
 
 ---
 
@@ -147,20 +141,17 @@ github.com/emtcmca/litt
 
 ## Key Shots Checklist
 
-- [ ] Empty dashboard + "Run Closeout" button visible
-- [ ] Timeline starts (`signal_received` first observation)
-- [ ] Rivera deadline ESCALATION (amber badge, 70% confidence visible)
-- [ ] Rivera "SOURCE CONFLICT" badge in DeadlineModal header
-- [ ] Rivera source email body visible (from: jcolbert@colbertmarsh.com, body with "tomorrow (Friday)" text)
-- [ ] Gemini extraction badge (confidence 0.92) visible in email viewer
-- [ ] Rivera "Verify" tab selected (amber), action completing with AuditEventDrawer
-- [ ] AuditEventDrawer: audit_event_id visible
-- [ ] BLOCKED observation for Whitmore comms
+- [ ] Empty dashboard — "Run Closeout" button visible, `▶ Timer` in toolbar
+- [ ] Banner: `DEMO MODE — strand-okafor — 2026-06-25`
+- [ ] Loading state visible while sweep runs (not blank screen)
+- [ ] Timeline starts — `signal_received` first observation
+- [ ] Rivera deadline ESCALATION (amber badge visible)
+- [ ] Rivera `SOURCE CONFLICT` badge in DeadlineModal header
+- [ ] Rivera source email body (from: jcolbert@colbertmarsh.com, "tomorrow (Friday), June 26, 2026")
+- [ ] Rivera "Verify" action completing with AuditEventDrawer, audit_event_id readable
 - [ ] Timeline shows `complete` status pill
-- [ ] Brief fully populated (deadlines, WIP, budget, silence, anomalies all visible)
-- [ ] Audit Log page (`/audit`) — legal_defensibility tier entries visible
-- [ ] Expanded before/after state diff in audit log
-- [ ] LEDES Export button visible in topbar (bonus shot if time allows)
+- [ ] Brief fully populated — deadlines, WIP, budget, silence, anomalies all visible
+- [ ] Acme 92% CRITICAL budget bar visible
 - [ ] Final frame or title card
 
 ---
@@ -178,3 +169,6 @@ Three ways: (1) routing is a Python dict, not LLM routing; (2) Gemini drafts are
 
 **"What's the stack?"**
 Python (FastAPI), Google ADK, Gemini 2.5 Pro via Vertex AI, Firestore, React, Cloud Run. Firestore is the only write path — all writes go through the tool layer, every write calls `log_audit_event()`.
+
+**"What's the Timer button?"**
+Real-time billing capture. Attorney selects a matter, starts the timer, works. On stop, Gemini normalizes the raw note into a LEDES-compliant billing narrative. Attorney confirms or edits, and the entry writes directly into the billing pipeline — PENDING status, through the scrubber, into the next sweep.
