@@ -16,7 +16,7 @@ from app.scrubber.prebill import run_prebill_checks
 
 router = APIRouter()
 
-DEMO_DATE = date(2026, 5, 29)
+DEMO_DATE = config.get_effective_date()
 
 
 # ---------------------------------------------------------------------------
