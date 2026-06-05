@@ -5,7 +5,7 @@ Idempotent — deletes existing data and re-creates it fresh each run.
 Usage (from repo root):
     python scripts/seed_demo.py
 
-Demo date anchor: 2026-05-29
+Demo date anchor: 2026-06-25
 All relative dates computed from this anchor.
 
 Five demo conditions seeded:
@@ -35,8 +35,8 @@ PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "litt-prod")
 FIRM_ID = os.getenv("LITT_DEMO_FIRM_ID", "strand-okafor")
 
 # Demo date anchor
-DEMO_DATE = date(2026, 5, 29)
-DEMO_DT = datetime(2026, 5, 29, 16, 30, 0, tzinfo=timezone.utc)
+DEMO_DATE = date(2026, 6, 25)
+DEMO_DT = datetime(2026, 6, 25, 16, 30, 0, tzinfo=timezone.utc)
 FIRM_SETUP_DT = datetime(2026, 1, 15, 9, 0, 0, tzinfo=timezone.utc)
 
 
@@ -151,7 +151,7 @@ def seed(db: firestore.Client):
         "retainer_refill_threshold": 1000,
         "ledes_client_id": "ACME-COM-001",
         "client_matter_id_prefix": "ACME",
-        "last_client_contact": dt(2026, 5, 21),
+        "last_client_contact": dt(2026, 6, 17),
         "client_silence_threshold_days": 14,
         "billing_guidelines": acme_guidelines,
         "engagement_terms": acme_terms,
@@ -202,7 +202,7 @@ def seed(db: firestore.Client):
         "retainer_refill_threshold": None,
         "ledes_client_id": "MERCER-001",
         "client_matter_id_prefix": "MERCER",
-        "last_client_contact": dt(2026, 5, 22),
+        "last_client_contact": dt(2026, 6, 18),
         "client_silence_threshold_days": 14,
         "billing_guidelines": default_guidelines,
         "engagement_terms": {**default_terms, "budget_cap": 25000},
@@ -225,7 +225,7 @@ def seed(db: firestore.Client):
         "retainer_refill_threshold": None,
         "ledes_client_id": "REYES-001",
         "client_matter_id_prefix": "REYES",
-        "last_client_contact": dt(2026, 5, 25),
+        "last_client_contact": dt(2026, 6, 21),
         "client_silence_threshold_days": 14,
         "billing_guidelines": default_guidelines,
         "engagement_terms": {**default_terms, "budget_cap": 18000},
@@ -248,7 +248,7 @@ def seed(db: firestore.Client):
         "retainer_refill_threshold": None,
         "ledes_client_id": "WHITMORE-001",
         "client_matter_id_prefix": "WHIT",
-        "last_client_contact": dt(2026, 5, 13),  # 16 days before demo date — silence trigger
+        "last_client_contact": dt(2026, 6, 9),  # 16 days before demo date — silence trigger
         "client_silence_threshold_days": 14,
         "billing_guidelines": default_guidelines,
         "engagement_terms": {**default_terms, "budget_cap": 12000},
@@ -272,8 +272,8 @@ def seed(db: firestore.Client):
         "status": "ACTIVE",
         "assigned_attorneys": ["dana-strand", "kofi-okafor"],
         "opened_at": dt(2026, 1, 20),
-        "last_activity": dt(2026, 5, 28),
-        "last_client_contact": dt(2026, 5, 22),
+        "last_activity": dt(2026, 6, 24),
+        "last_client_contact": dt(2026, 6, 18),
         "created_at": dt(2026, 1, 20),
         "updated_at": DEMO_DT,
     })
@@ -289,8 +289,8 @@ def seed(db: firestore.Client):
         "status": "ACTIVE",
         "assigned_attorneys": ["dana-strand", "kofi-okafor"],
         "opened_at": dt(2026, 2, 10),
-        "last_activity": dt(2026, 5, 27),
-        "last_client_contact": dt(2026, 5, 25),
+        "last_activity": dt(2026, 6, 23),
+        "last_client_contact": dt(2026, 6, 21),
         "created_at": dt(2026, 2, 10),
         "updated_at": DEMO_DT,
     })
@@ -306,8 +306,8 @@ def seed(db: firestore.Client):
         "status": "ACTIVE",
         "assigned_attorneys": ["dana-strand"],
         "opened_at": dt(2026, 1, 15),
-        "last_activity": dt(2026, 5, 28),
-        "last_client_contact": dt(2026, 5, 21),
+        "last_activity": dt(2026, 6, 24),
+        "last_client_contact": dt(2026, 6, 17),
         "created_at": dt(2026, 1, 15),
         "updated_at": DEMO_DT,
     })
@@ -323,10 +323,10 @@ def seed(db: firestore.Client):
         "status": "ACTIVE",
         "assigned_attorneys": ["dana-strand", "kofi-okafor"],
         "opened_at": dt(2026, 3, 1),
-        "last_activity": dt(2026, 5, 13),
-        "last_client_contact": dt(2026, 5, 13),  # 16 days before demo date
+        "last_activity": dt(2026, 6, 9),
+        "last_client_contact": dt(2026, 6, 9),  # 16 days before demo date
         "created_at": dt(2026, 3, 1),
-        "updated_at": dt(2026, 5, 13),
+        "updated_at": dt(2026, 6, 9),
     })
     print("  [ok] matters")
 
@@ -341,7 +341,7 @@ def seed(db: firestore.Client):
         "matter_id": "mercer-v-dunlap",
         "client_id": "mercer-industries",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-27",
+        "entry_date": "2026-06-23",
         "hours": 1.4,
         "rate": 350,
         "amount": 490.00,
@@ -369,8 +369,8 @@ def seed(db: firestore.Client):
         "write_down_record": None,
         "write_off_record": None,
         "version": 1,
-        "created_at": dt(2026, 5, 27, 17, 0),
-        "updated_at": dt(2026, 5, 27, 17, 0),
+        "created_at": dt(2026, 6, 23, 17, 0),
+        "updated_at": dt(2026, 6, 23, 17, 0),
     })
 
     # te-002: APPROVED, clean
@@ -380,7 +380,7 @@ def seed(db: firestore.Client):
         "matter_id": "mercer-v-dunlap",
         "client_id": "mercer-industries",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-26",
+        "entry_date": "2026-06-22",
         "hours": 0.5,
         "rate": 350,
         "amount": 175.00,
@@ -408,8 +408,8 @@ def seed(db: firestore.Client):
         "write_down_record": None,
         "write_off_record": None,
         "version": 2,
-        "created_at": dt(2026, 5, 26, 16, 45),
-        "updated_at": dt(2026, 5, 27, 9, 0),
+        "created_at": dt(2026, 6, 22, 16, 45),
+        "updated_at": dt(2026, 6, 23, 9, 0),
     })
 
     # te-003: PENDING, clean narrative ready
@@ -419,7 +419,7 @@ def seed(db: firestore.Client):
         "matter_id": "reyes-acquisition",
         "client_id": "reyes-family-holdings",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-28",
+        "entry_date": "2026-06-24",
         "hours": 0.8,
         "rate": 350,
         "amount": 280.00,
@@ -444,14 +444,14 @@ def seed(db: firestore.Client):
         "client_ai_disclosure_status": "not_required",
         "billing_treatment": "billed_as_human_review",
         "activity_log": [
-            "2026-05-28T14:10:00Z|Edit|reyes-loi-draft-v2.docx",
-            "2026-05-28T14:38:00Z|Write|reyes-loi-redline-notes.md",
+            "2026-06-24T14:10:00Z|Edit|reyes-loi-draft-v2.docx",
+            "2026-06-24T14:38:00Z|Write|reyes-loi-redline-notes.md",
         ],
         "write_down_record": None,
         "write_off_record": None,
         "version": 1,
-        "created_at": dt(2026, 5, 28, 15, 0),
-        "updated_at": dt(2026, 5, 28, 15, 0),
+        "created_at": dt(2026, 6, 24, 15, 0),
+        "updated_at": dt(2026, 6, 24, 15, 0),
     })
 
     # te-004: PENDING, round hours no session data — anomaly
@@ -461,7 +461,7 @@ def seed(db: firestore.Client):
         "matter_id": "reyes-acquisition",
         "client_id": "reyes-family-holdings",
         "attorney_id": "kofi-okafor",
-        "entry_date": "2026-05-27",
+        "entry_date": "2026-06-23",
         "hours": 1.2,
         "rate": 375,
         "amount": 450.00,
@@ -489,8 +489,8 @@ def seed(db: firestore.Client):
         "write_down_record": None,
         "write_off_record": None,
         "version": 1,
-        "created_at": dt(2026, 5, 27, 18, 0),
-        "updated_at": dt(2026, 5, 27, 18, 0),
+        "created_at": dt(2026, 6, 23, 18, 0),
+        "updated_at": dt(2026, 6, 23, 18, 0),
     })
 
     # te-005: PENDING, narrative contains "review documents" — pre-bill scrubber hit
@@ -500,7 +500,7 @@ def seed(db: firestore.Client):
         "matter_id": "acme-contract-review-2026",
         "client_id": "acme-commercial",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-28",
+        "entry_date": "2026-06-24",
         "hours": 0.8,
         "rate": 350,
         "amount": 280.00,
@@ -525,14 +525,14 @@ def seed(db: firestore.Client):
         "client_ai_disclosure_status": None,
         "billing_treatment": None,
         "activity_log": [
-            "2026-05-28T10:05:00Z|Read|acme-vendor-msa-draft.docx",
-            "2026-05-28T10:41:00Z|Read|acme-indemnification-precedents.pdf",
+            "2026-06-24T10:05:00Z|Read|acme-vendor-msa-draft.docx",
+            "2026-06-24T10:41:00Z|Read|acme-indemnification-precedents.pdf",
         ],
         "write_down_record": None,
         "write_off_record": None,
         "version": 1,
-        "created_at": dt(2026, 5, 28, 11, 0),
-        "updated_at": dt(2026, 5, 28, 11, 0),
+        "created_at": dt(2026, 6, 24, 11, 0),
+        "updated_at": dt(2026, 6, 24, 11, 0),
     })
 
     # te-006: APPROVED, round hours no session data — anomaly (already logged)
@@ -543,7 +543,7 @@ def seed(db: firestore.Client):
         "matter_id": "acme-contract-review-2026",
         "client_id": "acme-commercial",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-22",
+        "entry_date": "2026-06-18",
         "hours": 2.0,  # round hours — anomaly (already flagged/logged)
         "rate": 350,
         "amount": 700.00,
@@ -571,8 +571,8 @@ def seed(db: firestore.Client):
         "write_down_record": None,
         "write_off_record": None,
         "version": 2,
-        "created_at": dt(2026, 5, 22, 17, 0),
-        "updated_at": dt(2026, 5, 23, 9, 30),
+        "created_at": dt(2026, 6, 18, 17, 0),
+        "updated_at": dt(2026, 6, 19, 9, 30),
     })
 
     # te-007: BILLED, clean, on INV-2026-006
@@ -582,7 +582,7 @@ def seed(db: firestore.Client):
         "matter_id": "whitmore-employment-2026",
         "client_id": "whitmore-group",
         "attorney_id": "dana-strand",
-        "entry_date": "2026-05-10",
+        "entry_date": "2026-06-08",
         "hours": 0.6,
         "rate": 350,
         "amount": 210.00,
@@ -610,8 +610,8 @@ def seed(db: firestore.Client):
         "write_down_record": None,
         "write_off_record": None,
         "version": 3,
-        "created_at": dt(2026, 5, 10, 16, 0),
-        "updated_at": dt(2026, 5, 15, 10, 0),
+        "created_at": dt(2026, 6, 8, 16, 0),
+        "updated_at": dt(2026, 6, 13, 10, 0),
     })
 
     # te-008: APPROVED, kofi, whitmore — clean
@@ -621,7 +621,7 @@ def seed(db: firestore.Client):
         "matter_id": "whitmore-employment-2026",
         "client_id": "whitmore-group",
         "attorney_id": "kofi-okafor",
-        "entry_date": "2026-05-20",
+        "entry_date": "2026-06-16",
         "hours": 1.1,
         "rate": 375,
         "amount": 412.50,
@@ -646,14 +646,14 @@ def seed(db: firestore.Client):
         "client_ai_disclosure_status": "not_required",
         "billing_treatment": "billed_as_human_review",
         "activity_log": [
-            "2026-05-20T13:30:00Z|Read|whitmore-employee-handbook-2025.pdf",
-            "2026-05-20T14:15:00Z|Write|whitmore-policy-amendments-draft.docx",
+            "2026-06-16T13:30:00Z|Read|whitmore-employee-handbook-2025.pdf",
+            "2026-06-16T14:15:00Z|Write|whitmore-policy-amendments-draft.docx",
         ],
         "write_down_record": None,
         "write_off_record": None,
         "version": 2,
-        "created_at": dt(2026, 5, 20, 15, 0),
-        "updated_at": dt(2026, 5, 21, 9, 0),
+        "created_at": dt(2026, 6, 16, 15, 0),
+        "updated_at": dt(2026, 6, 17, 9, 0),
     })
     print("  [ok] time_entries")
 
@@ -661,18 +661,18 @@ def seed(db: firestore.Client):
     # Deadlines
     # ------------------------------------------------------------------
 
-    # dl-mercer-001: HARD_LEGAL, 6 days out from 2026-05-29 = 2026-06-04, NO confirmation — escalation fires
+    # dl-mercer-001: HARD_LEGAL, 6 days out from 2026-06-25 = 2026-07-01, NO confirmation — escalation fires
     col(db, "deadlines").document("dl-mercer-001").set({
         "id": "dl-mercer-001",
         "firm_id": FIRM_ID,
         "matter_id": "mercer-v-dunlap",
         "description": "Opposition to defendant's motion for summary judgment due",
-        "due_date": "2026-06-04",
+        "due_date": "2026-07-01",
         "classification": "HARD_LEGAL",
         "status": "ACTIVE",
         "source_type": "court_order",
         "source_document_id": "court-order-2026-0508",
-        "source_excerpt": "Plaintiff's opposition to defendant's motion for summary judgment shall be filed no later than June 4, 2026.",
+        "source_excerpt": "Plaintiff's opposition to defendant's motion for summary judgment shall be filed no later than July 1, 2026.",
         "created_by": "dana-strand",
         "verified_by": "dana-strand",
         "verification_status": "attorney_verified",
@@ -685,18 +685,18 @@ def seed(db: firestore.Client):
         "updated_at": dt(2026, 5, 8, 10, 30),
     })
 
-    # dl-reyes-001: HARD_CONTRACTUAL, 11 days out = 2026-06-09, no confirmation — digest mention
+    # dl-reyes-001: HARD_CONTRACTUAL, 11 days out = 2026-07-06, no confirmation — digest mention
     col(db, "deadlines").document("dl-reyes-001").set({
         "id": "dl-reyes-001",
         "firm_id": FIRM_ID,
         "matter_id": "reyes-acquisition",
         "description": "LOI acceptance window closes — counterparty signature required",
-        "due_date": "2026-06-09",
+        "due_date": "2026-07-06",
         "classification": "HARD_CONTRACTUAL",
         "status": "ACTIVE",
         "source_type": "contract",
         "source_document_id": "email-reyes-loi-20260518",
-        "source_excerpt": "Acceptance of this Letter of Intent must be executed and returned no later than June 9, 2026.",
+        "source_excerpt": "Acceptance of this Letter of Intent must be executed and returned no later than July 6, 2026.",
         "created_by": "dana-strand",
         "verified_by": "dana-strand",
         "verification_status": "attorney_verified",
@@ -730,15 +730,15 @@ def seed(db: firestore.Client):
         "source_map": [
             {
                 "fact_id": "f1",
-                "fact_text": "No confirmed client contact since May 13, 2026 — 16 days ago.",
+                "fact_text": "No confirmed client contact since June 9, 2026 — 16 days ago.",
                 "sentence_in_draft": "I wanted to reach out with a brief update on the Whitmore Group employment advisory matter.",
                 "source_type": "firestore",
                 "source_id": "matters/whitmore-employment-2026",
-                "source_excerpt": "last_client_contact: 2026-05-13",
+                "source_excerpt": "last_client_contact: 2026-06-09",
             },
             {
                 "fact_id": "f2",
-                "fact_text": "te-008 (APPROVED, May 20) — reviewed handbook and drafted policy amendments.",
+                "fact_text": "te-008 (APPROVED, June 16) — reviewed handbook and drafted policy amendments.",
                 "sentence_in_draft": "Our team has completed the initial review of the employment handbook and drafted recommended policy amendments.",
                 "source_type": "firestore",
                 "source_id": "time_entries/te-008",
@@ -763,20 +763,20 @@ def seed(db: firestore.Client):
         "id": "INV-2026-006",
         "firm_id": FIRM_ID,
         "client_id": "whitmore-group",
-        "period_start": "2026-05-01",
-        "period_end": "2026-05-15",
+        "period_start": "2026-06-01",
+        "period_end": "2026-06-15",
         "total_hours": 0.6,
         "total_amount": 210.00,
         "retainer_draw": None,
         "retainer_balance_after": None,
-        "exhibit_md": "# Invoice INV-2026-006\n\n**Whitmore Group** — May 1–15, 2026\n\n| Date | Description | Hours | Rate | Amount |\n|------|-------------|-------|------|--------|\n| 2026-05-10 | FLSA exemption research | 0.6 | $350 | $210.00 |\n\n**Total: $210.00**",
+        "exhibit_md": "# Invoice INV-2026-006\n\n**Whitmore Group** — June 1–15, 2026\n\n| Date | Description | Hours | Rate | Amount |\n|------|-------------|-------|------|--------|\n| 2026-06-08 | FLSA exemption research | 0.6 | $350 | $210.00 |\n\n**Total: $210.00**",
         "ledes_file_path": None,
         "status": "ISSUED",
-        "issued_at": dt(2026, 5, 16, 9, 0),
+        "issued_at": dt(2026, 6, 16, 9, 0),
         "paid_at": None,
-        "days_outstanding": 13,
-        "created_at": dt(2026, 5, 16, 9, 0),
-        "updated_at": dt(2026, 5, 16, 9, 0),
+        "days_outstanding": 9,
+        "created_at": dt(2026, 6, 16, 9, 0),
+        "updated_at": dt(2026, 6, 16, 9, 0),
     })
     print("  [ok] invoices")
 
@@ -788,9 +788,9 @@ def seed(db: firestore.Client):
         "firm_id": FIRM_ID,
         "source_system": "gmail",
         "source_id": "gmail-court-order-20260508",
-        "source_hash": "sha256-mercer-opposition-june4-2026",
+        "source_hash": "sha256-mercer-opposition-july1-2026",
         "signal_type": "deadline_candidate",
-        "extracted_date": "2026-06-04",
+        "extracted_date": "2026-07-01",
         "matter_id": "mercer-v-dunlap",
         "processed": True,
         "outcome_id": "dl-mercer-001",
@@ -803,11 +803,11 @@ def seed(db: firestore.Client):
 
     print(f"\n[DONE] Seed complete — {FIRM_ID} ready")
     print(f"   Demo date: {DEMO_DATE}")
-    print(f"   dl-mercer-001: HARD_LEGAL, due {date(2026,6,4)} ({(date(2026,6,4)-DEMO_DATE).days} days out)")
+    print(f"   dl-mercer-001: HARD_LEGAL, due {date(2026,7,1)} ({(date(2026,7,1)-DEMO_DATE).days} days out)")
     print(f"   te-005: PENDING, 'review documents' in narrative")
     print(f"   te-001: PENDING, no narrative")
     print(f"   acme-commercial: $11,700 / $15,000 = 78%")
-    print(f"   whitmore last contact: 2026-05-13 ({(DEMO_DATE - date(2026,5,13)).days} days ago)")
+    print(f"   whitmore last contact: 2026-06-09 ({(DEMO_DATE - date(2026,6,9)).days} days ago)")
 
 
 if __name__ == "__main__":

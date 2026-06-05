@@ -3,7 +3,7 @@
 **Target duration:** 90 seconds  
 **Hard cap:** 2:00 (contest rule)  
 **Demo firm:** Strand & Okafor LLP (`strand-okafor`)  
-**Demo date anchor:** May 29, 2026, 4:29 PM
+**Demo date anchor:** June 25, 2026, 4:29 PM
 
 ---
 
@@ -26,7 +26,7 @@ Run these before every take:
 |---|---|
 | Top half | Agent Run Timeline (empty, "Run Closeout" button visible) |
 | Bottom half | Daily Closeout Brief (loading state) |
-| Banner | `DEMO MODE — strand-okafor — 2026-05-29` |
+| Banner | `DEMO MODE — strand-okafor — 2026-06-25` |
 
 ---
 
@@ -39,7 +39,7 @@ Run these before every take:
 >
 > Litt is an autonomous operations agent for that gap. It watches the firm's operational surface, finds what needs attorney attention, and produces a source-backed Daily Closeout Brief with an audit trail.
 >
-> Dana Strand at Strand & Okafor LLP. 4:29 PM. She clicks Run Closeout."
+> Dana Strand at Strand & Okafor LLP. Thursday, June 25. 4:29 PM. She clicks Run Closeout."
 
 **ACTION:** Click the "Run Closeout" button.
 
@@ -86,7 +86,7 @@ Timeline shows `complete`. Daily Closeout Brief populates below.
 **ACTION:** Click Rivera deadline item → modal opens → click "View source email" → show full opposing counsel email body. Point to the extracted text and confidence score.
 
 **NARRATOR:**
-> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'May 30' with 92% confidence, and refused to verify it without attorney review. Dana clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence."
+> "Here is the opposing counsel email that triggered the escalation. Litt read this text, extracted 'June 26' with 92% confidence, and refused to verify it without attorney review. Dana clicks Verify — the deadline is now attorney-verified and enters the normal escalation cadence."
 
 **Show:** Full source email (from: jcolbert@colbertmarsh.com, subject: Rivera v. Holbrook — Discovery Responses Due, body with "tomorrow (Friday)" text). Then Verify action completing with AuditEventDrawer confirmation (audit_event_id visible).
 

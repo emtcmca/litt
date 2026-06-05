@@ -14,7 +14,7 @@ New fixtures:
 
 from datetime import datetime, timezone
 
-DEMO_DT = datetime(2026, 5, 29, 16, 30, 0, tzinfo=timezone.utc)
+DEMO_DT = datetime(2026, 6, 25, 16, 30, 0, tzinfo=timezone.utc)
 
 
 def _dt(y, m, d, h=0, mn=0):
@@ -39,7 +39,7 @@ ELENA_RIVERA_CLIENT = {
     "retainer_refill_threshold": None,
     "ledes_client_id": "RIVERA-001",
     "client_matter_id_prefix": "RIVERA",
-    "last_client_contact": _dt(2026, 5, 28),  # recent — no silence trigger
+    "last_client_contact": _dt(2026, 6, 24),  # recent — no silence trigger
     "client_silence_threshold_days": 14,
     "billing_guidelines": {
         "block_billing_allowed": True,
@@ -70,7 +70,7 @@ ELENA_RIVERA_CLIENT = {
     },
     "notes": "Contingency cap negotiated. Client prefers email updates.",
     "created_at": _dt(2026, 4, 10, 10),
-    "updated_at": _dt(2026, 5, 28, 14),
+    "updated_at": _dt(2026, 6, 24, 14),
 }
 
 
@@ -89,10 +89,10 @@ RIVERA_MATTER = {
     "status": "ACTIVE",
     "assigned_attorneys": ["dana-strand", "kofi-okafor"],
     "opened_at": _dt(2026, 4, 10, 10),
-    "last_activity": _dt(2026, 5, 28, 14),
-    "last_client_contact": _dt(2026, 5, 28, 14),
+    "last_activity": _dt(2026, 6, 24, 14),
+    "last_client_contact": _dt(2026, 6, 24, 14),
     "created_at": _dt(2026, 4, 10, 10),
-    "updated_at": _dt(2026, 5, 28, 14),
+    "updated_at": _dt(2026, 6, 24, 14),
 }
 
 
@@ -110,14 +110,14 @@ DL_RIVERA_001 = {
     "firm_id": None,  # patched at seed time
     "matter_id": "rivera-employment-2026",
     "description": "Rivera v. Holbrook — discovery responses to opposing counsel",
-    "due_date": "2026-05-30",  # tomorrow from demo date 2026-05-29
+    "due_date": "2026-06-26",  # tomorrow from demo date 2026-06-25
     "classification": "HARD_LEGAL",
     "status": "ACTIVE",
     "source_type": "email",
     "source_document_id": "email-rivera-opp-20260528",
     "source_excerpt": (
         "we expect your client's responses to our First Set of Interrogatories "
-        "and Requests for Production by tomorrow (Friday), May 30, 2026"
+        "and Requests for Production by tomorrow (Friday), June 26, 2026"
     ),
     "email_reference": "email-rivera-opp-20260528",
     "conflict_flag": True,
@@ -135,8 +135,8 @@ DL_RIVERA_001 = {
     "last_confirmed_by": None,
     "last_confirmed_at": None,
     "version": 1,
-    "created_at": _dt(2026, 5, 28, 15, 30),
-    "updated_at": _dt(2026, 5, 28, 15, 30),
+    "created_at": _dt(2026, 6, 24, 15, 30),
+    "updated_at": _dt(2026, 6, 24, 15, 30),
 }
 
 
@@ -153,12 +153,12 @@ EMAIL_RIVERA_OPP_20260528 = {
     "from_name": "James Colbert",
     "to_address": "dana@strand-okafor.com",
     "subject": "Rivera v. Holbrook Enterprises — Discovery Responses Due",
-    "received_at": _dt(2026, 5, 28, 9, 17),
+    "received_at": _dt(2026, 6, 24, 9, 17),
     "body": (
         "Dear Ms. Strand,\n\n"
-        "Pursuant to our Rule 26(f) conference on May 15 and the agreed-upon schedule, "
+        "Pursuant to our Rule 26(f) conference on June 11 and the agreed-upon schedule, "
         "we expect your client's responses to our First Set of Interrogatories and "
-        "Requests for Production by tomorrow (Friday), May 30, 2026.\n\n"
+        "Requests for Production by tomorrow (Friday), June 26, 2026.\n\n"
         "Please confirm receipt of this email and advise immediately if your client "
         "requires an extension. Any extension must be agreed upon in writing before "
         "the current deadline.\n\n"
@@ -172,8 +172,8 @@ EMAIL_RIVERA_OPP_20260528 = {
     ),
     "source_system": "gmail",
     "processed": True,
-    "created_at": _dt(2026, 5, 28, 9, 20),
-    "updated_at": _dt(2026, 5, 28, 9, 20),
+    "created_at": _dt(2026, 6, 24, 9, 20),
+    "updated_at": _dt(2026, 6, 24, 9, 20),
 }
 
 
@@ -189,7 +189,7 @@ TE_009 = {
     "matter_id": "rivera-employment-2026",
     "client_id": "elena-rivera",
     "attorney_id": "kofi-okafor",
-    "entry_date": "2026-05-28",
+    "entry_date": "2026-06-24",
     "hours": 4.0,  # round hours — ROUND_HOURS_NO_SESSION anomaly
     "rate": 375,
     "amount": 1500.00,
@@ -221,8 +221,8 @@ TE_009 = {
     "write_down_record": None,
     "write_off_record": None,
     "version": 1,
-    "created_at": _dt(2026, 5, 28, 18, 0),
-    "updated_at": _dt(2026, 5, 28, 18, 0),
+    "created_at": _dt(2026, 6, 24, 18, 0),
+    "updated_at": _dt(2026, 6, 24, 18, 0),
 }
 
 
