@@ -1,30 +1,21 @@
 import type { ReactNode } from 'react';
 import { ConsoleRail } from './ConsoleRail';
-import { DemoBanner } from '../DemoBanner';
 
-const DEMO_FIRM_NAME = 'Strand & Okafor LLP';
-const DEMO_DATE      = '2026-06-25';
-
-interface ConsoleShellProps {
-  children: ReactNode;
-  badges?: Record<string, number>;
-}
-
-export function ConsoleShell({ children, badges }: ConsoleShellProps) {
+export function ConsoleShell({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <DemoBanner firmName={DEMO_FIRM_NAME} demoDate={DEMO_DATE} />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-        <ConsoleRail badges={badges} />
-        <main style={{
-          flex:       1,
-          overflowY:  'auto',
-          background: 'var(--color-background-tertiary)',
-          minWidth:   0,
-        }}>
-          {children}
-        </main>
-      </div>
+    <div style={{ height: '100vh', display: 'flex', background: '#14221F' }}>
+      <ConsoleRail />
+      <main style={{
+        flex:             1,
+        minWidth:         0,
+        background:       '#F1EFE8',
+        display:          'grid',
+        gridTemplateRows: '1fr',
+        minHeight:        0,
+        overflow:         'hidden',
+      }}>
+        {children}
+      </main>
     </div>
   );
 }

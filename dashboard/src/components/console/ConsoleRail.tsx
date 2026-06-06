@@ -1,205 +1,245 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { T } from '../../tokens';
+import { Icon } from '../ui/Icon';
+import { Mono } from '../ui/Mono';
+import type { IconName } from '../ui/Icon';
 
-// Rail constants
-const RAIL_BG     = '#111C19';
-const RAIL_BORDER = 'rgba(255,255,255,0.06)';
-const SEC_LABEL   = 'rgba(93,202,165,0.45)'; // teal-200 at 45%
-const ITEM_REST   = 'rgba(255,255,255,0.55)';
-const ITEM_HOVER  = 'rgba(255,255,255,0.85)';
-const ITEM_ACTIVE_BG     = 'rgba(93,202,165,0.10)';
-const ITEM_ACTIVE_BORDER = '#5DCAA5';
-const ITEM_ACTIVE_COLOR  = '#9FE1CB';
+const FIRM_NAME = 'Strand & Okafor';
+const DEMO_DATE_DISPLAY = 'Jun 25, 2026';
+const LAST_SWEEP = '5:00 PM';
 
 interface NavItem {
+  id: string;
   label: string;
   path: string;
-  icon: string;
-  badge?: number;
+  icon: IconName;
+  star?: boolean;
+  count?: number;
 }
 
 interface NavSection {
-  label: string;
+  group: string | null;
   items: NavItem[];
 }
 
-interface ConsoleRailProps {
-  badges?: Record<string, number>;
-}
+const NAV: NavSection[] = [
+  { group: null, items: [
+    { id: 'overview', label: 'Overview',  path: '/',      icon: 'grid' },
+    { id: 'brief',    label: 'Brief',     path: '/brief', icon: 'clock', star: true },
+  ]},
+  { group: 'Watch', items: [
+    { id: 'deadlines',     label: 'Deadlines',      path: '/deadlines',     icon: 'shield', count: 1 },
+    { id: 'budgets',       label: 'Budgets',         path: '/budgets',       icon: 'chart',  count: 1 },
+    { id: 'relationships', label: 'Clients & comms', path: '/relationships', icon: 'mail',   count: 1 },
+    { id: 'anomalies',     label: 'Anomalies',       path: '/anomalies',     icon: 'alert',  count: 1 },
+  ]},
+  { group: 'Collect', items: [
+    { id: 'collect', label: 'Billing & WIP', path: '/collect', icon: 'dollar', count: 2 },
+  ]},
+  { group: 'Prove', items: [
+    { id: 'agents', label: 'Agent console', path: '/agents', icon: 'refresh' },
+    { id: 'record', label: 'Audit ledger',  path: '/ledger', icon: 'book'    },
+  ]},
+  { group: 'Tune', items: [
+    { id: 'policy',       label: 'Policy & autonomy', path: '/policy',       icon: 'sliders' },
+    { id: 'integrations', label: 'Integrations',      path: '/integrations', icon: 'plug'    },
+  ]},
+];
 
-function NavItemRow({ item }: { item: NavItem }) {
+const USERS = [
+  { id: 'marcus-okafor', name: 'Marcus Okafor', initials: 'MO', role: 'Managing Partner', scope: 'firm_admin' },
+  { id: 'dana-strand',   name: 'Dana Strand',   initials: 'DS', role: 'Attorney',         scope: 'attorney',  you: true },
+  { id: 'priya-nair',    name: 'Priya Nair',    initials: 'PN', role: 'Paralegal',        scope: 'staff'      },
+];
+
+const BORDER = 'rgba(214,193,129,.14)';
+
+function UserAvatar({ initials, scope, size = 26 }: { initials: string; scope: string; size?: number }) {
+  const isFirmAdmin = scope === 'firm_admin';
   return (
-    <NavLink
-      to={item.path}
-      end={item.path === '/'}
-      style={({ isActive }) => ({
-        display:         'flex',
-        alignItems:      'center',
-        gap:             8,
-        padding:         '6px 14px 6px 12px',
-        borderLeft:      `2px solid ${isActive ? ITEM_ACTIVE_BORDER : 'transparent'}`,
-        background:      isActive ? ITEM_ACTIVE_BG : 'transparent',
-        color:           isActive ? ITEM_ACTIVE_COLOR : ITEM_REST,
-        textDecoration:  'none',
-        fontSize:        13,
-        fontWeight:      isActive ? 600 : 400,
-        letterSpacing:   0,
-        cursor:          'pointer',
-        borderRadius:    '0 4px 4px 0',
-        marginRight:     8,
-        transition:      'color 0.12s, background 0.12s',
-        whiteSpace:      'nowrap',
-        overflow:        'hidden',
-        textOverflow:    'ellipsis',
-      })}
-    >
-      <span style={{ fontSize: 13, flexShrink: 0 }}>{item.icon}</span>
-      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {item.label}
-      </span>
-      {item.badge != null && item.badge > 0 && (
-        <span style={{
-          flexShrink:    0,
-          background:    '#5DCAA5',
-          color:         '#04342C',
-          borderRadius:  8,
-          padding:       '1px 5px',
-          fontSize:      9,
-          fontWeight:    700,
-          fontFamily:    'var(--font-mono)',
-          lineHeight:    1.4,
-        }}>
-          {item.badge}
-        </span>
-      )}
-    </NavLink>
+    <span style={{
+      width: size, height: size, borderRadius: 999,
+      background: isFirmAdmin ? T.brass : 'rgba(214,193,129,.18)',
+      color:      isFirmAdmin ? T.forest : T.brass,
+      display: 'grid', placeItems: 'center',
+      fontSize: size * 0.41, fontWeight: 700, flexShrink: 0,
+      fontFamily: 'var(--font-mono)',
+    }}>
+      {initials}
+    </span>
   );
 }
 
-export function ConsoleRail({ badges = {} }: ConsoleRailProps) {
-  const sections: NavSection[] = [
-    {
-      label: 'Watch',
-      items: [
-        { label: 'Brief',         path: '/',              icon: '◈' },
-        { label: 'Deadlines',     path: '/deadlines',     icon: '⊙', badge: badges.deadlines },
-        { label: 'Relationships', path: '/relationships', icon: '↔', badge: badges.relationships },
-      ],
-    },
-    {
-      label: 'Collect',
-      items: [
-        { label: 'Billing',       path: '/collect',       icon: '▤' },
-        { label: 'Anomalies',     path: '/anomalies',     icon: '◎', badge: badges.anomalies },
-        { label: 'Budgets',       path: '/budgets',       icon: '▦' },
-      ],
-    },
-    {
-      label: 'Prove',
-      items: [
-        { label: 'Agents',        path: '/agents',        icon: '⬡' },
-        { label: 'Audit Ledger',  path: '/ledger',        icon: '⊞' },
-      ],
-    },
-    {
-      label: 'Tune',
-      items: [
-        { label: 'Policy',        path: '/policy',        icon: '⊛' },
-        { label: 'Integrations',  path: '/integrations',  icon: '⊕' },
-      ],
-    },
-  ];
+export function ConsoleRail() {
+  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeUser, setActiveUser] = useState(() => USERS.find(u => u.you) ?? USERS[0]);
+
+  const isActive = (path: string) => pathname === path;
 
   return (
     <nav style={{
-      width:          220,
-      minWidth:       220,
-      background:     RAIL_BG,
-      borderRight:    `1px solid ${RAIL_BORDER}`,
-      display:        'flex',
-      flexDirection:  'column',
-      overflowY:      'auto',
-      overflowX:      'hidden',
-      height:         '100%',
+      width: 232, minWidth: 232,
+      background: T.forest,
+      borderRight: `1px solid rgba(214,193,129,.18)`,
+      display: 'flex', flexDirection: 'column',
+      height: '100%', overflowY: 'auto', overflowX: 'hidden',
     }}>
-      {/* Logo / firm wordmark */}
-      <div style={{
-        padding:      '18px 16px 14px',
-        borderBottom: `1px solid ${RAIL_BORDER}`,
-      }}>
-        <div style={{
-          fontSize:      14,
-          fontWeight:    700,
-          color:         '#9FE1CB',
-          letterSpacing: '-0.02em',
-          lineHeight:    1,
-        }}>
-          litt
+
+      {/* brand */}
+      <div style={{ padding: '18px 18px 14px', borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-.03em', color: '#EFEBDB' }}>
+          Litt<span style={{ color: T.teal }}>.</span>
         </div>
-        <div style={{
-          fontSize:      10,
-          fontFamily:    'var(--font-mono)',
-          color:         'rgba(159,225,203,0.45)',
-          marginTop:     3,
-          letterSpacing: '0.04em',
-        }}>
-          Strand & Okafor
-        </div>
+        <Mono style={{ fontSize: 10.5, color: '#9DA89A', marginTop: 3 }}>{FIRM_NAME}</Mono>
       </div>
 
-      {/* Nav sections */}
-      <div style={{ flex: 1, paddingTop: 8, paddingBottom: 8 }}>
-        {sections.map((sec, si) => (
-          <div key={sec.label} style={{ marginBottom: si < sections.length - 1 ? 4 : 0 }}>
-            <div style={{
-              padding:       '10px 16px 4px',
-              fontSize:      9,
-              fontFamily:    'var(--font-mono)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.12em',
-              color:         SEC_LABEL,
-              userSelect:    'none',
-            }}>
-              {sec.label}
-            </div>
-            {sec.items.map(item => (
-              <NavItemRow key={item.path} item={item} />
-            ))}
+      {/* nav */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '12px 12px',
+        display: 'grid', gap: 16, alignContent: 'start',
+      }}>
+        {NAV.map((sec, i) => (
+          <div key={i} style={{ display: 'grid', gap: 3 }}>
+            {sec.group && (
+              <Mono style={{
+                fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.12em',
+                color: '#7E8A7C', padding: '4px 10px 2px', display: 'block',
+              }}>
+                {sec.group}
+              </Mono>
+            )}
+            {sec.items.map(it => {
+              const on = isActive(it.path);
+              const star = !!(it.star && !on);
+              return (
+                <Link
+                  key={it.id}
+                  to={it.path}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    width: '100%', textAlign: 'left',
+                    padding: '8px 10px', borderRadius: 8,
+                    border: star ? '1px solid rgba(214,193,129,.4)' : '1px solid transparent',
+                    fontSize: 13, fontWeight: on || it.star ? 600 : 500,
+                    fontFamily: 'var(--font-sans)',
+                    background: on ? T.brass : (star ? 'rgba(214,193,129,.08)' : 'transparent'),
+                    color: on ? T.forest : '#D8D3C3',
+                    textDecoration: 'none',
+                    transition: 'background .15s',
+                  }}
+                >
+                  <Icon name={it.icon} size={15} color={on ? T.forest : (star ? T.brass : '#B7B2A2')} />
+                  <span style={{ flex: 1 }}>{it.label}</span>
+                  {star && (
+                    <Mono style={{ fontSize: 9, color: T.auditAccent, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                      ready
+                    </Mono>
+                  )}
+                  {it.count != null && (
+                    <Mono style={{
+                      fontSize: 10.5,
+                      color: on ? T.forest : T.danger,
+                      background: on ? 'rgba(20,34,31,.12)' : 'rgba(155,45,35,.16)',
+                      borderRadius: 999, padding: '1px 6px', fontWeight: 600,
+                    }}>
+                      {it.count}
+                    </Mono>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </div>
 
-      {/* User chip */}
-      <div style={{
-        padding:      '10px 14px',
-        borderTop:    `1px solid ${RAIL_BORDER}`,
-        display:      'flex',
-        alignItems:   'center',
-        gap:          8,
-      }}>
-        <div style={{
-          width:        28,
-          height:       28,
-          borderRadius: '50%',
-          background:   'rgba(93,202,165,0.15)',
-          border:       `1px solid rgba(93,202,165,0.25)`,
-          display:      'flex',
-          alignItems:   'center',
-          justifyContent: 'center',
-          fontSize:     11,
-          fontWeight:   700,
-          color:        '#9FE1CB',
-          flexShrink:   0,
-        }}>
-          DS
+      {/* system status */}
+      <div style={{ padding: '12px 16px', borderTop: `1px solid ${BORDER}`, display: 'grid', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span className="litt-pulse" style={{
+            width: 6, height: 6, borderRadius: 999,
+            background: T.auditAccent,
+            boxShadow: `0 0 6px ${T.auditAccent}`,
+            display: 'inline-block',
+          }} />
+          <Mono style={{ fontSize: 10.5, color: '#9DA89A' }}>All systems nominal</Mono>
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: ITEM_HOVER, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Dana Strand
-          </div>
-          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: SEC_LABEL, marginTop: 1 }}>
-            attorney
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Mono style={{ fontSize: 10, color: '#7E8A7C' }}>Last sweep</Mono>
+          <Mono style={{ fontSize: 10, color: T.brass }}>{LAST_SWEEP}</Mono>
         </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Mono style={{ fontSize: 10, color: '#7E8A7C' }}>Integrations</Mono>
+          <Mono style={{ fontSize: 10, color: T.brass }}>2 connected</Mono>
+        </div>
+        {/* demo date anchor */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9, color: T.brass,
+            background: 'rgba(214,193,129,.18)',
+            border: '1px solid rgba(214,193,129,.45)',
+            borderRadius: 3, padding: '1px 5px',
+            letterSpacing: '.04em',
+          }}>
+            DEMO
+          </span>
+          <Mono style={{ fontSize: 10, color: T.brass }}>· {DEMO_DATE_DISPLAY}</Mono>
+        </div>
+      </div>
+
+      {/* user switcher */}
+      <div style={{ position: 'relative', padding: '12px 14px', borderTop: `1px solid ${BORDER}` }}>
+        {menuOpen && (
+          <div style={{
+            position: 'absolute', bottom: '100%', left: 12, right: 12, marginBottom: 6,
+            background: '#1C2E2A',
+            border: `1px solid rgba(214,193,129,.22)`,
+            borderRadius: 10, overflow: 'hidden',
+            boxShadow: '0 12px 30px rgba(0,0,0,.4)',
+          }}>
+            {USERS.map(u => (
+              <button
+                key={u.id}
+                onClick={() => { setActiveUser(u); setMenuOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '9px 11px',
+                  background: u.id === activeUser.id ? 'rgba(214,193,129,.1)' : 'transparent',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <UserAvatar initials={u.initials} scope={u.scope} size={24} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 12, color: '#EFEBDB', fontWeight: 500 }}>{u.name}</span>
+                  <Mono style={{ fontSize: 9.5, color: '#9DA89A' }}>
+                    {u.role}{u.scope === 'firm_admin' ? ' · sets firm policy' : ''}
+                  </Mono>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+            background: 'transparent',
+            border: `1px solid rgba(214,193,129,.18)`,
+            borderRadius: 9, padding: '8px 10px', cursor: 'pointer',
+          }}
+        >
+          <UserAvatar initials={activeUser.initials} scope={activeUser.scope} size={26} />
+          <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <span style={{ display: 'block', fontSize: 12.5, color: '#EFEBDB', fontWeight: 500 }}>
+              {activeUser.name}
+            </span>
+            <Mono style={{ fontSize: 9.5, color: '#9DA89A' }}>{activeUser.role}</Mono>
+          </span>
+          <Icon name="chevronD" size={13} color="#9DA89A" />
+        </button>
       </div>
     </nav>
   );

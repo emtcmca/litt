@@ -401,11 +401,13 @@
 
 ---
 
-## Phase 1 — Shell, Rail, Routing
+## Phase 1 — Shell, Rail, Routing ✓ COMPLETE
 
-- [ ] V113-P1a Update `App.tsx` — add Overview at `/`, move DailyCloseoutBrief to `/brief`, add `/brief` route, remove DemoBanner import, keep `/audit` + `/ledger`
-- [ ] V113-P1b Rebuild `ConsoleShell.tsx` — `height: 100vh; display: flex; background: #14221F`; no DemoBanner; rail left, content right
-- [ ] V113-P1c Rebuild `ConsoleRail.tsx` — 232px forest bg, brass active pill, system status block (pulse dot + "All systems nominal" + last sweep + demo date + integrations + DEMO pill when `brief.demo_mode`), 3-user dropdown, SVG Icon set, ungrouped Overview/Brief at top
+- [x] V113-P1a Update `App.tsx` — Overview at `/`, DailyCloseoutBrief at `/brief`, keep `/audit` + `/ledger`; Overview stub created in `pages/Overview.tsx`
+- [x] V113-P1b Rebuild `ConsoleShell.tsx` — `height: 100vh; display: flex; background: #14221F`; no DemoBanner; rail left, content right
+- [x] V113-P1c Rebuild `ConsoleRail.tsx` — 232px forest bg, brass active pill, system status block (pulse dot + "All systems nominal" + last sweep + DEMO pill + demo date), 3-user dropdown, SVG Icon set, ungrouped Overview/Brief at top
+
+**Gate 1 verified:** `npx tsc --noEmit` exit 0
 
 ---
 

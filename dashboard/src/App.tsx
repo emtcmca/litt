@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConsoleShell } from './components/console/ConsoleShell';
+import { Overview } from './pages/Overview';
 import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
 import { EmailPreview } from './pages/EmailPreview';
 import { AuditLog } from './pages/AuditLog';
@@ -41,6 +42,11 @@ export default function App() {
         } />
         {/* Console routes */}
         <Route path="/" element={
+          <ConsoleShell>
+            <Overview />
+          </ConsoleShell>
+        } />
+        <Route path="/brief" element={
           <ConsoleShell>
             <DailyCloseoutBrief />
           </ConsoleShell>
