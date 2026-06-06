@@ -497,7 +497,7 @@ function Inspector({ sel, setSel, step, sweep, tech, onBriefNav, sweepEmpty }: {
         {n.kind === 'tool' && <ToolCatalog sweep={sweep} />}
         {n.kind === 'brief' && (
           <button onClick={onBriefNav} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: T.forest, color: T.brass, fontSize: 13, fontWeight: 600, padding: '11px 16px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
-            Open today's closeout <Icon name="arrow" size={13} color={T.brass} />
+            Open Brief <Icon name="arrow" size={13} color={T.brass} />
           </button>
         )}
       </div>
@@ -520,39 +520,49 @@ function Inspector({ sel, setSel, step, sweep, tech, onBriefNav, sweepEmpty }: {
           </div>
           {tab === 'inspector' ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 9.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.faint }}>Live · step {step + 1}</span>
-                <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: T.faint }}>{agentMeta(cur.agent)?.name ?? cur.agent}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: `${cm.color}10`, border: `1px solid ${cm.color}33`, borderRadius: 10, padding: '11px 13px 12px' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 999, background: cm.color, flexShrink: 0 }} />
-                <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: cm.color, lineHeight: 1.2 }}>{cm.label}</div>
-                  <span style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.35, display: 'block' }}>{cm.note}</span>
+              {complete ? (
+                /* ── Sweep-complete summary (replaces step-level detail) ── */
+                <div style={{ display: 'grid', gap: 14 }}>
+                  <div style={{ background: T.audit, borderRadius: 12, padding: '16px 16px', display: 'grid', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 30, height: 30, borderRadius: 999, background: 'rgba(158,225,199,.16)', border: '1px solid rgba(158,225,199,.4)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Icon name="check" size={16} color={T.auditAccent} stroke={2.2} /></span>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#EFEBDB', lineHeight: 1.2 }}>Sweep complete</div>
+                        <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: T.auditMuted }}>every step was logged</span>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: T.auditMuted, lineHeight: 1.6 }}>
+                      Litt reviewed everything across your matters. Five items need your attention — one requires immediate action. Nothing was sent, filed, or billed. Switch to the Log tab to see every step.
+                    </p>
+                    <button onClick={onBriefNav} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: T.brass, color: T.forest, fontSize: 13, fontWeight: 600, padding: '11px 14px', borderRadius: 9, border: 'none', cursor: 'pointer' }}>
+                      Review items in your Brief <Icon name="arrow" size={13} color={T.forest} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <p style={{ margin: 0, fontSize: 15, color: T.ink, lineHeight: 1.55, fontWeight: 450 }}>{tech ? cur.desc : (PLAIN[step] ?? cur.desc)}</p>
-              {cur.tool && cur.tool.sig && <LiveToolCard tool={{ name: cur.tool.name, kind: cur.tool.kind, sig: cur.tool.sig, result: cur.tool.result }} />}
-              {cur.type === 'ROUTE_HANDOFF' && cur.from && cur.to && <HandoffCard from={cur.from} to={cur.to} />}
-              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-                <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: isTealTone ? '#0F6E56' : '#3A4A44', background: isTealTone ? 'rgba(29,158,117,.1)' : 'rgba(20,34,31,.06)', border: `1px solid ${isTealTone ? 'rgba(29,158,117,.3)' : 'rgba(20,34,31,.18)'}`, borderRadius: 5, padding: '3px 8px' }}>{wm.label}</span>
-                {tech && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.muted, background: T.wash2, border: `1px solid ${T.soft}`, borderRadius: 5, padding: '3px 8px' }}>{cur.type}</span>}
-                {cur.model && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.teal, background: 'rgba(29,158,117,.08)', border: '1px solid rgba(29,158,117,.24)', borderRadius: 5, padding: '3px 8px' }}>model: {cur.model}</span>}
-                {cur.conf != null && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.muted, background: T.wash2, border: `1px solid ${T.soft}`, borderRadius: 5, padding: '3px 8px' }}>confidence {cur.conf}</span>}
-              </div>
-              {complete && (
-                <div style={{ background: T.audit, borderRadius: 12, padding: '14px 15px', display: 'grid', gap: 10, marginTop: 2 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    <span style={{ width: 26, height: 26, borderRadius: 999, background: 'rgba(158,225,199,.16)', border: '1px solid rgba(158,225,199,.4)', display: 'grid', placeItems: 'center' }}><Icon name="check" size={14} color={T.auditAccent} stroke={2.2} /></span>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#EFEBDB' }}>Sweep complete</div>
-                      <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.auditMuted }}>5 items · 1 critical · every step logged</span>
+              ) : (
+                /* ── Live step detail ── */
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.faint }}>Live · step {step + 1}</span>
+                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: T.faint }}>{agentMeta(cur.agent)?.name ?? cur.agent}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: `${cm.color}10`, border: `1px solid ${cm.color}33`, borderRadius: 10, padding: '11px 13px 12px' }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 999, background: cm.color, flexShrink: 0 }} />
+                    <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: cm.color, lineHeight: 1.2 }}>{cm.label}</div>
+                      <span style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.35, display: 'block' }}>{cm.note}</span>
                     </div>
                   </div>
-                  <button onClick={onBriefNav} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: T.brass, color: T.forest, fontSize: 13, fontWeight: 600, padding: '10px 14px', borderRadius: 9, border: 'none', cursor: 'pointer' }}>
-                    Open today's closeout <Icon name="arrow" size={13} color={T.forest} />
-                  </button>
-                </div>
+                  <p style={{ margin: 0, fontSize: 15, color: T.ink, lineHeight: 1.55, fontWeight: 450 }}>{tech ? cur.desc : (PLAIN[step] ?? cur.desc)}</p>
+                  {cur.tool && cur.tool.sig && <LiveToolCard tool={{ name: cur.tool.name, kind: cur.tool.kind, sig: cur.tool.sig, result: cur.tool.result }} />}
+                  {cur.type === 'ROUTE_HANDOFF' && cur.from && cur.to && <HandoffCard from={cur.from} to={cur.to} />}
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                    <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: isTealTone ? '#0F6E56' : '#3A4A44', background: isTealTone ? 'rgba(29,158,117,.1)' : 'rgba(20,34,31,.06)', border: `1px solid ${isTealTone ? 'rgba(29,158,117,.3)' : 'rgba(20,34,31,.18)'}`, borderRadius: 5, padding: '3px 8px' }}>{wm.label}</span>
+                    {tech && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.muted, background: T.wash2, border: `1px solid ${T.soft}`, borderRadius: 5, padding: '3px 8px' }}>{cur.type}</span>}
+                    {cur.model && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.teal, background: 'rgba(29,158,117,.08)', border: '1px solid rgba(29,158,117,.24)', borderRadius: 5, padding: '3px 8px' }}>model: {cur.model}</span>}
+                    {cur.conf != null && <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.muted, background: T.wash2, border: `1px solid ${T.soft}`, borderRadius: 5, padding: '3px 8px' }}>confidence {cur.conf}</span>}
+                  </div>
+                </>
               )}
             </>
           ) : (

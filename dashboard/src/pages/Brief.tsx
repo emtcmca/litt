@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { BriefResponse, BriefSections } from '../types';
+import type { BriefResponse, BriefSections, ToolResult } from '../types';
 import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
 import { getBrief, runSweep } from '../api';
+import { DeadlineModal } from '../components/modals/DeadlineModal';
+import type { DeadlineAction } from '../components/modals/DeadlineModal';
+import { BillingWIPModal } from '../components/modals/BillingWIPModal';
+import type { BillingAction } from '../components/modals/BillingWIPModal';
+import { BudgetModal } from '../components/modals/BudgetModal';
+import { AnomalyModal } from '../components/modals/AnomalyModal';
+import { ClientCommsModal } from '../components/modals/ClientCommsModal';
 
 const FIRM_ID = 'strand-okafor';
+const ATTORNEY_ID = 'dana-strand';
+
+type ModalState = { kind: string; id: string; gate: 'ESCALATION' | 'REVIEW_REQUIRED' | 'AUTO_SAFE' } | null;
 
 interface Decision {
   id: string;
@@ -84,11 +94,6 @@ function deriveDecisions(sections: BriefSections): Decision[] {
   return decs.sort((a, b) => ord[a.gate] - ord[b.gate]);
 }
 
-const KIND_ROUTE: Record<string, string> = {
-  deadline: '/deadlines', billing: '/collect', anomaly: '/anomalies',
-  'budget risk': '/budgets', 'client silence': '/relationships',
-};
-
 const KIND_LABEL: Record<string, string> = {
   deadline: 'deadline', billing: 'billing', anomaly: 'anomaly',
   'budget risk': 'budget risk', 'client silence': 'client silence',
@@ -106,6 +111,7 @@ export function Brief() {
   const [error,   setError]   = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [sched,   setSched]   = useState({ daily: true, morning: false, events: true });
+  const [modal,   setModal]   = useState<ModalState>(null);
   const hasFetched = useRef(false);
 
   const load = useCallback(async () => {
@@ -138,8 +144,32 @@ export function Brief() {
   const crit  = decs.filter(d => d.gate === 'ESCALATION').length;
   const time  = fmtTime(brief!.generated_at);
 
+  const s = brief!.sections;
+  const closeModal = () => setModal(null);
+  const onModalSuccess = (_r: ToolResult, _id: string) => { setModal(null); load(); };
+  let modalContent: React.ReactNode = null;
+  if (modal) {
+    if (modal.kind === 'deadline') {
+      const item = s.deadlines.items.find(i => i.deadline_id === modal.id);
+      if (item) modalContent = <DeadlineModal item={item} action={'confirm' as DeadlineAction} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+    } else if (modal.kind === 'billing') {
+      const item = s.time_entries.items.find(i => i.entry_id === modal.id);
+      if (item) { const act: BillingAction = item.has_block ? 'edit' : 'approve'; modalContent = <BillingWIPModal item={item} action={act} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />; }
+    } else if (modal.kind === 'budget risk') {
+      const item = s.budget_risks.items.find(i => `${i.client_id}-budget` === modal.id);
+      if (item) modalContent = <BudgetModal item={item} onClose={closeModal} />;
+    } else if (modal.kind === 'anomaly') {
+      const item = s.anomalies.items.find(i => i.escalation_id === modal.id);
+      if (item) modalContent = <AnomalyModal item={item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+    } else if (modal.kind === 'client silence') {
+      const item = s.client_silence.items.find(i => `${i.matter_id}-silence` === modal.id);
+      if (item) modalContent = <ClientCommsModal item={item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+    }
+  }
+
   return (
     <div style={{ overflowY: 'auto', padding: '24px 30px 60px', height: '100%' }}>
+      {modalContent}
       <div style={{ maxWidth: 940, margin: '0 auto', display: 'grid', gap: 20 }}>
 
         {/* header */}
@@ -194,7 +224,7 @@ export function Brief() {
             {decs.map((d, i) => {
               const col = GATE_COLOR[d.gate];
               return (
-                <button key={d.id} onClick={() => navigate(KIND_ROUTE[d.kind] ?? '/brief')} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 11, alignItems: 'center', padding: '12px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, textDecoration: 'none', borderLeft: `3px solid ${d.gate === 'ESCALATION' ? T.danger : 'transparent'}`, width: '100%', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                <button key={d.id} onClick={() => setModal({ kind: d.kind, id: d.id, gate: d.gate })} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 11, alignItems: 'center', padding: '12px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, textDecoration: 'none', borderLeft: `3px solid ${d.gate === 'ESCALATION' ? T.danger : 'transparent'}`, width: '100%', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 999, background: col, flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{d.headline}</div>
