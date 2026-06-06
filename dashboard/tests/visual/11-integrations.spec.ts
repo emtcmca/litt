@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { setupMocks } from './fixtures';
+import { mockAllApis } from './fixtures';
 
 test.describe('Phase 11 — Integrations', () => {
   test.beforeEach(async ({ page }) => {
-    await setupMocks(page);
+    await mockAllApis(page);
     await page.goto('/integrations');
     await page.waitForLoadState('networkidle');
   });
