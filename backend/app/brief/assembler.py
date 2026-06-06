@@ -19,14 +19,18 @@ from app.brief.schemas import (
     BriefAnomalyItem,
     BriefBudgetItem,
     BriefClientSilenceItem,
+    BriefCompoundEscalationItem,
     BriefDeadlineItem,
+    BriefInboundItem,
     BriefResponse,
     BriefScrubberFlag,
     BriefSections,
     BriefTimeEntryItem,
     BudgetRisksSection,
     ClientSilenceSection,
+    CompoundEscalationsSection,
     DeadlineSection,
+    InboxSection,
     TimeEntrySection,
 )
 
@@ -148,7 +152,19 @@ def _build_time_entries_section(
     time_entries: List[dict],
     matters: Dict[str, dict],
     clients: Dict[str, dict],
+    escalations: Optional[List[dict]] = None,
 ) -> TimeEntrySection:
+    # Build lookup: entry_id → suggested_narrative from ANOMALY escalations
+    suggested: Dict[str, str] = {}
+    for esc in (escalations or []):
+        if esc.get("type") != "ANOMALY":
+            continue
+        sn = esc.get("suggested_narrative") or esc.get("brief", {}).get("suggested_narrative")
+        if sn:
+            eid = esc.get("entity_id", "")
+            if eid and eid not in suggested:
+                suggested[eid] = sn
+
     items: List[BriefTimeEntryItem] = []
     total_wip = 0.0
 
@@ -192,6 +208,7 @@ def _build_time_entries_section(
             task_code=entry.get("task_code"),
             activity_code=entry.get("activity_code"),
             session_minutes_actual=entry.get("session_minutes_actual"),
+            suggested_narrative=suggested.get(entry["id"]),
         ))
 
     # BLOCKs first, then WARNs, then clean
@@ -298,6 +315,71 @@ def _build_client_silence_section(
     return ClientSilenceSection(items=items, count=len(items))
 
 
+def _build_compound_escalations_section(escalations: List[dict]) -> CompoundEscalationsSection:
+    items: List[BriefCompoundEscalationItem] = []
+
+    for esc in escalations:
+        if esc.get("type") != "COMPOUND":
+            continue
+        if esc.get("status") != "PENDING":
+            continue
+
+        brief = esc.get("brief", {})
+        created_dt = _parse_dt(esc.get("created_at"))
+
+        items.append(BriefCompoundEscalationItem(
+            escalation_id=esc["id"],
+            matter_id=esc.get("matter_id") or esc.get("entity_id", ""),
+            what_is_happening=brief.get("what_is_happening", ""),
+            why_it_matters=brief.get("why_it_matters", ""),
+            what_attorney_must_decide=brief.get("what_attorney_must_decide", ""),
+            risk_level=brief.get("risk_level", "ELEVATED"),
+            priority=esc.get("priority", 2),
+            created_at=created_dt.isoformat() if created_dt else "",
+        ))
+
+    items.sort(key=lambda x: x.priority, reverse=True)
+    return CompoundEscalationsSection(items=items, count=len(items))
+
+
+def _build_inbox_section(inbound_messages: List[dict]) -> InboxSection:
+    items: List[BriefInboundItem] = []
+
+    for msg in inbound_messages:
+        status = msg.get("status", "")
+        if status in ("HANDLED", "DISMISSED"):
+            continue
+
+        action_items_raw = msg.get("action_items", [])
+        action_strs = [
+            ai.get("description", "") if isinstance(ai, dict) else str(ai)
+            for ai in action_items_raw
+        ]
+
+        received_dt = _parse_dt(msg.get("received_at"))
+
+        items.append(BriefInboundItem(
+            message_id=msg.get("id", msg.get("message_id", "")),
+            matter_id=msg.get("matter_id"),
+            from_name=msg.get("from_name", ""),
+            from_role=msg.get("from_role", "client"),
+            received_at=received_dt.isoformat() if received_dt else "",
+            wait_days=int(msg.get("wait_days", 0)),
+            urgency=msg.get("urgency", "LOW"),
+            message_excerpt=msg.get("message_excerpt", ""),
+            summary=msg.get("summary"),
+            action_items=[s for s in action_strs if s],
+            suggested_reply_comm_id=msg.get("suggested_reply_comm_id"),
+            cross_agent=bool(msg.get("cross_agent", False)),
+            status=status or "AWAITING_TRIAGE",
+        ))
+
+    # HIGH urgency first, then MEDIUM, then LOW
+    _urgency_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+    items.sort(key=lambda x: (_urgency_order.get(x.urgency, 3), -x.wait_days))
+    return InboxSection(items=items, count=len(items))
+
+
 def _build_anomalies_section(escalations: List[dict]) -> AnomaliesSection:
     items: List[BriefAnomalyItem] = []
 
@@ -347,6 +429,7 @@ def assemble_brief(firm_id: str, attorney_id: str = "dana-strand") -> BriefRespo
     deadlines = [doc.to_dict() for doc in collection_ref(firm_id, "deadlines").stream()]
     escalations = [doc.to_dict() for doc in collection_ref(firm_id, "escalations").stream()]
     comms = [doc.to_dict() for doc in collection_ref(firm_id, "client_communications").stream()]
+    inbound_messages = [doc.to_dict() for doc in collection_ref(firm_id, "inbound_messages").stream()]
 
     attorney = attorneys.get(attorney_id, {})
 
@@ -359,10 +442,12 @@ def assemble_brief(firm_id: str, attorney_id: str = "dana-strand") -> BriefRespo
         demo_mode=config.DEMO_MODE,
         sections=BriefSections(
             deadlines=_build_deadlines_section(deadlines, matters, clients, today),
-            time_entries=_build_time_entries_section(time_entries, matters, clients),
+            time_entries=_build_time_entries_section(time_entries, matters, clients, escalations),
             budget_risks=_build_budget_section(time_entries, clients),
             client_silence=_build_client_silence_section(matters, clients, today, comms),
             anomalies=_build_anomalies_section(escalations),
+            compound_escalations=_build_compound_escalations_section(escalations),
+            inbox_items=_build_inbox_section(inbound_messages),
         ),
         resolved_today=[],
     )

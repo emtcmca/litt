@@ -8,15 +8,21 @@ import type {
   BriefBudgetItem,
   BriefClientSilenceItem,
   BriefDeadlineItem,
+  BriefInboundItem,
+  BriefCompoundEscalationItem,
   BriefResponse,
   BriefTimeEntryItem,
   ToolResult,
 } from '../types';
-import { getBrief, runSweep, downloadLedesExport } from '../api';
+import { getBrief, runSweep, downloadLedesExport, updateNarrative } from '../api';
 import { DeadlineModal } from './modals/DeadlineModal';
 import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
 import type { BillingAction } from './modals/BillingWIPModal';
+import { GeminiLabel } from './shared/GeminiLabel';
+import { WarnNotice } from './shared/WarnNotice';
+import { CompoundEscalationCard } from './CompoundEscalationCard';
+import { InboundCard } from './InboundCard';
 
 // UTBMS task code labels (subset — enough for demo data)
 const UTBMS_TASK_SHORT: Record<string, string> = {
@@ -29,7 +35,6 @@ import { ClientCommsModal } from './modals/ClientCommsModal';
 import { BudgetModal } from './modals/BudgetModal';
 import { AnomalyModal } from './modals/AnomalyModal';
 import { AuditEventDrawer } from './shared/AuditEventDrawer';
-import { DemoBanner } from './DemoBanner';
 import { DemoResetButton } from './DemoResetButton';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -103,6 +108,9 @@ interface DecisionRow {
   isEscalationDeadline?: boolean;
   extraTags?:          string[];
   sourceRef?:          SourceRef;
+  suggestedNarrative?: string;
+  entryId?:            string;
+  entryVersion?:       number;
 }
 
 interface PressureSignalItem {
@@ -393,9 +401,12 @@ function buildDecisionRows(
         llm:   'none',
         extra: 'tool=scrub_time_entry',
       },
-      actionLabel: 'Resolve',
-      onAction:    () => openModal({ type: 'billing', item: e, action: needsEdit ? 'edit' : 'approve' }),
-      extraTags:   tags.length ? tags : undefined,
+      actionLabel:        'Resolve',
+      onAction:           () => openModal({ type: 'billing', item: e, action: needsEdit ? 'edit' : 'approve' }),
+      extraTags:          tags.length ? tags : undefined,
+      suggestedNarrative: e.suggested_narrative ?? undefined,
+      entryId:            e.entry_id,
+      entryVersion:       e.version,
     });
   }
 
@@ -467,7 +478,7 @@ function buildDecisionRows(
 
 // ─── NavPanel ─────────────────────────────────────────────────────────────────
 
-type ActiveView = 'docket' | 'deadlines' | 'billing' | 'silence';
+type ActiveView = 'docket' | 'deadlines' | 'billing' | 'silence' | 'compound' | 'inbox';
 
 interface NavPanelProps {
   brief: BriefResponse;
@@ -491,10 +502,12 @@ function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName: _f
   };
 
   const navItems: { label: string; count: number; view: ActiveView }[] = [
-    { label: 'Decision docket', count: decisionCount,        view: 'docket'    },
-    { label: 'Deadline risk',   count: deadlines.count,      view: 'deadlines' },
-    { label: 'Billing WIP',     count: time_entries.count,   view: 'billing'   },
-    { label: 'Client silence',  count: client_silence.count, view: 'silence'   },
+    { label: 'Decision docket', count: decisionCount,                               view: 'docket'    },
+    { label: 'Deadline risk',   count: deadlines.count,                             view: 'deadlines' },
+    { label: 'Billing WIP',     count: time_entries.count,                          view: 'billing'   },
+    { label: 'Client silence',  count: client_silence.count,                        view: 'silence'   },
+    { label: 'Compound risk',   count: brief.sections.compound_escalations?.count ?? 0, view: 'compound' },
+    { label: 'Inbox',           count: brief.sections.inbox_items?.count ?? 0,          view: 'inbox'    },
   ];
 
   return (
@@ -890,11 +903,16 @@ interface DecisionRowItemProps {
   auditEventId?:      string;
   onOpenSourceDrawer?: () => void;
   onActionClick:      () => void;
+  onNarrativeApplied?: (entryId: string) => void;
+  firmId:             string;
+  attorneyId:         string;
 }
 
 function DecisionRowItem({
   row, isReceipted, isCollapsing, isLast, auditEventId, onOpenSourceDrawer, onActionClick,
+  onNarrativeApplied, firmId, attorneyId,
 }: DecisionRowItemProps) {
+  const [applyingNarrative, setApplyingNarrative] = useState(false);
   const rowStyle: CSSProperties = {
     position:    'relative',
     display:     'grid',
@@ -933,6 +951,51 @@ function DecisionRowItem({
                 borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)', fontSize: 10,
               }}>{tag}</span>
             ))}
+          </div>
+        )}
+        {row.suggestedNarrative && !isReceipted && (
+          <div style={{ marginTop: 10, padding: '9px 11px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+              <GeminiLabel title="Suggested narrative from Gemini 2.5 Pro via AnomalyAgent" />
+              <span style={{ fontSize: 11, color: '#92400E', fontFamily: 'var(--font-mono)' }}>Suggested narrative</span>
+            </div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: '#14221F', lineHeight: 1.5 }}>
+              {row.suggestedNarrative}
+            </p>
+            <button
+              disabled={applyingNarrative}
+              onClick={async () => {
+                if (!row.entryId) return;
+                setApplyingNarrative(true);
+                try {
+                  await updateNarrative({
+                    firm_id: firmId,
+                    attorney_id: attorneyId,
+                    entry_id: row.entryId,
+                    narrative: row.suggestedNarrative!,
+                    expected_version: row.entryVersion,
+                    idempotency_key: `apply-narrative-${row.entryId}-${Date.now()}`,
+                  });
+                  onNarrativeApplied?.(row.entryId);
+                } catch (_) {
+                  // silent failure — attorney can still edit manually
+                } finally {
+                  setApplyingNarrative(false);
+                }
+              }}
+              style={{
+                background:   applyingNarrative ? 'rgba(169,132,53,.3)' : '#A98435',
+                color:        '#FFFFFF',
+                border:       'none',
+                borderRadius: 5,
+                padding:      '4px 10px',
+                fontSize:     11,
+                fontWeight:   600,
+                cursor:       applyingNarrative ? 'default' : 'pointer',
+              }}
+            >
+              {applyingNarrative ? 'Applying…' : 'Apply narrative'}
+            </button>
           </div>
         )}
         {row.sourceRef && !isReceipted && (
@@ -1754,9 +1817,7 @@ export function DailyCloseoutBrief() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: C.bg }}>
-        {/* Skeleton: amber demo banner */}
-        <div style={{ height: 33, background: 'var(--color-ramp-amber-200)' }} />
+      <div style={{ background: C.bg }}>
         <div style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
           <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
             {/* Topbar skeleton */}
@@ -1804,7 +1865,7 @@ export function DailyCloseoutBrief() {
 
   if (error || !brief || !pressure) {
     return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: 400, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: C.danger, marginBottom: 12 }}>{error ?? 'Brief unavailable'}</p>
           <button onClick={loadBrief} style={{ fontSize: 13, color: C.teal, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
@@ -1816,14 +1877,17 @@ export function DailyCloseoutBrief() {
   }
 
   const VIEW_META: Record<ActiveView, { title: string; desc: string }> = {
-    docket:    { title: 'Closeout docket',  desc: 'Attorney decisions ranked by operational pressure. Each row exposes gate, confidence, architecture boundary, and action path.' },
-    deadlines: { title: 'Deadline risk',    desc: 'Court-filed, contractual, and internal deadlines requiring attorney confirmation before closeout.' },
-    billing:   { title: 'Billing WIP',      desc: 'Pending time entries — scrubber results, UTBMS codes, session data, and approval paths.' },
-    silence:   { title: 'Client silence',   desc: 'Matters past the contact threshold. Comms agent drafts are gated behind attorney approval.' },
+    docket:    { title: 'Closeout docket',       desc: 'Attorney decisions ranked by operational pressure. Each row exposes gate, confidence, architecture boundary, and action path.' },
+    deadlines: { title: 'Deadline risk',         desc: 'Court-filed, contractual, and internal deadlines requiring attorney confirmation before closeout.' },
+    billing:   { title: 'Billing WIP',           desc: 'Pending time entries — scrubber results, UTBMS codes, session data, and approval paths.' },
+    silence:   { title: 'Client silence',        desc: 'Matters past the contact threshold. Comms agent drafts are gated behind attorney approval.' },
+    compound:  { title: 'Compound risk',         desc: 'Matters flagged by two or more agents in the same sweep — cross-domain risk requiring coordinated attorney review.' },
+    inbox:     { title: 'Inbox',                 desc: 'Inbound messages awaiting attorney triage. HIGH urgency items have Gemini-generated summaries and draft replies.' },
   };
 
   const VIEW_SECTION: Record<ActiveView, DecisionRow['section'] | null> = {
     docket: null, deadlines: 'deadline', billing: 'billing', silence: 'silence',
+    compound: null, inbox: null,
   };
 
   const allVisible     = decisionRows.filter(r => !resolved.has(r.id));
@@ -1833,9 +1897,7 @@ export function DailyCloseoutBrief() {
   const wipUsd         = brief.sections.time_entries.total_wip_usd;
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
-      <DemoBanner firmName={brief.firm_name} demoDate={brief.generated_at.slice(0, 10)} />
-
+    <div style={{ background: C.bg }}>
       <div className="litt-shell-padding" style={{ maxWidth: 1720, margin: '0 auto', padding: '20px 26px 40px' }}>
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 20, overflow: 'hidden', background: C.paper, boxShadow: '0 28px 78px rgba(32,35,31,.13)' }}>
 
@@ -2069,7 +2131,39 @@ export function DailyCloseoutBrief() {
 
               {activeView === 'docket' && <PressureSection pressure={pressure} decisionRows={decisionRows} />}
 
-              {/* Decision docket / filtered view */}
+              {/* Compound escalations view */}
+              {activeView === 'compound' && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {(brief.sections.compound_escalations?.items ?? []).length === 0 ? (
+                    <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 14, color: C.muted, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14 }}>
+                      No compound escalations this sweep.
+                    </div>
+                  ) : (brief.sections.compound_escalations?.items ?? []).map(item => (
+                    <CompoundEscalationCard key={item.escalation_id} item={item} />
+                  ))}
+                </div>
+              )}
+
+              {/* Inbox view */}
+              {activeView === 'inbox' && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {(brief.sections.inbox_items?.items ?? []).length === 0 ? (
+                    <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 14, color: C.muted, background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14 }}>
+                      No inbox items awaiting triage.
+                    </div>
+                  ) : (brief.sections.inbox_items?.items ?? []).map(item => (
+                    <InboundCard
+                      key={item.message_id}
+                      item={item}
+                      onDismiss={() => refreshBrief()}
+                      onApproveReply={() => refreshBrief()}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Decision docket / filtered view — hidden for compound + inbox views */}
+              {activeView !== 'compound' && activeView !== 'inbox' && (
               <section style={{ border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden', background: C.surface }}>
                 {visibleRows.length === 0 ? (
                   <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 14, color: C.muted }}>
@@ -2090,6 +2184,9 @@ export function DailyCloseoutBrief() {
                         isCollapsing={isCollapsing}
                         isLast={isLast}
                         auditEventId={resolvedEntry?.auditEventId}
+                        firmId={FIRM_ID}
+                        attorneyId={ATTORNEY_ID}
+                        onNarrativeApplied={() => refreshBrief()}
                         onOpenSourceDrawer={
                           row.isEscalationDeadline
                             ? () => setSourceItem(escalationDeadline)
@@ -2107,6 +2204,7 @@ export function DailyCloseoutBrief() {
                   })
                 )}
               </section>
+              )}
             </main>
 
             <ProofRail

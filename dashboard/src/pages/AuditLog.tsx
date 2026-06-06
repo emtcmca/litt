@@ -2,10 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AuditLogEvent, AuditTier } from '../types';
 import { getAuditLog } from '../api';
-import { DemoBanner } from '../components/DemoBanner';
-
-const DEMO_FIRM_NAME = 'Strand & Okafor LLP';
-const DEMO_DATE      = '2026-05-29';
 
 const FIRM_ID = 'strand-okafor';
 
@@ -217,9 +213,7 @@ export function AuditLog() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)' }}>
-      <DemoBanner firmName={DEMO_FIRM_NAME} demoDate={DEMO_DATE} />
-
+    <div style={{ background: 'var(--color-background-tertiary)' }}>
       {/* Topbar */}
       <div style={{
         background: 'var(--color-background-primary)',
@@ -229,7 +223,7 @@ export function AuditLog() {
         padding: '0 20px',
         gap: 0,
         position: 'sticky',
-        top: 33,          /* below DemoBanner (33px = 8px padding * 2 + 12px font + ~5px) */
+        top: 0,
         zIndex: 50,
         minHeight: 58,
       }}>

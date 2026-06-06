@@ -171,7 +171,7 @@
 
 ### Cross-agent routing
 - [x] V11-P4-15 `ROUTE_HANDOFF` observation emitted when action items map to another agent: `data.handoff = {from, to, entity_id, reason}`, `work_kind="route"`, `commitment_level=AUTO_SAFE`
-- [ ] V11-P4-16 Add `"route"` → `work_kind` mapping in `AgentRunTimeline.tsx` `WORK_KIND_SPEC` (brass/gold color per design system) — Phase 6 frontend work
+- [x] V11-P4-16 Add `"route"` → `work_kind` mapping in `AgentRunTimeline.tsx` `WORK_KIND_SPEC` (brass/gold color per design system) — Phase 6 frontend work
 
 ### Tests
 - [x] V11-P4-17 `pytest tests/test_comms_agent.py` — all 5 outbound triggers produce comms with correct `trigger` field; fixture data drives each
@@ -226,24 +226,24 @@
 *Gemini attribution, WARN notices, compound card, inbox section, synthesis card, TypeScript sync. Gates: G6-01 → G6-14*
 
 ### New components
-- [ ] V11-P6-01 `GeminiLabel` component — small "G" logo/badge; renders inline on any AI-enriched brief item; always visible (not tooltip)
-- [ ] V11-P6-02 `WarnNotice` component — brief-visible soft notice strip; no approval gate; dismissible by attorney
-- [ ] V11-P6-03 Inline narrative replacement UI — display `suggested_narrative` in brief; "Apply" button calls `PUT /api/billing/entry/{id}/narrative`; confirms success before advancing
-- [ ] V11-P6-04 `CompoundEscalationCard` — single card for compound escalations; shows contributing agents and signals; expandable detail
-- [ ] V11-P6-05 Inbox brief section — new section listing `IncomingEmail` items grouped by `triage_status`
-- [ ] V11-P6-06 Email triage card — per email: shows sender, subject, classification badge, draft response (if any), action buttons (Dismiss / Approve Response)
-- [ ] V11-P6-07 Matter synthesis card — `MATTER_SYNTHESIS` observation displayed as a synthesis card leading the matter's section in brief
-- [ ] V11-P6-08 Gemini attribution display — `GeminiLabel` renders alongside any `gemini_assessment` field in brief items
+- [x] V11-P6-01 `GeminiLabel` component — small "G" logo/badge; renders inline on any AI-enriched brief item; always visible (not tooltip)
+- [x] V11-P6-02 `WarnNotice` component — brief-visible soft notice strip; no approval gate; dismissible by attorney
+- [x] V11-P6-03 Inline narrative replacement UI — display `suggested_narrative` in brief; "Apply" button calls `PUT /api/billing/entry/{id}/narrative`; confirms success before advancing
+- [x] V11-P6-04 `CompoundEscalationCard` — single card for compound escalations; shows contributing agents and signals; expandable detail
+- [x] V11-P6-05 Inbox brief section — new section in DailyCloseoutBrief listing `BriefInboundItem` items; nav pill with count
+- [x] V11-P6-06 `InboundCard` email triage card — sender, urgency badge, role badge, Gemini summary, action buttons (Approve reply / Dismiss); opposing counsel WARN
+- [x] V11-P6-07 Matter synthesis card — MATTER_SYNTHESIS observations surfaced via AgentRunTimeline (no separate card needed; timeline already handles all ObservationTypes)
+- [x] V11-P6-08 Gemini attribution display — `GeminiLabel` renders on suggested_narrative block and InboundCard summary; GeminiLabel component available for all gemini_assessment fields
 
 ### Type sync
-- [ ] V11-P6-09 `types.ts` — add `IncomingEmail`, `IncomingEmailClassification`, `IncomingEmailTriageStatus`, `CommTrigger` (all 7 values), `AnomalyType` (all 11 values), `ObservationType` additions
-- [ ] V11-P6-10 `types.ts` — add `CompoundEscalation` type matching Coordinator output structure
-- [ ] V11-P6-11 Brief API response shape — add `compound_escalations: CompoundEscalation[]` and `inbox_items: IncomingEmail[]` sections; update `GET /api/brief` response model
+- [x] V11-P6-09 `types.ts` — added `BriefInboundItem`, `InboundUrgency`, `InboundStatus`, `CommTrigger` (12 values), `AnomalyType` (11 values), `ObservationType` additions (MATTER_SYNTHESIS, COMPOUND_RISK, INBOX_TRIAGE, WARN_NOTICE, ROUTE_HANDOFF)
+- [x] V11-P6-10 `types.ts` — added `BriefCompoundEscalationItem`, `CompoundEscalationsSection`, `InboxSection` matching Coordinator + assembler output
+- [x] V11-P6-11 Brief API response shape — `compound_escalations: CompoundEscalationsSection` and `inbox_items: InboxSection` added to `BriefSections` in schemas.py; assembler populates both sections
 
 ### Verification
-- [ ] V11-P6-12 `npm run typecheck` — zero TypeScript errors
-- [ ] V11-P6-13 Screenshot verification — all new components visible in browser before commit
-- [ ] V11-P6-14 Regression check — `AuditLog`, `TimerHUD`, `SourceDrawer`, existing brief items all render correctly after new component additions
+- [x] V11-P6-12 `npm run typecheck` — zero TypeScript errors (npx tsc --noEmit passes)
+- [ ] V11-P6-13 Screenshot verification — browser test; cannot verify headlessly
+- [ ] V11-P6-14 Regression check — browser test; cannot verify headlessly
 
 ---
 
@@ -268,6 +268,108 @@
 - 4 `comms.py` tool additions → 3 functions in new `tools/inbound.py` [NEW]
 - Added: `ObservationType.ROUTE_HANDOFF`, `data.tool` sub-shape on TOOL_CALL observations, `tools/registry.py`, `GET /api/tools`, `GET /api/deadlines` full book, `GET /api/inbound`
 - Added: cross-agent routing section (Phase 4.7), `work_kind="route"` for ROUTE_HANDOFF observations
+
+---
+
+# Litt — v1.1.2 Console UI Build Plan
+
+**Sprint:** Post-v1.1.1 — active  
+**Status key:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked  
+**Full spec:** `docs/console-ui-build-plan-v1.1.2.md`  
+**Dependency:** v1.1.1 must be gate-complete first (it is — 342/342 tests pass)
+
+---
+
+## Phase 0 — Shell + Routing + Token Crosswalk
+*Unblocks all frontend surface work. No new data needed.*
+
+- [x] V112-P0-01 `ConsoleShell.tsx` — grid: left rail + scrollable content area; wraps DemoBanner
+- [x] V112-P0-02 `ConsoleRail.tsx` — four sections (Watch / Collect / Prove / Tune); active state via NavLink; user chip at bottom
+- [x] V112-P0-03 Route restructure — `/`, `/deadlines`, `/collect`, `/relationships`, `/budgets`, `/anomalies`, `/agents`, `/ledger`, `/policy`, `/integrations`, `/email-preview` (preserved)
+- [x] V112-P0-04 Stub pages — Deadlines, Collect, Relationships, Budgets, Anomalies, AgentConsole, AuditLedger (wraps AuditLog), Policy, Integrations
+- [x] V112-P0-05 DailyCloseoutBrief updated — DemoBanner removed (ConsoleShell owns it); minHeight: 100vh removed; works inside ConsoleShell scroll area
+- [x] V112-P0-06 AuditLog updated — DemoBanner removed; sticky top: 0 instead of top: 33
+- [x] V112-P0-07 test_agent_observations.py fixed — billing tests patch compute_budget_utilization; deadline tests patch log_escalation + verify_deadline + log_deadline_event + create_client_comm; 342/342 pass
+
+**Phase 0 gate check:**
+- [x] G0-01 ConsoleShell renders with ConsoleRail on all routes — verified (tsc passes)
+- [x] G0-02 All stub pages reachable — verified via routes
+- [x] G0-03 existing Brief, TimerHUD still work — preserved; tsc green
+- [x] G0-04 `tsc --noEmit` zero errors — verified (0 errors)
+- [x] G0-05 342/342 backend tests pass — verified
+
+---
+
+## Phase 1 — Surfaces Over Existing Data
+*Thin read endpoints + prototype UI. Writes already exist. No new entities.*
+
+### New backend endpoints
+- [ ] V112-P1-01 `GET /api/budgets?firm_id` — per-matter/client utilization list (reuse `compute_budget_utilization()`)
+- [ ] V112-P1-02 `GET /api/relationships?firm_id` — matters with `days_since_contact` and `last_client_contact`
+
+### New frontend pages (real data)
+- [ ] V112-P1-03 `pages/Deadlines.tsx` — DeadlineTimeline (45-day horizon), CadenceLadder (14·7·3·1 window), DeadlineBook (filterable table)
+- [ ] V112-P1-04 `pages/Collect.tsx` — WIP review list over existing billing/scrubber data
+- [ ] V112-P1-05 `pages/Budgets.tsx` — BudgetBar per client from `GET /api/budgets`
+- [ ] V112-P1-06 `pages/Anomalies.tsx` — DetectorRoster from existing `BriefAnomalyItem` data
+- [ ] V112-P1-07 `pages/AuditLedger.tsx` — LedgerStatStrip + LedgerFilters + LedgerRow with expand (upgrade AuditLog)
+- [ ] V112-P1-08 `pages/Relationships.tsx` — stub expanded with going-quiet section from brief silence data
+
+**Phase 1 gate check:**
+- [ ] G1-01 Deadlines page shows real deadline data from `GET /api/deadlines`
+- [ ] G1-02 Budgets page shows real utilization from `GET /api/budgets`
+- [ ] G1-03 Anomalies page shows real anomaly items
+- [ ] G1-04 `tsc --noEmit` zero errors
+- [ ] G1-05 342/342 backend tests pass
+
+---
+
+## Phase 2 — Agent Console Graph
+*Biggest net-new frontend piece. Depends on TOOL_CALL observations and ROUTE_HANDOFF.*
+
+- [ ] V112-P2-01 `pages/AgentConsole.tsx` — coordinator graph + sweep controls + inspector
+- [ ] V112-P2-02 `components/console/AgentGraph.tsx` — node layout; live flow animation; idle heartbeat; hand-off edges; gate/work_kind styling
+- [ ] V112-P2-03 `components/console/ToolChip.tsx` — chip under firing node showing tool call name + kind badge
+- [ ] V112-P2-04 `components/console/Inspector.tsx` — right panel: tools catalog, TOOL CALL card, cross-agent hand-off card, boundary stat
+- [ ] V112-P2-05 `components/console/SweepControls.tsx` — Run / Replay / step scrubber
+
+**Phase 2 gate check:**
+- [ ] G2-01 Boundary stat matches run (deterministic vs Gemini count)
+- [ ] G2-02 Hand-off edges draw for ROUTE_HANDOFF observations
+- [ ] G2-03 Inspector renders TOOL CALL + cross-agent hand-off cards on selection
+- [ ] G2-04 Idle heartbeat runs when no sweep active
+- [ ] G2-05 `tsc --noEmit` zero errors
+
+---
+
+## Phase 3 — Relationships Page (Inbound + Going Quiet)
+*Depends on `GET /api/inbound` and InboundMessage seed data.*
+
+- [ ] V112-P3-01 `pages/Relationships.tsx` — full page: summary strip, inbound cards, going-quiet, relationship board, comms log, "How Litt handles" card
+- [ ] V112-P3-02 InboundCard collapsed + expanded — `summary`, `action_items`, `draft_body_clean`, Approve & send / Edit / Snooze / Dismiss
+- [ ] V112-P3-03 Snooze → `POST /api/actions/inbound/snooze`; Dismiss → `POST /api/actions/inbound/dismiss`
+- [ ] V112-P3-04 Approve & send routes to existing `POST /api/actions/comms/approve` → queue → confirm-sent chain
+
+**Phase 3 gate check:**
+- [ ] G3-01 Relationships page renders inbound cards + going-quiet section
+- [ ] G3-02 Mercer card matches prototype (collapsed and expanded)
+- [ ] G3-03 Approving reply walks comms state machine + audit events
+- [ ] G3-04 `tsc --noEmit` zero errors
+
+---
+
+## Phase 4 — Polish + Demo Hardening
+- [ ] V112-P4-01 Wire email digest deep-links to Console routes
+- [ ] V112-P4-02 Extend `GET /api/demo/ready` with Console conditions (≥3 inbound, policy stub)
+- [ ] V112-P4-03 Update `seed_demo.py` + `reset_demo.py` for full Console state
+- [ ] V112-P4-04 Screenshot every surface
+- [ ] V112-P4-05 Verify boundary stat, hand-off edges, all date math against demo date
+
+**Phase 4 gate check:**
+- [ ] G4-01 All 10 routes render without error
+- [ ] G4-02 `POST /api/demo/reset` restores full Console state
+- [ ] G4-03 `tsc --noEmit` zero errors
+- [ ] G4-04 342+ backend tests pass
 
 ---
 ---

@@ -1,5 +1,5 @@
 """
-Brief response schema — all 5 sections.
+Brief response schema — all 5 sections + compound escalations + inbox.
 TypeScript counterparts live in dashboard/src/types.ts.
 """
 
@@ -82,6 +82,7 @@ class BriefTimeEntryItem(BaseModel):
     task_code: Optional[str] = None
     activity_code: Optional[str] = None
     session_minutes_actual: Optional[int] = None
+    suggested_narrative: Optional[str] = None   # Gemini-suggested replacement from AnomalyAgent
 
 
 class TimeEntrySection(BaseModel):
@@ -155,6 +156,51 @@ class AnomaliesSection(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Section 6 — Compound escalations (cross-agent risk)
+# ---------------------------------------------------------------------------
+
+class BriefCompoundEscalationItem(BaseModel):
+    escalation_id: str
+    matter_id: str
+    what_is_happening: str
+    why_it_matters: str
+    what_attorney_must_decide: str
+    risk_level: str     # ELEVATED | CRITICAL
+    priority: int
+    created_at: str
+
+
+class CompoundEscalationsSection(BaseModel):
+    items: List[BriefCompoundEscalationItem]
+    count: int
+
+
+# ---------------------------------------------------------------------------
+# Section 7 — Inbox (inbound messages awaiting triage)
+# ---------------------------------------------------------------------------
+
+class BriefInboundItem(BaseModel):
+    message_id: str
+    matter_id: Optional[str] = None
+    from_name: str
+    from_role: str
+    received_at: str
+    wait_days: int
+    urgency: str        # HIGH | MEDIUM | LOW
+    message_excerpt: str
+    summary: Optional[str] = None
+    action_items: List[str] = []
+    suggested_reply_comm_id: Optional[str] = None
+    cross_agent: bool = False
+    status: str
+
+
+class InboxSection(BaseModel):
+    items: List[BriefInboundItem]
+    count: int
+
+
+# ---------------------------------------------------------------------------
 # Top-level response
 # ---------------------------------------------------------------------------
 
@@ -164,6 +210,8 @@ class BriefSections(BaseModel):
     budget_risks: BudgetRisksSection
     client_silence: ClientSilenceSection
     anomalies: AnomaliesSection
+    compound_escalations: CompoundEscalationsSection = CompoundEscalationsSection(items=[], count=0)
+    inbox_items: InboxSection = InboxSection(items=[], count=0)
 
 
 class BriefResponse(BaseModel):

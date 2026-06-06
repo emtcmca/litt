@@ -1,26 +1,99 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ConsoleShell } from './components/console/ConsoleShell';
 import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
 import { EmailPreview } from './pages/EmailPreview';
 import { AuditLog } from './pages/AuditLog';
+import { AuditLedger } from './pages/AuditLedger';
+import { Deadlines } from './pages/Deadlines';
+import { Collect } from './pages/Collect';
+import { Relationships } from './pages/Relationships';
+import { Budgets } from './pages/Budgets';
+import { Anomalies } from './pages/Anomalies';
+import { AgentConsole } from './pages/AgentConsole';
+import { Policy } from './pages/Policy';
+import { Integrations } from './pages/Integrations';
 import { TimerHUD } from './components/TimerHUD';
 
-const FIRM_ID = 'strand-okafor';
+const FIRM_ID    = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
+
+function NotFound() {
+  return (
+    <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 8px' }}>404</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<DailyCloseoutBrief />} />
+        {/* Email preview — no shell */}
         <Route path="/email-preview" element={<EmailPreview />} />
-        <Route path="/audit" element={<AuditLog />} />
+        {/* Legacy audit route — keep for backwards compat */}
+        <Route path="/audit" element={
+          <ConsoleShell>
+            <AuditLog />
+          </ConsoleShell>
+        } />
+        {/* Console routes */}
+        <Route path="/" element={
+          <ConsoleShell>
+            <DailyCloseoutBrief />
+          </ConsoleShell>
+        } />
+        <Route path="/deadlines" element={
+          <ConsoleShell>
+            <Deadlines />
+          </ConsoleShell>
+        } />
+        <Route path="/relationships" element={
+          <ConsoleShell>
+            <Relationships />
+          </ConsoleShell>
+        } />
+        <Route path="/collect" element={
+          <ConsoleShell>
+            <Collect />
+          </ConsoleShell>
+        } />
+        <Route path="/anomalies" element={
+          <ConsoleShell>
+            <Anomalies />
+          </ConsoleShell>
+        } />
+        <Route path="/budgets" element={
+          <ConsoleShell>
+            <Budgets />
+          </ConsoleShell>
+        } />
+        <Route path="/agents" element={
+          <ConsoleShell>
+            <AgentConsole />
+          </ConsoleShell>
+        } />
+        <Route path="/ledger" element={
+          <ConsoleShell>
+            <AuditLedger />
+          </ConsoleShell>
+        } />
+        <Route path="/policy" element={
+          <ConsoleShell>
+            <Policy />
+          </ConsoleShell>
+        } />
+        <Route path="/integrations" element={
+          <ConsoleShell>
+            <Integrations />
+          </ConsoleShell>
+        } />
         <Route path="*" element={
-          <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 8px' }}>404</p>
-              <Link to="/" style={{ color: 'var(--color-text-info)', fontSize: 14 }}>Back to brief</Link>
-            </div>
-          </div>
+          <ConsoleShell>
+            <NotFound />
+          </ConsoleShell>
         } />
       </Routes>
       <TimerHUD firmId={FIRM_ID} attorneyId={ATTORNEY_ID} />

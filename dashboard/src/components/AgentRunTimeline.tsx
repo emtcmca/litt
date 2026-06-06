@@ -20,6 +20,7 @@ const WORK_KIND_SPEC: Record<string, { label: string; color: string }> = {
   llm_assisted:  { label: 'gemini',     color: 'var(--color-ramp-blue-600)' },
   tool_write:    { label: 'tool write', color: 'var(--color-ramp-teal-600)' },
   human_gate:    { label: 'human gate', color: 'var(--color-ramp-amber-600)' },
+  route:         { label: 'route',      color: 'var(--color-ramp-amber-600)' },
 };
 
 function GateBadge({ level }: { level: string }) {

@@ -56,31 +56,30 @@ class TestBillingAgentObservations:
     def test_returns_observations_key(self):
         agent = self._make_agent()
         mock_entry = {"id": "te-005", "status": "PENDING", "client_id": "c1", "matter_id": "m1"}
-        mock_client = {}
 
-        with patch("app.agents.billing_agent.collection_ref") as mock_cr:
-            # clients stream
-            mock_cr.return_value.stream.return_value = []
-            # time_entries stream returns one PENDING entry with BLOCK flag
-            from app.scrubber.prebill import ScrubberFlag, ScrubberResult
-            block_result = ScrubberResult(
-                entry_id="te-005",
-                flags=[ScrubberFlag(entry_id="te-005", check_name="forbidden_phrase", severity="BLOCK", message="Found 'review documents'", matched_text="review documents")],
-            )
-            with patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
-                 patch("app.agents.billing_agent.log_anomaly") as mock_log:
-                mock_log.return_value = MagicMock(entity_id="esc-001")
+        from app.scrubber.prebill import ScrubberFlag, ScrubberResult
+        from app.models import ToolError
+        block_result = ScrubberResult(
+            entry_id="te-005",
+            flags=[ScrubberFlag(entry_id="te-005", check_name="forbidden_phrase", severity="BLOCK", message="Found 'review documents'", matched_text="review documents")],
+        )
 
-                entry_doc = MagicMock()
-                entry_doc.to_dict.return_value = mock_entry
+        entry_doc = MagicMock()
+        entry_doc.to_dict.return_value = mock_entry
 
-                def side_effect(firm_id, col):
-                    s = MagicMock()
-                    s.stream.return_value = [entry_doc] if col == "time_entries" else []
-                    return s
+        def side_effect(firm_id, col):
+            s = MagicMock()
+            s.stream.return_value = [entry_doc] if col == "time_entries" else []
+            return s
 
-                mock_cr.side_effect = side_effect
-                result = agent.run("strand-okafor", run_id="sweep-test-001")
+        with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
+             patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
+             patch("app.agents.billing_agent.log_anomaly") as mock_log, \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no budget cap")):
+            mock_log.return_value = MagicMock(entity_id="esc-001")
+            mock_cr.side_effect = side_effect
+            result = agent.run("strand-okafor", run_id="sweep-test-001")
 
         assert "observations" in result
         obs = result["observations"]
@@ -90,6 +89,7 @@ class TestBillingAgentObservations:
         agent = self._make_agent()
 
         from app.scrubber.prebill import ScrubberFlag, ScrubberResult
+        from app.models import ToolError
         block_result = ScrubberResult(
             entry_id="te-005",
             flags=[ScrubberFlag(entry_id="te-005", check_name="forbidden_phrase", severity="BLOCK", message="Found 'review documents'", matched_text="review documents")],
@@ -100,16 +100,17 @@ class TestBillingAgentObservations:
             "id": "te-005", "status": "PENDING", "client_id": "c1", "matter_id": "m1"
         }
 
+        def side_effect(firm_id, col):
+            s = MagicMock()
+            s.stream.return_value = [entry_doc] if col == "time_entries" else []
+            return s
+
         with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
              patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
-             patch("app.agents.billing_agent.log_anomaly") as mock_log:
+             patch("app.agents.billing_agent.log_anomaly") as mock_log, \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no budget cap")):
             mock_log.return_value = MagicMock(entity_id="esc-001")
-
-            def side_effect(firm_id, col):
-                s = MagicMock()
-                s.stream.return_value = [entry_doc] if col == "time_entries" else []
-                return s
-
             mock_cr.side_effect = side_effect
             result = agent.run("strand-okafor", run_id="sweep-test-001")
 
@@ -184,12 +185,20 @@ class TestDeadlineAgentObservations:
         }
 
         with patch("app.agents.deadline_agent.collection_ref") as mock_cr, \
-             patch("app.agents.deadline_agent._call_gemini_deadline_extraction") as mock_gemini:
+             patch("app.agents.deadline_agent._call_gemini_deadline_extraction") as mock_gemini, \
+             patch("app.agents.deadline_agent.log_escalation") as mock_esc, \
+             patch("app.agents.deadline_agent.verify_deadline") as mock_verify, \
+             patch("app.agents.deadline_agent.log_deadline_event") as mock_dl_event, \
+             patch("app.agents.deadline_agent.create_client_comm") as mock_comm:
             mock_gemini.return_value = {
                 "extracted_date": "2026-05-30",
                 "confidence": 0.70,
                 "evidence": "Counsel wrote 'we expect your response by tomorrow (Friday)'",
             }
+            mock_esc.return_value = MagicMock(entity_id="esc-dl-001")
+            mock_verify.return_value = MagicMock(entity_id="dl-rivera-001")
+            mock_dl_event.return_value = MagicMock(entity_id="dle-001")
+            mock_comm.return_value = MagicMock(entity_id="comm-001")
 
             def side_effect(firm_id, col):
                 s = MagicMock()
@@ -201,7 +210,6 @@ class TestDeadlineAgentObservations:
                     email_doc = MagicMock()
                     email_doc.exists = True
                     email_doc.to_dict.return_value = {"body": "Please be advised that we expect your response by tomorrow (Friday)."}
-                    # For .document(ref).get() pattern
                     s.document.return_value.get.return_value = email_doc
                     s.stream.return_value = []
                 else:
@@ -236,7 +244,15 @@ class TestDeadlineAgentObservations:
         }
 
         with patch("app.agents.deadline_agent.collection_ref") as mock_cr, \
-             patch("app.agents.deadline_agent._call_gemini_deadline_extraction", return_value=None):
+             patch("app.agents.deadline_agent._call_gemini_deadline_extraction", return_value=None), \
+             patch("app.agents.deadline_agent.log_escalation") as mock_esc, \
+             patch("app.agents.deadline_agent.verify_deadline") as mock_verify, \
+             patch("app.agents.deadline_agent.log_deadline_event") as mock_dl_event, \
+             patch("app.agents.deadline_agent.create_client_comm") as mock_comm:
+            mock_esc.return_value = MagicMock(entity_id="esc-dl-002")
+            mock_verify.return_value = MagicMock(entity_id="dl-conflict-001")
+            mock_dl_event.return_value = MagicMock(entity_id="dle-002")
+            mock_comm.return_value = MagicMock(entity_id="comm-002")
 
             def side_effect(firm_id, col):
                 s = MagicMock()

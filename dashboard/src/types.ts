@@ -69,6 +69,7 @@ export interface BriefTimeEntryItem {
   task_code: string | null;
   activity_code: string | null;
   session_minutes_actual: number | null;
+  suggested_narrative?: string | null;
 }
 
 export interface TimeEntrySection {
@@ -129,12 +130,104 @@ export interface AnomaliesSection {
   count: number;
 }
 
+// ---------------------------------------------------------------------------
+// v1.1.1 — Compound escalations section
+// ---------------------------------------------------------------------------
+
+export interface BriefCompoundEscalationItem {
+  escalation_id: string;
+  matter_id: string;
+  what_is_happening: string;
+  why_it_matters: string;
+  what_attorney_must_decide: string;
+  risk_level: "ELEVATED" | "CRITICAL";
+  priority: number;
+  created_at: string;
+}
+
+export interface CompoundEscalationsSection {
+  items: BriefCompoundEscalationItem[];
+  count: number;
+}
+
+// ---------------------------------------------------------------------------
+// v1.1.1 — Inbox section (inbound messages awaiting triage)
+// ---------------------------------------------------------------------------
+
+export type InboundUrgency = "HIGH" | "MEDIUM" | "LOW";
+
+export type InboundStatus =
+  | "AWAITING_TRIAGE"
+  | "TRIAGED"
+  | "REPLY_HELD"
+  | "HANDLED"
+  | "SNOOZED"
+  | "DISMISSED";
+
+export interface BriefInboundItem {
+  message_id: string;
+  matter_id: string | null;
+  from_name: string;
+  from_role: string;
+  received_at: string;
+  wait_days: number;
+  urgency: InboundUrgency;
+  message_excerpt: string;
+  summary: string | null;
+  action_items: string[];
+  suggested_reply_comm_id: string | null;
+  cross_agent: boolean;
+  status: InboundStatus;
+}
+
+export interface InboxSection {
+  items: BriefInboundItem[];
+  count: number;
+}
+
+// ---------------------------------------------------------------------------
+// v1.1.1 — CommTrigger enum (all 12 values including legacy)
+// ---------------------------------------------------------------------------
+
+export type CommTrigger =
+  | "DAYS_SINCE_CONTACT"
+  | "MILESTONE_COMPLETE"
+  | "BUDGET_THRESHOLD"
+  | "DEADLINE_APPROACHING"
+  | "INVOICE_ISSUED"
+  | "ATTORNEY_INITIATED"
+  | "BUDGET_THRESHOLD_CROSSED"
+  | "DEADLINE_CONFIRMED_NO_UPDATE"
+  | "INVOICE_GENERATED"
+  | "ACTIVITY_WITHOUT_UPDATE"
+  | "DEADLINE_EXTENSION_REQUEST"
+  | "INBOUND_REPLY";
+
+// ---------------------------------------------------------------------------
+// v1.1.1 — AnomalyType enum (11 values)
+// ---------------------------------------------------------------------------
+
+export type AnomalyType =
+  | "ROUND_HOURS_NO_SESSION"
+  | "DUPLICATE_ENTRY_CANDIDATE"
+  | "AI_DISCLOSURE_GAP"
+  | "STALE_VERIFIED_DEADLINE"
+  | "LATE_ENTRY_CREATION"
+  | "ENTRY_CLUSTERING"
+  | "NARRATIVE_INSUFFICIENT"
+  | "HOURS_NARRATIVE_MISMATCH"
+  | "SEMANTIC_DUPLICATE_CANDIDATE"
+  | "RATE_ANOMALY"
+  | "INVOICE_STALENESS";
+
 export interface BriefSections {
   deadlines: DeadlineSection;
   time_entries: TimeEntrySection;
   budget_risks: BudgetRisksSection;
   client_silence: ClientSilenceSection;
   anomalies: AnomaliesSection;
+  compound_escalations: CompoundEscalationsSection;
+  inbox_items: InboxSection;
 }
 
 export interface BriefResponse {
@@ -159,7 +252,12 @@ export type ObservationType =
   | "TOOL_CALL"
   | "RESULT"
   | "ESCALATION"
-  | "APPROVAL_GATE_APPLIED";
+  | "APPROVAL_GATE_APPLIED"
+  | "MATTER_SYNTHESIS"
+  | "COMPOUND_RISK"
+  | "INBOX_TRIAGE"
+  | "WARN_NOTICE"
+  | "ROUTE_HANDOFF";
 
 export type CommitmentLevel =
   | "AUTO_SAFE"
