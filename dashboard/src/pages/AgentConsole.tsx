@@ -5,6 +5,7 @@ import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
 import type { IconName } from '../components/ui/Icon';
 import { runSweep } from '../api';
+import sweepFixture from '../demo-fixtures/sweep.json';
 
 const FIRM_ID   = 'strand-okafor';
 const STEP_MS   = 640;
@@ -629,9 +630,9 @@ export function AgentConsole() {
   // Pre-load sweep when frozen=1 (Playwright tests need the scrubber segments)
   useEffect(() => {
     if (!frozen) return;
-    runSweep(FIRM_ID).then(res => {
-      setSweep(res.timeline.observations.map(adaptObs));
-    }).catch(() => null);
+    runSweep(FIRM_ID)
+      .then(res => setSweep(res.timeline.observations.map(adaptObs)))
+      .catch(() => setSweep((sweepFixture as AgentObservation[]).map(adaptObs)));
   }, [frozen]);
 
   // Idle heartbeat
@@ -652,8 +653,15 @@ export function AgentConsole() {
     setError(null);
     setSel(null);
     try {
-      const res  = await runSweep(FIRM_ID);
-      const steps = res.timeline.observations.map(adaptObs);
+      let obs: AgentObservation[];
+      try {
+        const res = await runSweep(FIRM_ID);
+        obs = res.timeline.observations;
+      } catch {
+        // Backend not running — use demo fixture
+        obs = sweepFixture as AgentObservation[];
+      }
+      const steps = obs.map(adaptObs);
       setSweep(steps);
       setStep(-1);
       setPlaying(true);

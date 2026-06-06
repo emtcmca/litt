@@ -3,7 +3,7 @@
 **Project:** Litt — Autonomous AI Operations Agent for Small Law Firms  
 **Track:** Track 1 — Build (Net-New Agents)  
 **Region:** AMERS  
-**Submission deadline:** June 5, 2026, 5:00 PM PT  
+**Submission deadline:** June 11, 2026, 5:00 PM EST  
 **GitHub:** github.com/emtcmca/litt (public)
 
 ---

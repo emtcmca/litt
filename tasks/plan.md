@@ -118,9 +118,9 @@ Do not build in v1.1.1 or v1.1.2:
 
 # Litt — Locked Build Plan v1.0 ✓ COMPLETE
 
-**Sprint:** May 30 – June 5, 2026 (6 days)  
-**Submission deadline:** June 5, 5:00 PM PT  
-**Target submit time:** June 5, 4:30 PM PT (30-minute buffer)  
+**Sprint:** May 30 – June 11, 2026  
+**Submission deadline:** June 11, 5:00 PM EST  
+**Target submit time:** June 11, 4:30 PM EST (30-minute buffer)  
 **Track:** Track 1 — Build (Net-New Agents)
 
 ---

@@ -436,7 +436,7 @@
 
 # Litt — v1.0 Hackathon Sprint Task List ✓ SPRINT COMPLETE
 
-**Sprint:** May 30 – June 5, 2026  
+**Sprint:** May 30 – June 11, 2026  
 **Status key:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ---

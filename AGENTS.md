@@ -5,7 +5,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 **Project:** Litt — Autonomous AI Operations Agent for Small Law Firms  
 **Stack:** Python (FastAPI) · Google ADK · Gemini 2.5 Pro · Firestore · React · Cloud Run  
 **Demo firm:** Strand & Okafor LLP (synthetic seed data only)  
-**Submission deadline:** June 5, 2026, 5:00 PM PT  
+**Submission deadline:** June 11, 2026, 5:00 PM EST  
 **Current state:** Day 1, May 30 — docs complete, code not yet written. Build order matters.
 
 ---

@@ -2,8 +2,8 @@
 
 **Version:** 1.0  
 **Author:** Eric Tetzlaff  
-**Sprint window:** May 30 – June 5, 2026  
-**Submission deadline:** 5:00 PM PT, June 5, 2026  
+**Sprint window:** May 30 – June 11, 2026  
+**Submission deadline:** 5:00 PM EST, June 11, 2026  
 **Status:** Active — do not revise without logging a change
 
 ---
@@ -441,11 +441,11 @@
 
 ---
 
-## Day 7 — Thursday, June 5
+## Final Day — Wednesday, June 11
 
 **Focus:** Demo Video + Written Description + Submission  
 **Hours:** 6–8  
-**Submission hard deadline:** 5:00 PM PT  
+**Submission hard deadline:** 5:00 PM EST  
 **Theme:** Everything you do today serves the 5 PM deadline. Target submission by 4:30 PM.
 
 ### Demo Video — Record by Noon
@@ -499,8 +499,8 @@
 
 ### Final Submission
 
-- `[SUBMIT]` `[CRITICAL]` **Submit on Devpost by 4:30 PM PT**  
-  Buffer of 30 minutes before the 5 PM PT hard deadline. Submit:
+- `[SUBMIT]` `[CRITICAL]` **Submit on Devpost by 4:30 PM EST**  
+  Buffer of 30 minutes before the 5 PM EST hard deadline. Submit:
   - GitHub repo URL (`github.com/emtcmca/litt`) — must be public
   - Demo video URL (YouTube unlisted or Vimeo)
   - Written description with architecture diagram embedded

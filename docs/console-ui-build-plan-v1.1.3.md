@@ -4,7 +4,7 @@
 - **Status:** COMPLETE — all 12 phases shipped (P12 Brief hub committed)
 - **Preceded by:** v1.1.2 (Console UI Phase 1–4, now superseded)
 - **Prototype source:** `docs/ui-ux-design-handoff/ui/final-ui-reference/litt-handoff/ui-reference/`
-- **Submission deadline:** June 5, 2026 — this build must complete before demo recording
+- **Submission deadline:** June 11, 2026 — this build must complete before demo recording
 
 ---
 
