@@ -106,6 +106,14 @@ export function makeBrief(): BriefResponse {
           created_at: '2026-05-29T12:00:00Z',
         }],
       },
+      compound_escalations: {
+        count: 0,
+        items: [],
+      },
+      inbox_items: {
+        count: 0,
+        items: [],
+      },
     },
   };
 }

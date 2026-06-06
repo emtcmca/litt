@@ -6,7 +6,6 @@ import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
 import { Mono } from '../components/ui/Mono';
 import { ClsChip } from '../components/ui/ClsChip';
-import { PageHead } from '../components/ui/PageHead';
 
 const FIRM_ID = 'strand-okafor';
 const HORIZON  = 46;

@@ -8,8 +8,6 @@ import type {
   BriefBudgetItem,
   BriefClientSilenceItem,
   BriefDeadlineItem,
-  BriefInboundItem,
-  BriefCompoundEscalationItem,
   BriefResponse,
   BriefTimeEntryItem,
   ToolResult,
@@ -20,7 +18,6 @@ import type { DeadlineAction } from './modals/DeadlineModal';
 import { BillingWIPModal } from './modals/BillingWIPModal';
 import type { BillingAction } from './modals/BillingWIPModal';
 import { GeminiLabel } from './shared/GeminiLabel';
-import { WarnNotice } from './shared/WarnNotice';
 import { CompoundEscalationCard } from './CompoundEscalationCard';
 import { InboundCard } from './InboundCard';
 
