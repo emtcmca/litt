@@ -430,7 +430,7 @@
 - [x] V113-P9 Budgets page — stat strip, utilization list, 75%/90% threshold bar (Gate 1 ✓)
 - [x] V113-P10 Anomalies page — ELEVATED callout, 13-detector roster, cleared today panel (Gate 1 ✓)
 - [x] V113-P11 Integrations page — 4 integration tiles, status pills, Connect CTA (Gate 1 ✓)
-- [ ] V113-P12 Brief page — port console-brief.jsx
+- [x] V113-P12 Brief page — hub layout: dark hero, decision list from brief data, schedule toggles (Gate 1 ✓)
 
 ---
 
