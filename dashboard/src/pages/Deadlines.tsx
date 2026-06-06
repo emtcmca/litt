@@ -1,311 +1,515 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { RawDeadline } from '../types';
-import { getDeadlinesFull } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { RawDeadline, RelationshipMatter } from '../types';
+import { getDeadlinesFull, getRelationships } from '../api';
+import { T } from '../tokens';
+import { Icon } from '../components/ui/Icon';
+import { Mono } from '../components/ui/Mono';
+import { ClsChip } from '../components/ui/ClsChip';
+import { PageHead } from '../components/ui/PageHead';
 
 const FIRM_ID = 'strand-okafor';
+const HORIZON  = 46;
 
-const CLASS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  HARD_LEGAL:       { label: 'Court / Legal',  color: '#9B2D23', bg: 'rgba(155,45,35,.08)' },
-  HARD_CONTRACTUAL: { label: 'Contractual',     color: '#A98435', bg: 'rgba(169,132,53,.08)' },
-  SOFT_INTERNAL:    { label: 'Internal',        color: '#1D9E75', bg: 'rgba(29,158,117,.08)' },
-  ADMINISTRATIVE:   { label: 'Administrative',  color: '#5C6B64', bg: 'rgba(92,107,100,.08)' },
-};
+// ── cadence tiers ────────────────────────────────────────────────────────────
 
-const LEVEL_ORDER = ['CRITICAL', '1_DAY', '3_DAY', '7_DAY', '14_DAY'];
-const LEVEL_LABEL: Record<string, string> = {
-  CRITICAL: '< 1d',
-  '1_DAY':  '1d',
-  '3_DAY':  '3d',
-  '7_DAY':  '7d',
-  '14_DAY': '14d',
-};
+const CADENCE = [
+  { tier: '1_DAY',  max: 1,  label: 'Final day', desc: 'Due tomorrow or today',  color: T.danger },
+  { tier: '3_DAY',  max: 3,  label: '3-day',     desc: 'Inside the 3-day window',color: T.danger },
+  { tier: '7_DAY',  max: 7,  label: '7-day',     desc: 'Inside the 7-day window',color: T.gold   },
+  { tier: '14_DAY', max: 14, label: '14-day',    desc: 'First escalation fires', color: T.gold   },
+];
 
-function DaysChip({ days }: { days: number | null }) {
-  if (days == null) return null;
-  const color = days < 0 ? '#9B2D23' : days <= 1 ? '#9B2D23' : days <= 3 ? '#A98435' : '#1D9E75';
-  return (
-    <span style={{
-      fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-      color, padding: '2px 6px', borderRadius: 4,
-      background: `${color}18`,
-      border: `1px solid ${color}30`,
-      whiteSpace: 'nowrap',
-    }}>
-      {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d out`}
-    </span>
-  );
+function cadenceTier(daysOut: number | null) {
+  if (daysOut == null || daysOut < 0) return null;
+  for (const c of CADENCE) if (daysOut <= c.max) return c;
+  return null;
 }
 
-function VerifBadge({ status }: { status: string }) {
-  const isOk = status === 'verified';
-  return (
-    <span style={{
-      fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 600,
-      textTransform: 'uppercase', letterSpacing: '0.06em',
-      color: isOk ? '#1D9E75' : '#A98435',
-      background: isOk ? 'rgba(29,158,117,.06)' : 'rgba(169,132,53,.06)',
-      border: `1px solid ${isOk ? 'rgba(29,158,117,.25)' : 'rgba(169,132,53,.3)'}`,
-      borderRadius: 3, padding: '1px 5px',
-    }}>
-      {isOk ? 'verified' : status.replace(/_/g, ' ')}
-    </span>
-  );
+function fmtDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
-// ─── CadenceLadder ───────────────────────────────────────────────────────────
+// ── Timeline ─────────────────────────────────────────────────────────────────
 
-function CadenceLadder({ deadlines }: { deadlines: RawDeadline[] }) {
-  const hardLegal = deadlines.filter(d => d.classification === 'HARD_LEGAL');
-  const rung = (maxDays: number) =>
-    hardLegal.filter(d => d.days_out != null && d.days_out >= 0 && d.days_out <= maxDays).length;
+interface PinnedDeadline {
+  id: string;
+  client: string;
+  description: string;
+  cls: string;
+  daysOut: number;
+  isUnconfirmed: boolean;
+  due: string;
+}
 
-  const rungs = [
-    { label: '14d window', count: rung(14), maxDays: 14 },
-    { label: '7d window',  count: rung(7),  maxDays: 7  },
-    { label: '3d window',  count: rung(3),  maxDays: 3  },
-    { label: '1d window',  count: rung(1),  maxDays: 1  },
-  ];
+function Timeline({ items }: { items: PinnedDeadline[] }) {
+  const WEEKS = [7, 14, 21, 28, 35, 42];
+  const inWindow = items.filter(d => d.daysOut >= 0 && d.daysOut <= HORIZON)
+    .sort((a, b) => a.daysOut - b.daysOut);
+
+  const CLS_COLOR: Record<string, string> = {
+    HARD_LEGAL:       T.danger,
+    HARD_CONTRACTUAL: T.gold,
+    SOFT_INTERNAL:    T.teal,
+    ADMINISTRATIVE:   '#5F6F66',
+  };
 
   return (
-    <div style={{
-      background: '#14221F',
-      border: '1px solid rgba(158,225,199,.12)',
-      borderRadius: 10,
-      padding: '14px 18px',
-      display: 'grid', gap: 8,
-    }}>
-      <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(158,225,199,.5)', marginBottom: 4 }}>
-        Hard Legal Cadence
-      </div>
-      {rungs.map(r => (
-        <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 60, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,.45)', flexShrink: 0 }}>
-            {r.label}
-          </div>
-          <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.08)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${Math.min(100, r.count * 20)}%`,
-              background: r.count === 0 ? 'rgba(29,158,117,.4)' : r.count === 1 ? '#EF9F27' : '#9B2D23',
-              borderRadius: 3,
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
-          <div style={{ width: 20, textAlign: 'right', fontSize: 12, fontWeight: 700, color: r.count === 0 ? 'rgba(158,225,199,.5)' : r.count === 1 ? '#EF9F27' : '#9B2D23', fontFamily: 'var(--font-mono)' }}>
-            {r.count}
-          </div>
-        </div>
+    <div style={{ position: 'relative', height: 168, marginTop: 6 }}>
+      {/* week gridlines */}
+      {WEEKS.map(w => (
+        <div key={w} style={{
+          position: 'absolute',
+          left:  `${(w / HORIZON) * 100}%`,
+          top: 56, bottom: 56,
+          width: 1, background: T.soft,
+        }} />
       ))}
+      {/* baseline */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: '50%',
+        height: 2,
+        background: 'linear-gradient(90deg, rgba(20,20,18,.16), rgba(20,20,18,.06))',
+        borderRadius: 2,
+      }} />
+      {/* TODAY */}
+      <div style={{
+        position: 'absolute', left: 0, top: '50%',
+        transform: 'translate(-50%,-50%)',
+        display: 'grid', placeItems: 'center',
+      }}>
+        <span style={{
+          width: 11, height: 11, borderRadius: 999,
+          background: T.forest, border: '2px solid #fff',
+          boxShadow: '0 0 0 1px rgba(20,34,31,.3)',
+        }} />
+      </div>
+      <Mono style={{
+        position: 'absolute', left: 0, top: 'calc(50% + 12px)',
+        fontSize: 9.5, color: T.forest, fontWeight: 600,
+      }}>
+        TODAY
+      </Mono>
+      {/* week ticks */}
+      {WEEKS.map(w => (
+        <Mono key={'l' + w} style={{
+          position: 'absolute',
+          left: `${(w / HORIZON) * 100}%`,
+          bottom: 36,
+          transform: 'translateX(-50%)',
+          fontSize: 9, color: T.faint,
+        }}>
+          +{w}d
+        </Mono>
+      ))}
+      {/* pins */}
+      {inWindow.map((d, i) => {
+        const x   = (d.daysOut / HORIZON) * 100;
+        const up  = i % 2 === 0;
+        const c   = CLS_COLOR[d.cls] ?? '#5F6F66';
+        const due = fmtDate(d.due);
+        return (
+          <div key={d.id} style={{
+            position: 'absolute',
+            left: `${x}%`,
+            top: '50%',
+            transform: 'translateX(-50%)',
+          }}>
+            {/* stem */}
+            <div style={{
+              position: 'absolute', left: '50%',
+              top: up ? -46 : 2, height: 44,
+              width: 1.5, background: `${c}66`,
+              transform: 'translateX(-50%)',
+            }} />
+            {/* dot */}
+            <span className={d.isUnconfirmed ? 'litt-pulse' : ''} style={{
+              position: 'absolute', left: '50%', top: '50%',
+              transform: 'translate(-50%,-50%)',
+              width: d.isUnconfirmed ? 13 : 11,
+              height: d.isUnconfirmed ? 13 : 11,
+              borderRadius: 999, background: c,
+              border: '2px solid #fff',
+              boxShadow: d.isUnconfirmed ? `0 0 0 3px ${c}33` : `0 0 0 1px ${c}44`,
+              zIndex: 2, display: 'block',
+            }} />
+            {/* label card */}
+            <div style={{
+              position: 'absolute', left: '50%',
+              transform: 'translateX(-50%)',
+              top: up ? -84 : 48,
+              width: 124, textAlign: 'center',
+              background: T.surface,
+              border: `1px solid ${d.isUnconfirmed ? 'rgba(155,45,35,.3)' : T.line}`,
+              borderRadius: 9, padding: '6px 8px',
+              boxShadow: '0 2px 8px rgba(20,20,18,.06)',
+            }}>
+              <Mono style={{ fontSize: 11, fontWeight: 700, color: d.isUnconfirmed ? T.danger : T.ink, display: 'block', lineHeight: 1 }}>
+                {due}
+              </Mono>
+              <span style={{ fontSize: 10.5, color: T.muted, display: 'block', marginTop: 2, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {d.client}
+              </span>
+              <Mono style={{ fontSize: 8.5, color: c, display: 'block', marginTop: 1 }}>
+                {d.daysOut}d · {d.cls.replace('HARD_', '').replace('SOFT_', '')}
+              </Mono>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ─── DeadlineTimeline (45-day horizon) ───────────────────────────────────────
+// ── Cadence ladder ────────────────────────────────────────────────────────────
 
-function DeadlineTimeline({ deadlines }: { deadlines: RawDeadline[] }) {
-  const horizon = 45;
-  const inWindow = deadlines.filter(d => d.days_out != null && d.days_out >= 0 && d.days_out <= horizon);
-
-  if (inWindow.length === 0) {
-    return (
-      <div style={{ background: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '24px', textAlign: 'center' }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No deadlines in the next 45 days</div>
-      </div>
-    );
-  }
+function CadenceLadder({ items }: { items: PinnedDeadline[] }) {
+  const hardLegal = items.filter(d => d.cls === 'HARD_LEGAL');
 
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--color-border-tertiary)', fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-tertiary)' }}>
-        45-day horizon · {inWindow.length} deadline{inWindow.length !== 1 ? 's' : ''}
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${T.line}`,
+      borderRadius: 14, padding: '16px 17px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <Icon name="shield" size={14} color={T.gold} />
+        <Mono style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.09em', color: T.muted, fontWeight: 600 }}>
+          Escalation cadence
+        </Mono>
       </div>
-      <div style={{ padding: '12px 16px', display: 'grid', gap: 8 }}>
-        {inWindow.map(d => {
-          const cs = CLASS_STYLE[d.classification] ?? CLASS_STYLE.ADMINISTRATIVE;
-          const pct = Math.min(100, Math.max(3, (1 - (d.days_out ?? 0) / horizon) * 100));
+      <p style={{ margin: '0 0 13px', fontSize: 11.5, color: T.faint, lineHeight: 1.45 }}>
+        HARD_LEGAL deadlines surface as they cross each window. Litt re-fires until you confirm.
+      </p>
+      <div style={{ display: 'grid', gap: 7 }}>
+        {CADENCE.map(c => {
+          const hits = hardLegal.filter(d => cadenceTier(d.daysOut)?.tier === c.tier);
+          const live = hits.length > 0;
+          const isDanger = c.color === T.danger;
           return (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 160, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--color-text-primary)', fontWeight: 500 }}>
-                {d.description}
+            <div key={c.tier} style={{
+              display: 'flex', alignItems: 'center', gap: 11,
+              padding: '9px 11px', borderRadius: 10,
+              background: live ? (isDanger ? T.dangerSoft : 'rgba(169,132,53,.08)') : T.wash2,
+              border: `1px solid ${live ? (isDanger ? 'rgba(155,45,35,.24)' : 'rgba(169,132,53,.24)') : T.soft}`,
+            }}>
+              <div style={{ width: 38, textAlign: 'center', flexShrink: 0 }}>
+                <Mono style={{ fontSize: 14, fontWeight: 700, color: live ? c.color : T.faint, lineHeight: 1, display: 'block' }}>
+                  {c.tier.replace('_DAY', '')}
+                </Mono>
+                <Mono style={{ fontSize: 8.5, color: T.faint, display: 'block' }}>DAY</Mono>
               </div>
-              <div style={{ flex: 1, height: 8, background: 'var(--color-background-tertiary)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: cs.color, opacity: 0.6, borderRadius: 4 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {live
+                  ? hits.map(h => (
+                    <div key={h.id} style={{ fontSize: 12, fontWeight: 600, color: T.ink, lineHeight: 1.3 }}>
+                      {h.client} · {h.daysOut}d
+                      {h.isUnconfirmed && (
+                        <Mono style={{ fontSize: 9.5, color: T.danger, marginLeft: 6 }}>UNCONFIRMED</Mono>
+                      )}
+                    </div>
+                  ))
+                  : <span style={{ fontSize: 11.5, color: T.faint }}>{c.desc} — clear</span>
+                }
               </div>
-              <DaysChip days={d.days_out} />
-              <span style={{ flexShrink: 0, fontSize: 9, fontFamily: 'var(--font-mono)', color: cs.color, background: cs.bg, border: `1px solid ${cs.color}30`, borderRadius: 3, padding: '1px 5px', fontWeight: 600, letterSpacing: '0.04em' }}>
-                {cs.label}
-              </span>
+              {live && <span style={{ width: 7, height: 7, borderRadius: 999, background: c.color, flexShrink: 0 }} />}
             </div>
           );
         })}
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, paddingTop: 11, borderTop: `1px solid ${T.soft}` }}>
+        <Icon name="clock" size={12} color={T.faint} />
+        <Mono style={{ fontSize: 10.5, color: T.faint }}>
+          {hardLegal.filter(d => !cadenceTier(d.daysOut)).length} HARD_LEGAL beyond 14d · watching
+        </Mono>
+      </div>
     </div>
   );
 }
 
-// ─── DeadlineBook ────────────────────────────────────────────────────────────
+// ── Deadline book ─────────────────────────────────────────────────────────────
 
-type BookFilter = 'all' | 'unconfirmed' | 'hard_legal' | 'mine';
+type FilterKey = 'all' | 'unconfirmed' | 'HARD_LEGAL' | 'mine';
 
-function DeadlineBook({ deadlines }: { deadlines: RawDeadline[] }) {
-  const [filter, setFilter] = useState<BookFilter>('all');
+function DeadlineBook({ items, total }: { items: PinnedDeadline[]; total: number }) {
+  const [filter, setFilter] = useState<FilterKey>('all');
 
-  const tabs: { key: BookFilter; label: string }[] = [
-    { key: 'all',         label: 'All' },
-    { key: 'unconfirmed', label: 'Needs confirmation' },
-    { key: 'hard_legal',  label: 'Court / Legal' },
-    { key: 'mine',        label: 'Active' },
+  const filters: [FilterKey, string, number][] = [
+    ['all',         'All deadlines',       total],
+    ['unconfirmed', 'Needs confirmation',  items.filter(d => d.isUnconfirmed).length],
+    ['HARD_LEGAL',  'Court / legal',       items.filter(d => d.cls === 'HARD_LEGAL').length],
+    ['mine',        'Owned by you',        items.length],
   ];
 
-  const filtered = deadlines.filter(d => {
-    if (filter === 'unconfirmed') return d.verification_status !== 'verified';
-    if (filter === 'hard_legal')  return d.classification === 'HARD_LEGAL';
-    if (filter === 'mine')        return d.status === 'ACTIVE';
-    return true;
-  });
+  const rows = items.filter(d =>
+    filter === 'all'         ? true
+    : filter === 'unconfirmed' ? d.isUnconfirmed
+    : filter === 'HARD_LEGAL'  ? d.cls === 'HARD_LEGAL'
+    : true
+  );
 
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
-      {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--color-border-tertiary)', padding: '0 16px' }}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setFilter(t.key)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: '10px 12px 8px',
-              fontSize: 12, fontWeight: filter === t.key ? 600 : 400,
-              color: filter === t.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-              borderBottom: filter === t.key ? '2px solid #14221F' : '2px solid transparent',
-            }}
-          >
-            {t.label}
-            <span style={{ marginLeft: 5, fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--color-text-tertiary)' }}>
-              {filter === t.key ? filtered.length : ''}
-            </span>
-          </button>
+    <section style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, overflow: 'hidden' }}>
+      {/* header + filters */}
+      <div style={{
+        padding: '12px 16px', borderBottom: `1px solid ${T.soft}`,
+        background: T.wash2, display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+      }}>
+        <Mono style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.09em', color: T.muted, fontWeight: 600, marginRight: 4 }}>
+          The book
+        </Mono>
+        {filters.map(([key, label, n]) => {
+          const on = filter === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
+                fontSize: 11.5, fontWeight: 600, fontFamily: 'var(--font-sans)',
+                border: `1px solid ${on ? T.forest : T.line}`,
+                background: on ? T.forest : T.surface,
+                color: on ? T.brass : T.muted,
+              }}
+            >
+              {label}
+              <Mono style={{ fontSize: 10, opacity: .85 }}>{n}</Mono>
+            </button>
+          );
+        })}
+      </div>
+      {/* column header */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 96px 92px',
+        gap: 10, padding: '8px 16px',
+        borderBottom: `1px solid ${T.soft}`,
+      }}>
+        {['Matter · what's due', 'Class', 'Due'].map(h => (
+          <Mono key={h} style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: T.faint }}>
+            {h}
+          </Mono>
         ))}
       </div>
-
-      {filtered.length === 0 ? (
-        <div style={{ padding: 20, textAlign: 'center', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          No deadlines match this filter.
+      {/* rows */}
+      {rows.map(d => (
+        <div key={d.id} style={{
+          display: 'grid', gridTemplateColumns: '1fr 96px 92px', gap: 10,
+          alignItems: 'center', padding: '12px 16px',
+          borderBottom: `1px solid ${T.soft}`,
+          borderLeft: `3px solid ${d.isUnconfirmed ? T.danger : 'transparent'}`,
+          background: d.isUnconfirmed ? 'rgba(155,45,35,.025)' : 'transparent',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, lineHeight: 1.25 }}>
+              {d.description}
+            </div>
+            <Mono style={{ fontSize: 10.5, color: T.faint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              {d.client}
+            </Mono>
+            {d.isUnconfirmed
+              ? <Mono style={{ fontSize: 10, color: T.danger, fontWeight: 600 }}>UNCONFIRMED · needs you</Mono>
+              : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="check" size={10} color={T.teal} stroke={2.6} />
+                  <Mono style={{ fontSize: 10, color: T.teal }}>confirmed</Mono>
+                </span>
+            }
+          </div>
+          <ClsChip cls={d.cls} small />
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{fmtDate(d.due)}</div>
+            <Mono style={{ fontSize: 10, color: (d.daysOut ?? 99) <= 7 ? T.danger : T.faint }}>
+              {d.daysOut}d out
+            </Mono>
+          </div>
         </div>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: 'var(--color-background-secondary)' }}>
-              {['Deadline', 'Matter', 'Classification', 'Due', 'Days out', 'Status'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-tertiary)', fontWeight: 600, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((d, i) => {
-              const cs = CLASS_STYLE[d.classification] ?? CLASS_STYLE.ADMINISTRATIVE;
-              return (
-                <tr key={d.id} style={{ borderBottom: '1px solid var(--color-border-tertiary)', background: i % 2 === 0 ? 'transparent' : 'var(--color-background-secondary)' }}>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 500, maxWidth: 240 }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.description}</div>
-                  </td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)' }}>
-                    {d.matter_id}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.04em', color: cs.color, background: cs.bg, border: `1px solid ${cs.color}30`, borderRadius: 3, padding: '1px 5px' }}>
-                      {cs.label}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                    {d.due_date ? d.due_date.slice(0, 10) : '—'}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <DaysChip days={d.days_out} />
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <VerifBadge status={d.verification_status} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </div>
+      ))}
+      <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Mono style={{ fontSize: 10.5, color: T.faint }}>{rows.length} of {total} · sorted soonest first</Mono>
+        <Mono style={{ fontSize: 10.5, color: T.muted }}>Ingested from Calendar &amp; court orders</Mono>
+      </div>
+    </section>
   );
 }
 
-// ─── Deadlines page ──────────────────────────────────────────────────────────
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export function Deadlines() {
-  const [deadlines, setDeadlines] = useState<RawDeadline[] | null>(null);
-  const [error, setError]         = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [deadlines, setDeadlines] = useState<PinnedDeadline[] | null>(null);
+  const fetched = useRef(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await getDeadlinesFull(FIRM_ID);
-      setDeadlines(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load deadlines');
-    }
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+    Promise.all([
+      getDeadlinesFull(FIRM_ID),
+      getRelationships(FIRM_ID),
+    ]).then(([rawDl, rels]) => {
+      const relMap = new Map<string, { client_name: string; matter_name: string }>(
+        rels.map((r: RelationshipMatter) => [r.matter_id, { client_name: r.client_name, matter_name: r.matter_name }])
+      );
+      const pinned: PinnedDeadline[] = (rawDl as RawDeadline[])
+        .filter(d => d.days_out != null && d.days_out >= 0)
+        .sort((a, b) => (a.days_out ?? 999) - (b.days_out ?? 999))
+        .map(d => {
+          const names = relMap.get(d.matter_id);
+          return {
+            id:            d.id,
+            client:        names?.client_name ?? d.client_id ?? d.matter_id,
+            description:   d.description,
+            cls:           d.classification,
+            daysOut:       d.days_out ?? 0,
+            isUnconfirmed: d.verification_status === 'UNCONFIRMED',
+            due:           d.due_date,
+          };
+        });
+      setDeadlines(pinned);
+    }).catch(() => setDeadlines([]));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  if (!deadlines && !error) {
+  if (!deadlines) {
     return (
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading deadlines…</div>
+      <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+        <Mono style={{ fontSize: 12, color: T.muted }}>Loading…</Mono>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ fontSize: 13, color: '#9B2D23', marginBottom: 8 }}>{error}</div>
-        <button onClick={load} style={{ fontSize: 12, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
-      </div>
-    );
-  }
-
-  const all = deadlines ?? [];
-  const active = all.filter(d => d.status === 'ACTIVE');
-  const critical = active.filter(d => d.days_out != null && d.days_out >= 0 && d.days_out <= 1);
-  const unconfirmed = active.filter(d => d.verification_status !== 'verified');
+  const critical = deadlines.find(d => d.isUnconfirmed && d.cls === 'HARD_LEGAL');
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
-      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
-        Deadlines
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Deadline Monitor
-        </h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {critical.length > 0 && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'rgba(155,45,35,.1)', color: '#9B2D23', border: '1px solid rgba(155,45,35,.3)', borderRadius: 5, padding: '2px 8px', fontWeight: 700 }}>
-              {critical.length} CRITICAL
-            </span>
-          )}
-          {unconfirmed.length > 0 && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'rgba(169,132,53,.08)', color: '#A98435', border: '1px solid rgba(169,132,53,.3)', borderRadius: 5, padding: '2px 8px', fontWeight: 600 }}>
-              {unconfirmed.length} unconfirmed
-            </span>
-          )}
+    <div style={{ overflowY: 'auto', padding: '24px 30px 60px', height: '100%' }}>
+      <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gap: 20 }}>
+
+        {/* header */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>
+              Deadlines
+            </h1>
+            <Mono style={{
+              fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em',
+              color: T.gold, background: 'rgba(169,132,53,.1)',
+              border: '1px solid rgba(169,132,53,.28)', borderRadius: 5, padding: '2px 7px',
+            }}>
+              core job
+            </Mono>
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '66ch' }}>
+            Every court date, contractual trigger, and internal due date Litt is watching. A HARD_LEGAL deadline can't pass unseen — the escalation cadence surfaces it, and Litt holds it until you've confirmed you own it.
+          </p>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16, marginBottom: 20 }}>
-        <DeadlineTimeline deadlines={active} />
-        <CadenceLadder deadlines={active} />
-      </div>
+        {/* critical callout */}
+        {critical && (
+          <section style={{
+            background: T.surface,
+            border: `1px solid rgba(155,45,35,.32)`,
+            borderRadius: 14, overflow: 'hidden',
+            boxShadow: '0 1px 0 rgba(155,45,35,.05)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+              <div style={{ width: 4, background: T.danger, flexShrink: 0 }} />
+              <div style={{
+                flex: 1, padding: '17px 20px',
+                display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+              }}>
+                <div style={{
+                  display: 'grid', placeItems: 'center', textAlign: 'center',
+                  minWidth: 78, padding: '6px 10px', borderRadius: 11,
+                  background: T.dangerSoft, border: '1px solid rgba(155,45,35,.22)',
+                }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: T.danger, lineHeight: 1 }}>
+                    {critical.daysOut}
+                  </span>
+                  <Mono style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: T.danger, marginTop: 2 }}>
+                    days out
+                  </Mono>
+                </div>
+                <div style={{ flex: 1, minWidth: 240 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span className="litt-pulse" style={{ width: 7, height: 7, borderRadius: 999, background: T.danger, display: 'inline-block' }} />
+                    <Mono style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', color: T.danger, fontWeight: 600 }}>
+                      1 deadline needs your confirmation
+                    </Mono>
+                  </div>
+                  <div style={{ fontSize: 16.5, fontWeight: 600, color: T.ink, letterSpacing: '-.01em' }}>
+                    {critical.description} · {critical.client}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 5, flexWrap: 'wrap' }}>
+                    <ClsChip cls={critical.cls} />
+                    <Mono style={{ fontSize: 11, color: T.muted }}>Due {fmtDate(critical.due)}</Mono>
+                    <span style={{ color: T.faint }}>·</span>
+                    <Mono style={{ fontSize: 11, color: T.danger }}>UNCONFIRMED — entered the 7-day window</Mono>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/brief')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '11px 18px', borderRadius: 10,
+                    background: T.forest, color: T.brass,
+                    fontSize: 13.5, fontWeight: 600,
+                    border: 'none', cursor: 'pointer',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Confirm in closeout <Icon name="arrow" size={14} color={T.brass} />
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
-      <DeadlineBook deadlines={all} />
+        {/* 45-day timeline */}
+        <section style={{
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          borderRadius: 14, padding: '18px 22px 14px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Mono style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: T.muted, fontWeight: 600 }}>
+              The next 45 days
+            </Mono>
+          </div>
+          <Timeline items={deadlines} />
+        </section>
+
+        {/* book + cadence */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16 }}>
+          <DeadlineBook items={deadlines} total={deadlines.length} />
+          <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
+            <CadenceLadder items={deadlines} />
+            {/* deterministic note */}
+            <div style={{ background: T.audit, borderRadius: 14, padding: '15px 17px', display: 'grid', gap: 9 }}>
+              <Mono style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.09em', color: T.auditMuted }}>
+                How it runs
+              </Mono>
+              <div style={{ fontSize: 12.5, color: '#E6E2D2', lineHeight: 1.5 }}>
+                <strong style={{ color: T.brass, fontWeight: 600 }}>deadline_agent</strong> computes days-remaining with a Python function and applies the cadence by class. No model decides whether a date matters.
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 4 }}>
+                {['work: deterministic', 'llm: none', 'gate: ESCALATION'].map(t => (
+                  <Mono key={t} style={{
+                    fontSize: 10, color: T.auditAccent,
+                    background: 'rgba(158,225,199,.08)',
+                    border: '1px solid rgba(158,225,199,.2)',
+                    borderRadius: 5, padding: '2px 7px',
+                  }}>
+                    {t}
+                  </Mono>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

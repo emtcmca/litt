@@ -421,7 +421,7 @@
 
 ## Phases 3–12 — Remaining Pages
 
-- [ ] V113-P3 Deadlines page — ClsChip, timeline, DeadlineBook
+- [x] V113-P3 Deadlines page — ClsChip, timeline, DeadlineBook (Gate 1 ✓)
 - [ ] V113-P4 Collect page — WIP review list, scrubber flags, Approve
 - [ ] V113-P5 AgentConsole page — graph, inspector, sweep controls
 - [ ] V113-P6 AuditLedger page — stat strip, filters, rows, JSON export
