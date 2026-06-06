@@ -423,7 +423,7 @@
 
 - [x] V113-P3 Deadlines page — ClsChip, timeline, DeadlineBook (Gate 1 ✓)
 - [x] V113-P4 Collect page — pipeline strip, held section, scrubber table, realization card (Gate 1 ✓)
-- [ ] V113-P5 AgentConsole page — graph, inspector, sweep controls
+- [x] V113-P5 AgentConsole page — column-card graph, idle heartbeat, sweep animation, inspector panel, scrubber dock, tool catalog, frozen mode (Gate 1 ✓)
 - [ ] V113-P6 AuditLedger page — stat strip, filters, rows, JSON export
 - [ ] V113-P7 Policy page — local state, firm policy + attorney overrides
 - [ ] V113-P8 Relationships page — silence bar, going-quiet, inbound cards
