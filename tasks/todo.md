@@ -49,31 +49,44 @@
 *5 new detectors + priority sorting + 5 Gemini integrations. Gates: G1-01 → G1-14*
 
 ### New Python detectors
-- [ ] V11-P1-01 `LATE_ENTRY_CREATION` — fire when `created_at - entry_date > 3 days`; priority 2; no Gemini
-- [ ] V11-P1-02 `ENTRY_CLUSTERING` — fire when same attorney/matter/date has `>8h billed` or `>5 entries`; priority 3
-- [ ] V11-P1-03 `SEMANTIC_DUPLICATE_CANDIDATE` Python pre-filter — edit distance + shared-token check; flags pairs for Gemini review when threshold met
-- [ ] V11-P1-04 `RATE_ANOMALY` — fire when hourly rate deviates `>15%` from matter baseline; priority 2
-- [ ] V11-P1-05 `INVOICE_STALENESS` — fire when APPROVED entries older than `invoice_cycle_days`; priority 2
+- [x] V11-P1-01 `LATE_ENTRY_CREATION` — fire when `created_at - entry_date > 3 days`; priority 2; no Gemini
+- [x] V11-P1-02 `ENTRY_CLUSTERING` — fire when same attorney/matter/date has `>8h billed` or `>5 entries`; priority 3
+- [x] V11-P1-03 `SEMANTIC_DUPLICATE_CANDIDATE` Python pre-filter — edit distance + shared-token check; flags pairs for Gemini review when threshold met
+- [x] V11-P1-04 `RATE_ANOMALY` — fire when hourly rate deviates `>15%` from matter baseline; priority 2
+- [x] V11-P1-05 `INVOICE_STALENESS` — fire when APPROVED entries older than `invoice_cycle_days`; priority 2
 
 ### Signal handling
-- [ ] V11-P1-06 Sort all signals by priority descending before emitting observations
+- [x] V11-P1-06 Sort all signals by priority descending before emitting observations
 
 ### Gemini integration functions
-- [ ] V11-P1-07 `_call_gemini_anomaly_enrichment()` — priority-gated: only called for priority≥3, HARD_LEGAL context, >70% budget, or specific high-risk types; returns structured enrichment added to observation
-- [ ] V11-P1-08 `_call_gemini_narrative_quality()` — assess narrative text; emit `NARRATIVE_INSUFFICIENT` if `confidence≥0.65`; include `suggested_narrative` in `log_anomaly()` call
-- [ ] V11-P1-09 `_call_gemini_hours_plausibility()` — assess unusual hour totals; emit BLOCK if `confidence≥0.65`, WARN if `<0.65`; never gate on Gemini alone
-- [ ] V11-P1-10 `_call_gemini_semantic_duplicate()` — called only when Python pre-filter flags ≥4 entries on matter; returns duplicate pair IDs + rationale
-- [ ] V11-P1-11 `_call_gemini_matter_synthesis()` — called when ≥2 signals share `matter_id`; returns MATTER_SYNTHESIS observation text; logged as observation, never gates
+- [x] V11-P1-07 `_call_gemini_anomaly_enrichment()` — priority-gated: only called for priority≥3, HARD_LEGAL context, >70% budget, or specific high-risk types; returns structured enrichment added to observation
+- [x] V11-P1-08 `_call_gemini_narrative_quality()` — assess narrative text; emit `NARRATIVE_INSUFFICIENT` if `confidence≥0.65`; include `suggested_narrative` in `log_anomaly()` call
+- [x] V11-P1-09 `_call_gemini_hours_plausibility()` — assess unusual hour totals; emit BLOCK if `confidence≥0.65`, WARN if `<0.65`; never gate on Gemini alone
+- [x] V11-P1-10 `_call_gemini_semantic_duplicate()` — called only when Python pre-filter flags ≥4 entries on matter; returns duplicate pair IDs + rationale
+- [x] V11-P1-11 `_call_gemini_matter_synthesis()` — called when ≥2 signals share `matter_id`; returns MATTER_SYNTHESIS observation text; logged as observation, never gates
 
 ### Updated log_anomaly calls
-- [ ] V11-P1-12 Update all `log_anomaly()` calls in anomaly_agent.py to pass `severity`, `gemini_assessment`, `suggested_narrative`, `confidence` where applicable
+- [x] V11-P1-12 Update all `log_anomaly()` calls in anomaly_agent.py to pass `severity`, `gemini_assessment`, `suggested_narrative`, `confidence` where applicable
 
 ### Tests
-- [ ] V11-P1-13 `pytest tests/test_anomaly_agent.py` — all 5 new detectors fire on fixture data
-- [ ] V11-P1-14 `pytest tests/test_anomaly_agent.py` — Gemini gate respected: enrichment NOT called for priority<3 plain signals
+- [x] V11-P1-13 `pytest tests/test_anomaly_v11.py` — all 5 new detectors fire on fixture data (46 tests)
+- [x] V11-P1-14 `pytest tests/test_anomaly_v11.py` — Gemini gate respected: enrichment NOT called for priority<3 plain signals (7 gate tests)
 
 **Phase 1 gate check:**
-- [ ] G1-01 through G1-14 — per spec
+- [x] G1-01 LATE_ENTRY_CREATION fires when created_at > 3 days after entry_date — verified
+- [x] G1-02 LATE_ENTRY_CREATION does NOT fire on same-day or 3-day entries — verified
+- [x] G1-03 ENTRY_CLUSTERING fires on >5 entries same attorney/matter/date — verified
+- [x] G1-04 ENTRY_CLUSTERING fires when >8h same attorney/matter/date — verified
+- [x] G1-05 SEMANTIC_DUPLICATE_CANDIDATE pre-filter flags similar narratives on same matter — verified
+- [x] G1-06 Signals sorted priority descending before emit — verified
+- [x] G1-07 RATE_ANOMALY fires >15% deviation from attorney default_rate — verified
+- [x] G1-08 RATE_ANOMALY ignores entries with zero rate or unknown attorney — verified
+- [x] G1-09 INVOICE_STALENESS fires on APPROVED entries older than 30 days — verified
+- [x] G1-10 INVOICE_STALENESS does NOT fire on PENDING or BILLED entries — verified
+- [x] G1-11 _call_gemini_anomaly_enrichment NOT called for priority<3 with no override conditions — verified
+- [x] G1-12 _call_gemini_anomaly_enrichment called for priority≥3 — verified
+- [x] G1-13 Gemini gate calls for HARD_LEGAL context regardless of priority — verified
+- [x] G1-14 245/245 tests pass (0 regressions) — verified
 
 ---
 
