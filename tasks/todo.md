@@ -93,14 +93,25 @@
 ## Phase 2 — BillingAgent
 *Expand to APPROVED entries, WARN surfacing, budget signals, Gemini narrative, readiness check. Gates: G2-01 → G2-08*
 
-- [ ] V11-P2-01 Expand entry scan to include APPROVED entries (previously PENDING only)
-- [ ] V11-P2-02 Surface WARN-severity flags for soft issues — written to brief as `WARN_NOTICE`, no hard attorney gate
-- [ ] V11-P2-03 Budget threshold detection — compute utilization per client; emit signal at 70% and 90% thresholds
-- [ ] V11-P2-04 Build and return `budget_signals` dict from agent run — keyed by `client_id`, value is utilization data; passed to Coordinator for CommsAgent Round 2
-- [ ] V11-P2-05 Call Gemini for narrative improvement suggestion on `NARRATIVE_INSUFFICIENT` entries — populate `suggested_narrative` in `log_anomaly()` call (do not auto-apply)
-- [ ] V11-P2-06 Call `check_invoice_readiness()` before `generate_invoice()`; abort with 400 and block reason if status=BLOCK
-- [ ] V11-P2-07 Wire `/api/billing/invoice` POST route to enforce readiness check
-- [ ] V11-P2-08 `pytest tests/test_billing_agent.py` — APPROVED entries detected; WARN emitted; `budget_signals` dict populated; readiness check blocks invoice on BLOCK condition
+- [x] V11-P2-01 Expand entry scan to include APPROVED entries (previously PENDING only)
+- [x] V11-P2-02 Surface WARN-severity flags for soft issues — written to brief as `WARN_NOTICE`, no hard attorney gate
+- [x] V11-P2-03 Budget threshold detection — compute utilization per client; emit signal at 70% and 90% thresholds
+- [x] V11-P2-04 Build and return `budget_signals` dict from agent run — keyed by `client_id`, value is utilization data; passed to Coordinator for CommsAgent Round 2
+- [x] V11-P2-05 Call Gemini for narrative improvement suggestion on `NARRATIVE_INSUFFICIENT` entries — populate `suggested_narrative` in `log_anomaly()` call (do not auto-apply)
+- [x] V11-P2-06 Call `check_invoice_readiness()` before `generate_invoice()`; abort with 400 and block reason if status=BLOCK
+- [x] V11-P2-07 Wire `/api/billing/generate-invoice` POST route to enforce readiness check
+- [x] V11-P2-08 `pytest tests/test_billing_agent.py` — 12/12 pass: APPROVED entries detected; WARN emitted; `budget_signals` dict populated; readiness check blocks invoice on BLOCK condition
+
+**Phase 2 gate check:**
+- [x] G2-01 APPROVED entries included in scan — verified
+- [x] G2-02 BILLED/CLOSED/WRITTEN_OFF excluded from scan — verified
+- [x] G2-03 WARN flag produces WARN_NOTICE observation, no REVIEW_REQUIRED gate — verified
+- [x] G2-04 BLOCK flag still produces REVIEW_REQUIRED + APPROVAL_GATE_APPLIED — verified
+- [x] G2-05 budget_signals dict populated with client_id keys and utilization_pct — verified
+- [x] G2-06 90%+ budget emits WARN_NOTICE with CommitmentLevel.REVIEW_REQUIRED — verified
+- [x] G2-07 70%+ budget emits WARN_NOTICE with CommitmentLevel.AUTO_SAFE — verified
+- [x] G2-08 /api/billing/generate-invoice returns 400 when pending entries block readiness — verified
+- [x] 257/257 tests pass (0 regressions) — verified
 
 ---
 

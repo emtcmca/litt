@@ -7,7 +7,7 @@ import uuid
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
 from app.scrubber.prebill import run_prebill_scrubber
@@ -15,6 +15,7 @@ from app.tools.alerts import dismiss_alert
 from app.db import collection_ref
 from app.tools.billing import (
     advance_entry_status,
+    check_invoice_readiness,
     compute_budget_utilization,
     generate_invoice,
     update_entry_narrative,
@@ -258,6 +259,22 @@ def billing_budget(client_id: str, firm_id: str):
 @router.post("/billing/generate-invoice")
 def billing_generate_invoice(req: GenerateInvoice):
     from datetime import date
+    # V11-P2-06: enforce readiness check before generation
+    readiness = check_invoice_readiness(req.firm_id, req.client_id)
+    if not readiness["ready"]:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "INVOICE_NOT_READY",
+                "message": (
+                    f"{len(readiness['blocking_entries'])} PENDING "
+                    f"{'entry' if len(readiness['blocking_entries']) == 1 else 'entries'} "
+                    f"must be approved or resolved before generating invoice."
+                ),
+                "blocking_entries": readiness["blocking_entries"],
+                "warn_entries": readiness["warn_entries"],
+            },
+        )
     return _tool_resp(generate_invoice(
         firm_id=req.firm_id,
         client_id=req.client_id,
