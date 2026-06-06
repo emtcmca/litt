@@ -425,7 +425,7 @@
 - [x] V113-P4 Collect page — pipeline strip, held section, scrubber table, realization card (Gate 1 ✓)
 - [x] V113-P5 AgentConsole page — column-card graph, idle heartbeat, sweep animation, inspector panel, scrubber dock, tool catalog, frozen mode (Gate 1 ✓)
 - [x] V113-P6 AuditLedger page — stat strip, filters, rows, JSON export (Gate 1 ✓)
-- [ ] V113-P7 Policy page — local state, firm policy + attorney overrides
+- [x] V113-P7 Policy page — local state, firm policy + attorney overrides (Gate 1 ✓)
 - [ ] V113-P8 Relationships page — silence bar, going-quiet, inbound cards
 - [ ] V113-P9 Budgets page — BudgetBar per client
 - [ ] V113-P10 Anomalies page — detector roster, expand cards
