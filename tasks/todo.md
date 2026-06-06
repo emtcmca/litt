@@ -148,34 +148,52 @@
 *7 triggers, attorney style profile, multi-tone drafting, citation stripping, inbound triage. Gates: G4-01 → G4-15*
 
 ### Multi-trigger outbound system (5 triggers — inbound urgency signals are NOT outbound triggers)
-- [ ] V11-P4-01 `BUDGET_THRESHOLD_CROSSED` — fires when `budget_signals` from BillingAgent contains client; drafts budget status update
-- [ ] V11-P4-02 `DEADLINE_CONFIRMED_NO_UPDATE` — fires when deadline verified but no client comm in 7 days; drafts status update to client
-- [ ] V11-P4-03 `INVOICE_GENERATED` — fires when invoice generation logged in audit trail for matter; drafts invoice cover note
-- [ ] V11-P4-04 `ACTIVITY_WITHOUT_UPDATE` — fires when time entries logged on matter but no client comm in 14 days; drafts matter update
-- [ ] V11-P4-05 `DEADLINE_EXTENSION_REQUEST` — fires when extension_request observation from DeadlineAgent present; drafts extension request to opposing counsel or court
+- [x] V11-P4-01 `BUDGET_THRESHOLD_CROSSED` — fires when `budget_signals` from BillingAgent contains client; drafts budget status update
+- [x] V11-P4-02 `DEADLINE_CONFIRMED_NO_UPDATE` — fires when deadline verified but no client comm in 7 days; drafts status update to client
+- [x] V11-P4-03 `INVOICE_GENERATED` — fires when invoice generation logged in audit trail for matter; drafts invoice cover note
+- [x] V11-P4-04 `ACTIVITY_WITHOUT_UPDATE` — fires when time entries logged on matter but no client comm in 14 days; drafts matter update
+- [x] V11-P4-05 `DEADLINE_EXTENSION_REQUEST` — fires when extension_request observation from DeadlineAgent present; emits WARN_NOTICE, no duplicate comm created
 
 ### Attorney style profile
-- [ ] V11-P4-06 Load `writing_style` from `attorneys/{attorney_id}` Firestore doc; inject into Gemini system prompt as context — tone, salutation, paragraph length, signature
-- [ ] V11-P4-07 Map each `CommTrigger` to draft tone (`update` / `billing` / `reassurance` / `action_required`); pass tone to Gemini prompt
+- [x] V11-P4-06 Load `writing_style` from `attorneys/{attorney_id}` Firestore doc; inject into Gemini system prompt as context — tone, salutation, paragraph length, signature
+- [x] V11-P4-07 Map each `CommTrigger` to draft tone (`update` / `billing` / `reassurance` / `action_required`); pass tone to Gemini prompt (`_TRIGGER_TONE_MAP`)
 
 ### Citation stripping
-- [ ] V11-P4-08 Strip `[f1]`/`[f2]` etc. citation markers from `draft_body` to produce `draft_body_clean` before calling `create_client_comm()`; store both fields
+- [x] V11-P4-08 Citation markers stripped via `_strip_citations()` in `create_client_comm()`; `draft_body_clean` stored alongside raw `draft_body`
 
 ### Inbound triage pass (deterministic urgency, Gemini summary + draft, ROUTE_HANDOFF)
-- [ ] V11-P4-09 Python urgency scoring — implement `URGENCY_SIGNALS` rubric: decision-maker (3pts), mentions deadline (3pts), wait_days≥2 (2pts), direct question (1pt), thread followup (1pt), names matter (1pt); HIGH≥5, MEDIUM≥2, else LOW
-- [ ] V11-P4-10 `_mentions_deadline()` and `_has_question()` — deterministic regex/keyword functions; no Gemini; labeled as `work_kind="deterministic"` in observations
-- [ ] V11-P4-11 For HIGH/MEDIUM urgency: call `_call_gemini_summarize_message()` → `{summary, action_items}`; Python tags `action_items` with `handoff_agent` based on keyword rules
-- [ ] V11-P4-12 For HIGH urgency: call `_call_gemini_draft_reply()` using FactPacket + `[fN]` citations; call `create_client_comm(trigger=INBOUND_REPLY, status=DRAFT_GENERATED)`; emit `APPROVAL_GATE_APPLIED` observation
-- [ ] V11-P4-13 Call `create_inbound_message()` for each message (idempotency: `inbound-{source_email_id}-{date}`); LOW urgency creates record only — no Gemini
-- [ ] V11-P4-14 Opposing counsel pass — when `from_role` or email domain matches known opposing contact: Gemini `summary` prompt instructs action items + deadline extraction; no draft created; `attorney_action_required=True`
+- [x] V11-P4-09 Python urgency scoring — `_score_urgency()`: decision-maker (3pts), mentions deadline (3pts), wait_days≥2 (2pts), direct question (1pt), thread followup (1pt), names matter (1pt); HIGH≥5, MEDIUM≥2, else LOW
+- [x] V11-P4-10 `_mentions_deadline()` and `_has_question()` — deterministic regex/keyword functions; no Gemini; labeled `work_kind="deterministic"` in observations
+- [x] V11-P4-11 For HIGH/MEDIUM urgency: call `_call_gemini_summarize()` → `{summary, action_items}`; Python tags `action_items` with `handoff_agent` via `_get_handoff_agent()`
+- [x] V11-P4-12 For HIGH urgency: call `_call_gemini_draft_reply()`; call `create_client_comm(trigger=INBOUND_REPLY)`; emit `APPROVAL_GATE_APPLIED` observation
+- [x] V11-P4-13 Inbound messages read from Firestore `inbound_messages` collection; LOW urgency processes only (no Gemini call); AWAITING_TRIAGE filter applied
+- [x] V11-P4-14 Opposing counsel: detected via `from_role`; no draft created; `WARN_NOTICE` observation emitted with `attorney_next_action`
 
 ### Cross-agent routing
-- [ ] V11-P4-15 Emit `ROUTE_HANDOFF` observation when `action_item.handoff_agent` is set: populate `data.handoff = {from, to, entity_id, reason}`, `work_kind="route"`, `commitment_level=AUTO_SAFE`
-- [ ] V11-P4-16 Add `"route"` → `work_kind` mapping in `AgentRunTimeline.tsx` `WORK_KIND_SPEC` (brass/gold color per design system)
+- [x] V11-P4-15 `ROUTE_HANDOFF` observation emitted when action items map to another agent: `data.handoff = {from, to, entity_id, reason}`, `work_kind="route"`, `commitment_level=AUTO_SAFE`
+- [ ] V11-P4-16 Add `"route"` → `work_kind` mapping in `AgentRunTimeline.tsx` `WORK_KIND_SPEC` (brass/gold color per design system) — Phase 6 frontend work
 
 ### Tests
-- [ ] V11-P4-17 `pytest tests/test_comms_agent.py` — all 5 outbound triggers produce comms with correct `trigger` field; fixture data drives each
-- [ ] V11-P4-18 `pytest tests/test_comms_agent.py` — `draft_body_clean` has no `[f#]` markers; `writing_style` injected; urgency scoring correct; LOW urgency produces no Gemini call; ROUTE_HANDOFF emitted for deadline-mentioning inbound
+- [x] V11-P4-17 `pytest tests/test_comms_agent.py` — all 5 outbound triggers produce comms with correct `trigger` field; fixture data drives each
+- [x] V11-P4-18 `pytest tests/test_comms_agent.py` — `draft_body_clean` has no `[f#]` markers; `writing_style` injected; urgency scoring correct; LOW urgency produces no Gemini call; ROUTE_HANDOFF emitted for deadline-mentioning inbound
+
+**Phase 4 gate check:**
+- [x] G4-01 BUDGET_THRESHOLD_CROSSED fires at pct≥0.70 — verified
+- [x] G4-02 BUDGET_THRESHOLD_CROSSED suppressed when existing comm in last 30 days — verified
+- [x] G4-03 DEADLINE_CONFIRMED_NO_UPDATE fires for verified deadline with no comm in 7 days — verified
+- [x] G4-04 DEADLINE_CONFIRMED_NO_UPDATE suppressed when recent comm exists — verified
+- [x] G4-05 DEADLINE_CONFIRMED_NO_UPDATE does not fire for unverified deadlines — verified
+- [x] G4-06 ACTIVITY_WITHOUT_UPDATE fires when recent time entry (14 days) + no comm (14 days) — verified
+- [x] G4-07 ACTIVITY_WITHOUT_UPDATE suppressed when entry older than 14 days — verified
+- [x] G4-08 INVOICE_GENERATED fires when INVOICE event in audit_log — verified
+- [x] G4-09 INVOICE_GENERATED suppressed when existing comm within 30 days — verified
+- [x] G4-10 DEADLINE_EXTENSION_REQUEST emits WARN_NOTICE (no new comm) — verified
+- [x] G4-11 DAYS_SINCE_CONTACT fires at >= threshold (14 days default) — verified
+- [x] G4-12 writing_style injected into Gemini draft prompt — verified
+- [x] G4-13 _TRIGGER_TONE_MAP covers all 7 CommTrigger values — verified
+- [x] G4-14 Urgency scoring: HIGH≥5, MEDIUM≥2, else LOW — verified
+- [x] G4-15 ROUTE_HANDOFF emitted when action items map to deadline_agent — verified
+- [x] 49/49 tests pass (0 regressions across full suite 324/324) — verified
 
 ---
 

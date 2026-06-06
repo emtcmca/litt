@@ -175,9 +175,9 @@ def test_generate_observation_id_uniqueness():
 
 
 def test_generate_observation_id_uses_demo_clock():
-    # Demo mode frozen to 2026-05-29 — ID should contain that date
+    # Demo mode frozen to 2026-06-25 (conftest.py force-sets this) — ID should contain that date
     obs_id = generate_observation_id("deadline_agent", 0)
-    assert "20260529" in obs_id
+    assert "20260625" in obs_id
 
 
 def test_generate_observation_id_slug_normalization():

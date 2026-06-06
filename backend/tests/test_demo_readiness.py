@@ -59,7 +59,7 @@ class TestDeadlineMercerCheck:
         result = self._run({
             "id": "dl-mercer-001", "status": "ACTIVE",
             "verification_status": "attorney_verified",
-            "due_date": "2026-06-04",
+            "due_date": "2026-07-01",  # 6 days out from demo anchor 2026-06-25
             "last_confirmed_by": None, "classification": "HARD_LEGAL",
             "version": 1,
         })
@@ -75,7 +75,7 @@ class TestDeadlineMercerCheck:
         result = self._run({
             "id": "dl-mercer-001", "status": "RESOLVED",
             "verification_status": "attorney_verified",
-            "due_date": "2026-06-04", "last_confirmed_by": None, "version": 1,
+            "due_date": "2026-07-01", "last_confirmed_by": None, "version": 1,
         })
         assert result["pass"] is False
 
@@ -83,7 +83,8 @@ class TestDeadlineMercerCheck:
         result = self._run({
             "id": "dl-mercer-001", "status": "ACTIVE",
             "verification_status": "attorney_verified",
-            "due_date": "2026-06-04", "last_confirmed_by": "dana-strand", "version": 1,
+            "due_date": "2026-07-01",  # 6 days out from demo anchor 2026-06-25
+            "last_confirmed_by": "dana-strand", "version": 1,
         })
         assert result["pass"] is False
         assert "confirmed" in result["detail"]
@@ -92,7 +93,7 @@ class TestDeadlineMercerCheck:
         result = self._run({
             "id": "dl-mercer-001", "status": "ACTIVE",
             "verification_status": "unverified",
-            "due_date": "2026-06-04", "last_confirmed_by": None, "version": 1,
+            "due_date": "2026-07-01", "last_confirmed_by": None, "version": 1,
         })
         assert result["pass"] is False
 
@@ -248,7 +249,7 @@ class TestAcmeBudgetCheck:
 
 WHITMORE_MATTER = {
     "id": "whitmore-employment-2026", "status": "ACTIVE",
-    "last_client_contact": _dt(2026, 5, 13),  # 16 days before demo date
+    "last_client_contact": _dt(2026, 6, 9),  # 16 days before demo anchor 2026-06-25
     "client_id": "whitmore-group",
 }
 
@@ -277,7 +278,8 @@ class TestWhitmoreSilenceCheck:
         assert "16 days" in result["detail"]
 
     def test_fails_with_recent_contact(self):
-        recent_matter = {**WHITMORE_MATTER, "last_client_contact": _dt(2026, 5, 26)}
+        # 5 days before demo anchor — within 14-day threshold, so silence check should fail
+        recent_matter = {**WHITMORE_MATTER, "last_client_contact": _dt(2026, 6, 20)}
         result = self._run(recent_matter)
         assert result["pass"] is False
 
