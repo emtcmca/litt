@@ -427,9 +427,9 @@
 - [x] V113-P6 AuditLedger page — stat strip, filters, rows, JSON export (Gate 1 ✓)
 - [x] V113-P7 Policy page — local state, firm policy + attorney overrides (Gate 1 ✓)
 - [x] V113-P8 Relationships page — inbound cards, commitment tracker, silence hero, relationship board (Gate 1 ✓)
-- [ ] V113-P9 Budgets page — BudgetBar per client
-- [ ] V113-P10 Anomalies page — detector roster, expand cards
-- [ ] V113-P11 Integrations page — integration tiles
+- [x] V113-P9 Budgets page — stat strip, utilization list, 75%/90% threshold bar (Gate 1 ✓)
+- [x] V113-P10 Anomalies page — ELEVATED callout, 13-detector roster, cleared today panel (Gate 1 ✓)
+- [x] V113-P11 Integrations page — 4 integration tiles, status pills, Connect CTA (Gate 1 ✓)
 - [ ] V113-P12 Brief page — port console-brief.jsx
 
 ---

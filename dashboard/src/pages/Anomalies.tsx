@@ -1,191 +1,140 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { BriefAnomalyItem, BriefResponse } from '../types';
+import { T } from '../tokens';
+import { Icon } from '../components/ui/Icon';
 import { getBrief } from '../api';
 
 const FIRM_ID = 'strand-okafor';
 
-const RISK_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  CRITICAL: { color: '#9B2D23', bg: 'rgba(155,45,35,.08)', border: 'rgba(155,45,35,.3)' },
-  ELEVATED: { color: '#A98435', bg: 'rgba(169,132,53,.08)', border: 'rgba(169,132,53,.3)' },
-  ROUTINE:  { color: '#5C6B64', bg: 'rgba(92,107,100,.06)', border: 'rgba(92,107,100,.2)' },
-};
+// Static detector roster — display only (not API-driven). Source: console-stubs.jsx DETECTORS.
+// 13 detectors; do NOT map 1:1 to the 11-value AnomalyType enum.
+const DETECTORS: [string, number][] = [
+  ['Missing narrative', 1], ['Vague narrative', 0], ['Duplicate entry', 0], ['Round hours, no session', 0],
+  ['Rate deviation', 0], ['Block-billing', 0], ['Forbidden phrases', 0], ['Stale pending (>30d)', 0],
+  ['After-hours spike', 0], ['Excessive daily hours', 0], ['Weekend anomaly', 0], ['Negative duration', 0], ['Budget overrun', 0],
+];
 
-function AnomalyCard({ item }: { item: BriefAnomalyItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const rs = RISK_STYLE[item.risk_level] ?? RISK_STYLE.ROUTINE;
+// Static cleared list — brief has no cleared_today count in v1.x
+const CLEARED = [
+  { what: 'Duplicate of te-014 — auto-merged', when: '4:31 PM', by: 'billing_agent' },
+  { what: 'Round-hours entry te-009 — session log matched', when: '2:02 PM', by: 'Dana Strand' },
+];
 
+function ElevatedCallout({ item }: { item: BriefAnomalyItem }) {
+  const navigate = useNavigate();
   return (
-    <div style={{
-      background: 'var(--color-background-primary)',
-      border: `1px solid ${rs.border}`,
-      borderLeft: `3px solid ${rs.color}`,
-      borderRadius: 8,
-      overflow: 'hidden',
-    }}>
-      <button
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          width: '100%', textAlign: 'left', background: 'none', border: 'none',
-          cursor: 'pointer', padding: '12px 16px',
-          display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, alignItems: 'start',
-        }}
-      >
-        <span style={{
-          fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.06em',
-          color: rs.color, background: rs.bg, border: `1px solid ${rs.border}`,
-          borderRadius: 3, padding: '2px 6px', marginTop: 1,
-          whiteSpace: 'nowrap',
-        }}>
-          {item.risk_level}
+    <section style={{ background: T.surface, border: 'rgba(155,45,35,.3) solid 1px', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', flexWrap: 'wrap' as const, borderLeft: `4px solid ${T.danger}` }}>
+        <span style={{ width: 36, height: 36, borderRadius: 9, background: T.dangerSoft, border: '1px solid rgba(155,45,35,.22)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <Icon name="alert" size={18} color={T.danger} />
         </span>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
-            {item.what_is_happening}
-          </div>
-          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', marginTop: 3 }}>
-            {item.entity_type} · {item.entity_id}
-            {item.matter_id && <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)' }}>matter: {item.matter_id}</span>}
-          </div>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <span style={{ fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.danger, fontWeight: 600, fontFamily: 'var(--font-mono)', display: 'block' }}>
+            1 elevated · reason required to clear
+          </span>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: T.ink, marginTop: 3 }}>{item.what_is_happening}</div>
+          <span style={{ fontSize: 11.5, color: T.muted, fontFamily: 'var(--font-mono)' }}>
+            {item.entity_type} · {item.entity_id}{item.matter_id ? ` · ${item.matter_id}` : ''} · priority {item.priority}
+          </span>
         </div>
-        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
-          {expanded ? '▾' : '▸'}
-        </span>
-      </button>
-
-      {expanded && (
-        <div style={{ padding: '0 16px 14px', borderTop: '1px solid var(--color-border-tertiary)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <div>
-              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-tertiary)', marginBottom: 4, fontWeight: 600 }}>
-                Why it matters
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                {item.why_it_matters}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-tertiary)', marginBottom: 4, fontWeight: 600 }}>
-                What Litt has done
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                {item.what_litt_has_done}
-              </div>
-            </div>
-          </div>
-          <div style={{
-            marginTop: 10,
-            padding: '10px 12px',
-            background: '#14221F',
-            border: '1px solid rgba(158,225,199,.12)',
-            borderRadius: 6,
-          }}>
-            <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(158,225,199,.5)', marginBottom: 4, fontWeight: 600 }}>
-              Attorney must decide
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', lineHeight: 1.5 }}>
-              {item.what_attorney_must_decide}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <button onClick={() => navigate('/brief')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.forest, color: T.brass, fontSize: 12.5, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const }}>
+          Resolve in closeout <Icon name="arrow" size={12} color={T.brass} />
+        </button>
+      </div>
+    </section>
   );
 }
 
 export function Anomalies() {
   const [brief, setBrief] = useState<BriefResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+  const firingCount = DETECTORS.reduce((s, d) => s + d[1], 0);
 
   const load = useCallback(async () => {
     try {
       const data = await getBrief(FIRM_ID);
       setBrief(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load anomalies');
+      setError(e instanceof Error ? e.message : 'Failed to load');
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    load();
+  }, [load]);
 
-  if (!brief && !error) {
-    return (
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading…</div>
-      </div>
-    );
-  }
+  if (!brief && !error) return <div style={{ padding: '28px 32px', fontSize: 13, color: T.muted }}>Loading…</div>;
+  if (error) return <div style={{ padding: '28px 32px', fontSize: 13, color: T.danger }}>{error}</div>;
 
-  if (error) {
-    return (
-      <div style={{ padding: '28px 32px' }}>
-        <div style={{ fontSize: 13, color: '#9B2D23', marginBottom: 8 }}>{error}</div>
-        <button onClick={load} style={{ fontSize: 12, color: '#1D9E75', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
-      </div>
-    );
-  }
-
-  const items = brief?.sections.anomalies.items ?? [];
-  const critical = items.filter(i => i.risk_level === 'CRITICAL');
-  const elevated = items.filter(i => i.risk_level === 'ELEVATED');
-  const routine  = items.filter(i => i.risk_level === 'ROUTINE');
+  const items   = brief?.sections.anomalies.items ?? [];
+  const elevated = items.find(i => i.risk_level === 'ELEVATED' || i.risk_level === 'CRITICAL');
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 900 }}>
-      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
-        Anomalies
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Anomaly Roster
-        </h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {critical.length > 0 && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'rgba(155,45,35,.1)', color: '#9B2D23', border: '1px solid rgba(155,45,35,.3)', borderRadius: 5, padding: '2px 8px', fontWeight: 700 }}>
-              {critical.length} CRITICAL
-            </span>
-          )}
-          {elevated.length > 0 && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'rgba(169,132,53,.08)', color: '#A98435', border: '1px solid rgba(169,132,53,.3)', borderRadius: 5, padding: '2px 8px', fontWeight: 600 }}>
-              {elevated.length} ELEVATED
-            </span>
-          )}
-          {routine.length > 0 && (
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'rgba(92,107,100,.06)', color: '#5C6B64', border: '1px solid rgba(92,107,100,.2)', borderRadius: 5, padding: '2px 8px' }}>
-              {routine.length} ROUTINE
-            </span>
-          )}
-        </div>
-      </div>
+    <div style={{ overflowY: 'auto', padding: '24px 30px 60px', height: '100%' }}>
+      <div style={{ maxWidth: 920, margin: '0 auto', display: 'grid', gap: 18 }}>
 
-      {/* Stat strip */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: 'Total anomalies', value: items.length, color: 'var(--color-text-primary)' },
-          { label: 'Critical',        value: critical.length, color: '#9B2D23' },
-          { label: 'Elevated',        value: elevated.length, color: '#A98435' },
-        ].map(s => (
-          <div key={s.label} style={{
-            flex: 1, background: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)',
-            borderRadius: 8, padding: '12px 14px',
-          }}>
-            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3 }}>{s.label}</div>
+        {/* header */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Anomalies</h1>
+            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.gold, background: `${T.gold}1a`, border: `1px solid ${T.gold}44`, borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>watch</span>
           </div>
-        ))}
-      </div>
+          <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '64ch' }}>
+            Thirteen deterministic detectors run over every billing and operational pattern, scored by severity × confidence. Nothing is dismissed silently — clearing an anomaly always requires a reason on the record.
+          </p>
+        </div>
 
-      {items.length === 0 ? (
-        <div style={{ background: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: 24, textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No anomalies detected in the current brief.</div>
+        {/* elevated callout */}
+        {elevated && <ElevatedCallout item={elevated} />}
+
+        {/* 2-col: detector roster + cleared today */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16 }}>
+          {/* detector grid */}
+          <section style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: '15px 17px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '.09em', color: T.muted, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>Detectors</span>
+              <span style={{ fontSize: 10.5, color: firingCount ? T.danger : T.teal, fontFamily: 'var(--font-mono)' }}>{firingCount} firing · {DETECTORS.length} total</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+              {DETECTORS.map(([name, n]) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 999, background: n ? T.dangerSoft : 'rgba(29,158,117,.12)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <Icon name={n ? 'alert' : 'check'} size={8.5} color={n ? T.danger : T.teal} stroke={2.6} />
+                  </span>
+                  <span style={{ fontSize: 11.5, color: n ? T.ink : T.muted, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
+                  {n > 0 && <span style={{ fontSize: 10.5, color: T.danger, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{n}</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* cleared today */}
+          <section style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 14, padding: '15px 17px' }}>
+            <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '.09em', color: T.muted, fontWeight: 600, display: 'block', marginBottom: 11, fontFamily: 'var(--font-mono)' }}>Cleared today</span>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {CLEARED.map(c => (
+                <div key={c.what} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+                  <span style={{ width: 16, height: 16, borderRadius: 999, background: 'rgba(29,158,117,.12)', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
+                    <Icon name="check" size={9} color={T.teal} stroke={2.6} />
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: T.ink, lineHeight: 1.35 }}>{c.what}</div>
+                    <span style={{ fontSize: 10, color: T.faint, fontFamily: 'var(--font-mono)' }}>{c.when} · {c.by}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <span style={{ fontSize: 10.5, color: T.faint, display: 'block', marginTop: 13, paddingTop: 11, borderTop: `1px solid ${T.soft}`, lineHeight: 1.5, fontFamily: 'var(--font-mono)' }}>
+              Each clearance carries a reason and is appended to the audit ledger.
+            </span>
+          </section>
         </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {[...items].sort((a, b) => a.priority - b.priority).map(item => (
-            <AnomalyCard key={item.escalation_id} item={item} />
-          ))}
-        </div>
-      )}
+
+      </div>
     </div>
   );
 }
