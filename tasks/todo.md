@@ -304,23 +304,24 @@
 *Thin read endpoints + prototype UI. Writes already exist. No new entities.*
 
 ### New backend endpoints
-- [ ] V112-P1-01 `GET /api/budgets?firm_id` — per-matter/client utilization list (reuse `compute_budget_utilization()`)
-- [ ] V112-P1-02 `GET /api/relationships?firm_id` — matters with `days_since_contact` and `last_client_contact`
+- [x] V112-P1-01 `GET /api/budgets?firm_id` — per-matter/client utilization list (reuse `compute_budget_utilization()`)
+- [x] V112-P1-02 `GET /api/relationships?firm_id` — matters with `days_since_contact` and `last_client_contact`
 
 ### New frontend pages (real data)
-- [ ] V112-P1-03 `pages/Deadlines.tsx` — DeadlineTimeline (45-day horizon), CadenceLadder (14·7·3·1 window), DeadlineBook (filterable table)
-- [ ] V112-P1-04 `pages/Collect.tsx` — WIP review list over existing billing/scrubber data
-- [ ] V112-P1-05 `pages/Budgets.tsx` — BudgetBar per client from `GET /api/budgets`
-- [ ] V112-P1-06 `pages/Anomalies.tsx` — DetectorRoster from existing `BriefAnomalyItem` data
-- [ ] V112-P1-07 `pages/AuditLedger.tsx` — LedgerStatStrip + LedgerFilters + LedgerRow with expand (upgrade AuditLog)
-- [ ] V112-P1-08 `pages/Relationships.tsx` — stub expanded with going-quiet section from brief silence data
+- [x] V112-P1-03 `pages/Deadlines.tsx` — DeadlineTimeline (45-day horizon), CadenceLadder (14·7·3·1 window), DeadlineBook (filterable table)
+- [x] V112-P1-04 `pages/Collect.tsx` — WIP review list over existing billing/scrubber data; scrubber flags, suggested narrative, Approve action
+- [x] V112-P1-05 `pages/Budgets.tsx` — BudgetBar per client from `GET /api/budgets`
+- [x] V112-P1-06 `pages/Anomalies.tsx` — DetectorRoster from existing `BriefAnomalyItem` data; expand cards with why/what/decide
+- [x] V112-P1-07 `pages/AuditLedger.tsx` — LedgerStatStrip + LedgerFilters + LedgerRow with expand + JSON export
+- [x] V112-P1-08 `pages/Relationships.tsx` — SilenceBar per matter, going-quiet flag, "How Litt handles" card
+- [x] V112-P1-09 `AuditLog.tsx` fix — DEMO_FIRM_NAME constant restored (removed erroneously in Phase 0)
 
 **Phase 1 gate check:**
-- [ ] G1-01 Deadlines page shows real deadline data from `GET /api/deadlines`
-- [ ] G1-02 Budgets page shows real utilization from `GET /api/budgets`
-- [ ] G1-03 Anomalies page shows real anomaly items
-- [ ] G1-04 `tsc --noEmit` zero errors
-- [ ] G1-05 342/342 backend tests pass
+- [x] G1-01 Deadlines page shows real deadline data from `GET /api/deadlines`
+- [x] G1-02 Budgets page shows real utilization from `GET /api/budgets`
+- [x] G1-03 Anomalies page shows real anomaly items
+- [x] G1-04 `tsc --noEmit` zero errors — verified
+- [x] G1-05 342/342 backend tests pass — verified
 
 ---
 

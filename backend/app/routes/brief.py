@@ -215,6 +215,83 @@ def get_inbound(firm_id: str, attorney_id: str = "dana-strand"):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.get("/budgets")
+def get_budgets(firm_id: str):
+    """Per-client budget utilization for the Budgets page. Reuses compute_budget_utilization()."""
+    from app.tools.billing import compute_budget_utilization
+    from app.models import ToolError
+    try:
+        client_docs = list(collection_ref(firm_id, "clients").stream())
+        result = []
+        for doc in client_docs:
+            client = doc.to_dict()
+            client_id = client.get("id") or doc.id
+            util = compute_budget_utilization(firm_id, client_id)
+            if isinstance(util, ToolError):
+                continue
+            result.append({
+                "client_id":       client_id,
+                "client_name":     client.get("name", client_id),
+                "utilization_pct": float(util.utilization_pct),
+                "billed_to_date":  float(util.billed_to_date),
+                "approved_unbilled": float(util.approved_unbilled),
+                "total_committed": float(util.total_committed),
+                "budget_cap":      float(util.budget_cap),
+                "alert_status":    util.alert_status,
+            })
+        result.sort(key=lambda x: x["utilization_pct"], reverse=True)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/relationships")
+def get_relationships(firm_id: str):
+    """Matters with days_since_contact for the Relationships page."""
+    from app.config import get_effective_date
+    from datetime import datetime
+    try:
+        today = get_effective_date()
+        matter_docs = list(collection_ref(firm_id, "matters").stream())
+        client_docs = {doc.id: doc.to_dict() for doc in collection_ref(firm_id, "clients").stream()}
+        result = []
+        for doc in matter_docs:
+            m = doc.to_dict()
+            if m.get("status") not in ("ACTIVE", "active"):
+                continue
+            last_contact_raw = m.get("last_client_contact")
+            days_since: int | None = None
+            if last_contact_raw:
+                try:
+                    if isinstance(last_contact_raw, str):
+                        lc = datetime.fromisoformat(last_contact_raw[:10]).date()
+                    elif hasattr(last_contact_raw, "date"):
+                        lc = last_contact_raw.date()
+                    else:
+                        lc = last_contact_raw
+                    days_since = (today - lc).days
+                except Exception:
+                    pass
+            client_id = m.get("client_id", "")
+            client = client_docs.get(client_id, {})
+            threshold = client.get("client_silence_threshold_days", 14) if client else 14
+            result.append({
+                "matter_id":       m.get("id") or doc.id,
+                "matter_name":     m.get("name", ""),
+                "client_id":       client_id,
+                "client_name":     client.get("name", client_id),
+                "last_client_contact": m.get("last_client_contact"),
+                "days_since_contact": days_since,
+                "silence_threshold_days": threshold,
+                "going_quiet": (days_since is not None and days_since >= threshold),
+                "status":          m.get("status"),
+            })
+        result.sort(key=lambda x: (x.get("days_since_contact") or 0), reverse=True)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.get("/sweep/{run_id}", response_model=AgentRunTimeline)
 def get_sweep_timeline(run_id: str, firm_id: str):
     """

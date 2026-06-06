@@ -4,6 +4,7 @@ import type { AuditLogEvent, AuditTier } from '../types';
 import { getAuditLog } from '../api';
 
 const FIRM_ID = 'strand-okafor';
+const DEMO_FIRM_NAME = 'Strand & Okafor LLP';
 
 const TIER_META: Record<AuditTier, { label: string; bg: string; color: string; border: string }> = {
   legal_defensibility: {

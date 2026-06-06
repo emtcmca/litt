@@ -548,3 +548,44 @@ export interface DemoResetResponse {
   records_created: number;
   duration_ms: number;
 }
+
+// ---------------------------------------------------------------------------
+// Console UI — new read endpoints (v1.1.2)
+// ---------------------------------------------------------------------------
+
+export interface RawDeadline {
+  id: string;
+  status: string;
+  verification_status: string;
+  due_date: string;
+  description: string;
+  classification: "HARD_LEGAL" | "HARD_CONTRACTUAL" | "SOFT_INTERNAL" | "ADMINISTRATIVE";
+  matter_id: string;
+  client_id?: string;
+  days_out: number | null;
+  escalation_level: string | null;
+  email_reference?: string | null;
+}
+
+export interface BudgetUtilizationItem {
+  client_id: string;
+  client_name: string;
+  utilization_pct: number;
+  billed_to_date: number;
+  approved_unbilled: number;
+  total_committed: number;
+  budget_cap: number;
+  alert_status: string;
+}
+
+export interface RelationshipMatter {
+  matter_id: string;
+  matter_name: string;
+  client_id: string;
+  client_name: string;
+  last_client_contact: string | null;
+  days_since_contact: number | null;
+  silence_threshold_days: number;
+  going_quiet: boolean;
+  status: string;
+}

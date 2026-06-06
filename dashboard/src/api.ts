@@ -12,6 +12,7 @@ import type {
   BillingWriteDownRequest,
   BillingWriteOffRequest,
   BriefResponse,
+  BudgetUtilizationItem,
   CommsApproveRequest,
   CommsDismissRequest,
   CommsQueueRequest,
@@ -22,6 +23,8 @@ import type {
   DemoReadyResponse,
   DemoResetResponse,
   MatterSummary,
+  RawDeadline,
+  RelationshipMatter,
   ScrubberFlag,
   SourceEmail,
   SweepRunResponse,
@@ -192,6 +195,22 @@ export function normalizeNarrative(req: TimerNormalizeRequest): Promise<TimerNor
 
 export function captureTimerEntry(req: TimerCaptureRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/timer/capture", req);
+}
+
+// ---------------------------------------------------------------------------
+// Console UI read endpoints (v1.1.2)
+// ---------------------------------------------------------------------------
+
+export function getDeadlinesFull(firmId: string): Promise<RawDeadline[]> {
+  return get<RawDeadline[]>("/deadlines", { firm_id: firmId });
+}
+
+export function getBudgets(firmId: string): Promise<BudgetUtilizationItem[]> {
+  return get<BudgetUtilizationItem[]>("/budgets", { firm_id: firmId });
+}
+
+export function getRelationships(firmId: string): Promise<RelationshipMatter[]> {
+  return get<RelationshipMatter[]>("/relationships", { firm_id: firmId });
 }
 
 // ---------------------------------------------------------------------------
