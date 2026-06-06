@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Litt — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", "SF Mono", Monaco, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font-sans); color: #2C2C2A; background: #14221F;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  #root { height: 100vh; overflow: hidden; }
+  button { font: inherit; letter-spacing: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(120,118,110,.35); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(120,118,110,.55); background-clip: content-box; }
+
+  @keyframes litt-obs-drip { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .litt-obs-drip { animation: litt-obs-drip .3s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .litt-obs-drip { animation: none; } }
+  @keyframes ag-spin { to { transform: rotate(360deg); } }
+  .ag-spin { animation: ag-spin .7s linear infinite; }
+  @keyframes litt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+  .litt-pulse { animation: litt-pulse 1.6s ease-in-out infinite; }
+  @keyframes litt-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ag-flow { to { stroke-dashoffset: -28; } }
+  @keyframes ag-flow-rev { to { stroke-dashoffset: 28; } }
+  .ag-edge-flow { animation: ag-flow .6s linear infinite; }
+  .ag-edge-idle { animation: ag-flow 1.5s linear infinite; }
+  .ag-edge-rev { animation: ag-flow-rev 1.7s linear infinite; }
+  @keyframes ag-toolpop { from { opacity: 0; transform: translateX(-50%) scale(.9); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+  .ag-toolchip { animation: ag-toolpop .22s ease-out; }
+  @keyframes cm-flash-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .cm-flash { animation: cm-flash-in .25s ease-out; }
+  @keyframes ag-glow { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+  .ag-node-live { animation: ag-glow 1.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .litt-pulse, .ag-edge-flow, .ag-node-live { animation: none; } }
+  button:focus-visible, a:focus-visible { outline: 2px solid #378ADD; outline-offset: 2px; }
+
+  @media (max-width: 1040px) {
+    .ag-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="litt-core.js?v=3"></script>
+<script src="console-data.js?v=5"></script>
+<script type="text/babel" src="litt-flows.jsx?v=3"></script>
+<script type="text/babel" src="console-agents.jsx?v=10"></script>
+<script type="text/babel" src="console-collect.jsx?v=1"></script>
+<script type="text/babel" src="console-brief.jsx?v=2"></script>
+<script type="text/babel" src="console-deadlines.jsx?v=2"></script>
+<script type="text/babel" src="console-record.jsx?v=2"></script>
+<script type="text/babel" src="console-policy.jsx?v=1"></script>
+<script type="text/babel" src="console-clients.jsx?v=4"></script>
+<script type="text/babel" src="console-stubs.jsx?v=2"></script>
+<script type="text/babel" src="console-shell.jsx?v=6"></script>
+
+<script type="text/babel" data-presets="react">
+  ReactDOM.createRoot(document.getElementById('root')).render(<window.ConsoleApp />);
+</script>
+</body>
+</html>
