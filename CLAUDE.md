@@ -1,3 +1,4 @@
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -15,17 +16,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend (Python / FastAPI)
 
 ```bash
-# First-time setup — create project venv (run once)
-cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1   # Windows PowerShell
-pip install -r requirements.txt
+# Install dependencies
+pip install -r backend/requirements.txt
 
-# Run locally — ALWAYS from backend/ dir with project venv active
-# DO NOT run from repo root; DO NOT use bare `uvicorn` (picks up hermes-agent venv)
-cd backend
-.venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8002
+# Run locally (from repo root)
+uvicorn backend.app.main:app --reload --port 8002
 
 # Run all tests
 cd backend && pytest
@@ -200,19 +195,3 @@ Five demo conditions must pass `GET /api/demo/ready` before any recording:
 - All commits must be after April 22, 2026 (contest rule)
 - All agent reasoning uses Gemini 2.5 Pro via Vertex AI (contest rule — not Claude)
 - Required submission elements: live Cloud Run URL, demo video (2-min max), architecture diagram (`docs/architecture.png`)
-
----
-
-## Build & Deploy
-
-- Always run `tsc --noEmit` (or `npm run typecheck`) before committing or deploying; fix unused variables and declaration-order issues proactively.
-- Deployment target is Cloud Run / GCR. Verify the correct GCR project (`GOOGLE_CLOUD_PROJECT`) before pushing. Exclude the `tools` directory in `tsconfig.json` to avoid Cloud Build type-check failures.
-- The `dashboard/` worktree may be missing the TypeScript package. Run type checks using the main project compiler (`cd dashboard && npx tsc --noEmit`) — do not rely on a globally installed `tsc`.
-
----
-
-## UI / Frontend Conventions
-
-- Apply existing design system tokens for all UI work — do not introduce ad-hoc colors, spacing, or typography values.
-- Verify UI changes with a screenshot before committing.
-- Default font for buttons: IBM Plex Sans / monospace styling per current mockups.
