@@ -411,9 +411,11 @@
 
 ---
 
-## Phase 2 — Overview page
+## Phase 2 — Overview page ✓ COMPLETE
 
-- [ ] V113-P2 Build `dashboard/src/pages/Overview.tsx` — eyebrow from `brief.generated_at`, greet() pool, 5 book cards from `sections.*`, system row with navigate to /agents /policy /integrations
+- [x] V113-P2 Build `dashboard/src/pages/Overview.tsx` — eyebrow from `brief.generated_at`, greet() pool, 5 book cards from `sections.*`, system row with navigate to /agents /policy /integrations
+
+**Gate 1 verified:** `npx tsc --noEmit` exit 0
 
 ---
 
