@@ -103,7 +103,7 @@ def _check_acme_budget_warn(firm_id: str) -> dict:
     pct = committed / budget_cap
     if pct < threshold:
         return {"pass": False, "detail": f"utilization {pct:.1%} below threshold {threshold:.0%}"}
-    return {"pass": True, "detail": f"utilization {pct:.1%} (${committed:,.0f} / ${budget_cap:,.0f}) — {('CRITICAL' if pct >= 0.9 else 'WARN')}"}
+    return {"pass": True, "detail": f"utilization {pct:.1%} (${committed:,.0f} / ${budget_cap:,.0f}) - {('CRITICAL' if pct >= 0.9 else 'WARN')}"}
 
 
 def _check_whitmore_silence(firm_id: str) -> dict:
