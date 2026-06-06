@@ -36,17 +36,23 @@ CLIENT_SILENCE_THRESHOLD_DAYS: int = 14
 def get_effective_date() -> date:
     """
     Always use this instead of date.today(). Returns frozen demo date in demo mode.
+    Reads env at call time so tests can override without re-importing.
     """
-    if DEMO_MODE and DEMO_DATE_STR:
-        return date.fromisoformat(DEMO_DATE_STR)
+    demo_mode = os.getenv("LITT_DEMO_MODE", "false").lower() == "true"
+    demo_date_str = os.getenv("LITT_DEMO_DATE", "")
+    if demo_mode and demo_date_str:
+        return date.fromisoformat(demo_date_str)
     return date.today()
 
 
 def get_effective_datetime() -> datetime:
     """
     Always use this instead of datetime.now(). Returns frozen demo datetime in demo mode.
+    Reads env at call time so tests can override without re-importing.
     """
-    if DEMO_MODE and DEMO_DATE_STR:
-        demo_date = date.fromisoformat(DEMO_DATE_STR)
+    demo_mode = os.getenv("LITT_DEMO_MODE", "false").lower() == "true"
+    demo_date_str = os.getenv("LITT_DEMO_DATE", "")
+    if demo_mode and demo_date_str:
+        demo_date = date.fromisoformat(demo_date_str)
         return datetime.combine(demo_date, datetime.min.time())
     return datetime.now()

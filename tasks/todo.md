@@ -118,16 +118,29 @@
 ## Phase 3 — DeadlineAgent
 *Readiness monitoring, extension drafting, soft watch, conflict advancement, clustering. Gates: G3-01 → G3-10*
 
-- [ ] V11-P3-01 Readiness monitoring pass — read-only observation on each approaching deadline; checks for open items without writing Firestore
-- [ ] V11-P3-02 Extension request draft — trigger when deadline is 1_DAY or CRITICAL and no work logged on matter in last 5 days; call Gemini to draft extension request; store as `create_client_comm()` with `CommTrigger.DEADLINE_EXTENSION_REQUEST`
-- [ ] V11-P3-03 21-day soft watch — log observation when deadline is 21 days out and not yet verified; no escalation record; severity WARN
-- [ ] V11-P3-04 30-day soft watch — log observation when deadline is 30 days out; no escalation record; severity WARN
-- [ ] V11-P3-05 `conflict_flagged` → `pending_verification` advancement — Gemini extraction confidence≥0.80 triggers `verify_deadline()` with `pending_verification` status; attorney confirms or rejects
-- [ ] V11-P3-06 Cadence gap detection — fire WARN observation if escalation cadence skipped a level (e.g., 14_DAY → CRITICAL with no 7_DAY or 3_DAY record)
-- [ ] V11-P3-07 Deadline clustering — group ≥3 matters with deadlines within a 5-day window into single clustering observation; note capacity pressure
-- [ ] V11-P3-08 `pytest tests/test_deadline_agent.py` — readiness monitoring fires; 21/30-day watch produces observation with no escalation write; clustering groups matters correctly
-- [ ] V11-P3-09 `pytest tests/test_deadline_agent.py` — `conflict_flagged` advances to `pending_verification` at confidence≥0.80; does NOT advance at confidence<0.80
-- [ ] V11-P3-10 `pytest tests/test_deadline_agent.py` — extension draft produced on correct trigger; NOT produced when matter has recent activity or deadline not at 1_DAY/CRITICAL
+- [x] V11-P3-01 Readiness monitoring pass — read-only observation on each approaching deadline; checks for open items without writing Firestore
+- [x] V11-P3-02 Extension request draft — trigger when deadline is 1_DAY or CRITICAL and no work logged on matter in last 5 days; call Gemini to draft extension request; store as `create_client_comm()` with `CommTrigger.DEADLINE_EXTENSION_REQUEST`
+- [x] V11-P3-03 21-day soft watch — log observation when deadline is 21 days out and not yet verified; no escalation record; severity WARN
+- [x] V11-P3-04 30-day soft watch — log observation when deadline is 30 days out; no escalation record; severity WARN
+- [x] V11-P3-05 `conflict_flagged` → `pending_verification` advancement — Gemini extraction confidence≥0.80 triggers `verify_deadline()` with `pending_verification` status; attorney confirms or rejects
+- [x] V11-P3-06 Cadence gap detection — fire WARN observation if escalation cadence skipped a level (e.g., 14_DAY → CRITICAL with no 7_DAY or 3_DAY record)
+- [x] V11-P3-07 Deadline clustering — group ≥3 matters with deadlines within a 5-day window into single clustering observation; note capacity pressure
+- [x] V11-P3-08 `pytest tests/test_deadline_agent.py` — readiness monitoring fires; 21/30-day watch produces observation with no escalation write; clustering groups matters correctly
+- [x] V11-P3-09 `pytest tests/test_deadline_agent.py` — `conflict_flagged` advances to `pending_verification` at confidence≥0.80; does NOT advance at confidence<0.80
+- [x] V11-P3-10 `pytest tests/test_deadline_agent.py` — extension draft produced on correct trigger; NOT produced when matter has recent activity or deadline not at 1_DAY/CRITICAL
+
+**Phase 3 gate check:**
+- [x] G3-01 Readiness observation emitted per verified deadline within cadence window — verified
+- [x] G3-02 Readiness observation is AUTO_SAFE, no Firestore write — verified
+- [x] G3-03 21-day soft watch fires for unverified deadlines ≤21 days out — verified
+- [x] G3-04 30-day soft watch fires for pending_verification deadlines 21–30 days out — verified
+- [x] G3-05 No soft watch for verified deadlines — verified
+- [x] G3-06 No soft watch for overdue deadlines (days_out < 0) — verified
+- [x] G3-07 Clustering fires for ≥3 ACTIVE deadlines in any 5-day window — verified
+- [x] G3-08 conflict_flagged advances to pending_verification at Gemini confidence≥0.80 — verified
+- [x] G3-09 Does NOT advance at confidence<0.80 — verified
+- [x] G3-10 Extension draft created when 1_DAY/CRITICAL, no matter activity in 5 days, no existing extension comm — verified
+- [x] 18/18 tests pass (0 regressions) — verified
 
 ---
 

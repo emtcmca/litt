@@ -83,8 +83,14 @@ def verify_deadline(
     attorney_id: str,
     idempotency_key: str,
     expected_version: int,
+    verification_status: str = VerificationStatus.attorney_verified.value,
 ) -> Union[ToolResult, ToolError]:
-    """Mark deadline as attorney_verified. Updates verification_status on the deadline record."""
+    """
+    Update deadline verification_status. Default: attorney_verified.
+    Pass verification_status=VerificationStatus.pending_verification.value to
+    advance conflict_flagged deadlines to the intermediate pending_verification state
+    (used by DeadlineAgent when Gemini extraction confidence >= 0.80).
+    """
     existing = check_idempotency(firm_id, idempotency_key)
     if existing:
         return ToolResult(entity_id=deadline_id, entity_type="deadline", audit_event_id=existing)
@@ -98,17 +104,22 @@ def verify_deadline(
     now = get_effective_datetime()
 
     collection_ref(firm_id, "deadlines").document(deadline_id).update({
-        "verification_status": VerificationStatus.attorney_verified.value,
+        "verification_status": verification_status,
         "verified_by": attorney_id,
         "version": expected_version + 1,
         "updated_at": now,
     })
 
-    # Also log a DeadlineEvent for the audit trail
+    event_type = (
+        DeadlineEventType.VERIFICATION_COMPLETED.value
+        if verification_status == VerificationStatus.attorney_verified.value
+        else "VERIFICATION_PENDING"
+    )
+
     dl_event_result = log_deadline_event(
         firm_id=firm_id,
         deadline_id=deadline_id,
-        event_type=DeadlineEventType.VERIFICATION_COMPLETED.value,
+        event_type=event_type,
         actor=attorney_id,
         idempotency_key=f"{idempotency_key}-evt",
         attorney_id=attorney_id,
@@ -122,7 +133,7 @@ def verify_deadline(
         entity_type="deadline",
         entity_id=deadline_id,
         before_state={"verification_status": data.get("verification_status")},
-        after_state={"verification_status": "attorney_verified"},
+        after_state={"verification_status": verification_status},
         idempotency_key=idempotency_key,
     )
 
