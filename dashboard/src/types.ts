@@ -589,3 +589,50 @@ export interface RelationshipMatter {
   going_quiet: boolean;
   status: string;
 }
+
+// ---------------------------------------------------------------------------
+// Inbound messages (v1.1.2 Phase 3)
+// ---------------------------------------------------------------------------
+
+export interface InboundActionItem {
+  text: string;
+  handoff_agent?: string | null;
+}
+
+export interface InboundMessage {
+  id: string;
+  firm_id: string;
+  source_email_id: string | null;
+  matter_id: string | null;
+  client_id: string | null;
+  from_name: string;
+  from_role: string;
+  received_at: string;
+  wait_days: number;
+  urgency: "HIGH" | "MEDIUM" | "LOW";
+  urgency_signals: string[];
+  message_excerpt: string;
+  summary: string | null;
+  action_items: InboundActionItem[];
+  suggested_reply_comm_id: string | null;
+  suggested_reply_body?: string | null;
+  cross_agent: boolean;
+  status: string;
+  version: number;
+}
+
+export interface InboundSnoozeRequest {
+  firm_id: string;
+  attorney_id: string;
+  message_id: string;
+  expected_version: number;
+  idempotency_key?: string;
+}
+
+export interface InboundDismissRequest {
+  firm_id: string;
+  attorney_id: string;
+  message_id: string;
+  expected_version: number;
+  idempotency_key?: string;
+}

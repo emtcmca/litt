@@ -22,6 +22,9 @@ import type {
   DeadlineVerifyRequest,
   DemoReadyResponse,
   DemoResetResponse,
+  InboundDismissRequest,
+  InboundMessage,
+  InboundSnoozeRequest,
   MatterSummary,
   RawDeadline,
   RelationshipMatter,
@@ -211,6 +214,18 @@ export function getBudgets(firmId: string): Promise<BudgetUtilizationItem[]> {
 
 export function getRelationships(firmId: string): Promise<RelationshipMatter[]> {
   return get<RelationshipMatter[]>("/relationships", { firm_id: firmId });
+}
+
+export function getInbound(firmId: string): Promise<InboundMessage[]> {
+  return get<InboundMessage[]>("/inbound", { firm_id: firmId });
+}
+
+export function snoozeInbound(req: InboundSnoozeRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/inbound/snooze", req);
+}
+
+export function dismissInbound(req: InboundDismissRequest): Promise<ActionResult> {
+  return post<ActionResult>("/actions/inbound/dismiss", req);
 }
 
 // ---------------------------------------------------------------------------

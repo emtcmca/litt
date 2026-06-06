@@ -29,6 +29,7 @@ from app.tools.comms import (
     log_client_comm_sent,
     queue_client_comm_for_delivery,
 )
+from app.tools.inbound import dismiss_inbound, snooze_inbound
 from app.tools.deadlines import (
     confirm_deadline,
     dismiss_deadline,
@@ -555,4 +556,46 @@ def timer_capture(req: TimerCaptureRequest):
         ai_assisted=req.used_gemini,
         ai_tool="litt-narrative-normalizer" if req.used_gemini else None,
         model=_cfg.GEMINI_MODEL if req.used_gemini else None,
+    ))
+
+
+# ---------------------------------------------------------------------------
+# Inbound message actions
+# ---------------------------------------------------------------------------
+
+class InboundSnooze(BaseModel):
+    firm_id: str
+    attorney_id: str
+    message_id: str
+    expected_version: int
+    idempotency_key: Optional[str] = None
+
+
+class InboundDismiss(BaseModel):
+    firm_id: str
+    attorney_id: str
+    message_id: str
+    expected_version: int
+    idempotency_key: Optional[str] = None
+
+
+@router.post("/actions/inbound/snooze")
+def inbound_snooze(req: InboundSnooze):
+    return _tool_resp(snooze_inbound(
+        firm_id=req.firm_id,
+        message_id=req.message_id,
+        actor=req.attorney_id,
+        idempotency_key=_idem(req.idempotency_key),
+        expected_version=req.expected_version,
+    ))
+
+
+@router.post("/actions/inbound/dismiss")
+def inbound_dismiss(req: InboundDismiss):
+    return _tool_resp(dismiss_inbound(
+        firm_id=req.firm_id,
+        message_id=req.message_id,
+        actor=req.attorney_id,
+        idempotency_key=_idem(req.idempotency_key),
+        expected_version=req.expected_version,
     ))

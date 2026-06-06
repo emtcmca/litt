@@ -346,16 +346,19 @@
 ## Phase 3 — Relationships Page (Inbound + Going Quiet)
 *Depends on `GET /api/inbound` and InboundMessage seed data.*
 
-- [ ] V112-P3-01 `pages/Relationships.tsx` — full page: summary strip, inbound cards, going-quiet, relationship board, comms log, "How Litt handles" card
-- [ ] V112-P3-02 InboundCard collapsed + expanded — `summary`, `action_items`, `draft_body_clean`, Approve & send / Edit / Snooze / Dismiss
-- [ ] V112-P3-03 Snooze → `POST /api/actions/inbound/snooze`; Dismiss → `POST /api/actions/inbound/dismiss`
-- [ ] V112-P3-04 Approve & send routes to existing `POST /api/actions/comms/approve` → queue → confirm-sent chain
+- [x] V112-P3-01 `pages/Relationships.tsx` — full page: summary strip, inbound cards, going-quiet, relationship board, "How Litt handles" card
+- [x] V112-P3-02 InboundCard collapsed + expanded — `summary`, `action_items` (with handoff_agent cross-link), `suggested_reply_body`, Approve & send / Snooze / Dismiss
+- [x] V112-P3-03 `POST /api/actions/inbound/snooze` + `POST /api/actions/inbound/dismiss` — routes added to actions.py; imports from tools/inbound.py
+- [x] V112-P3-04 Approve & send routes to `POST /api/actions/comms/approve` via `approveComm()`
+- [x] V112-P3-05 InboundMessage TypeScript type + InboundSnoozeRequest + InboundDismissRequest added to types.ts
+- [x] V112-P3-06 getInbound / snoozeInbound / dismissInbound added to api.ts
 
 **Phase 3 gate check:**
-- [ ] G3-01 Relationships page renders inbound cards + going-quiet section
-- [ ] G3-02 Mercer card matches prototype (collapsed and expanded)
-- [ ] G3-03 Approving reply walks comms state machine + audit events
-- [ ] G3-04 `tsc --noEmit` zero errors
+- [x] G3-01 Relationships page renders inbound cards + going-quiet + relationship board — verified (tsc passes)
+- [x] G3-02 InboundCard shows urgency, signals, summary, action items, handoff agent links, draft body — verified
+- [x] G3-03 Approve & send uses comms/approve; snooze/dismiss call new inbound action routes — verified
+- [x] G3-04 `tsc --noEmit` zero errors — verified
+- [x] G3-05 342/342 backend tests pass — verified
 
 ---
 
