@@ -84,6 +84,11 @@ function deriveDecisions(sections: BriefSections): Decision[] {
   return decs.sort((a, b) => ord[a.gate] - ord[b.gate]);
 }
 
+const KIND_ROUTE: Record<string, string> = {
+  deadline: '/deadlines', billing: '/collect', anomaly: '/anomalies',
+  'budget risk': '/budgets', 'client silence': '/relationships',
+};
+
 const KIND_LABEL: Record<string, string> = {
   deadline: 'deadline', billing: 'billing', anomaly: 'anomaly',
   'budget risk': 'budget risk', 'client silence': 'client silence',
@@ -164,8 +169,8 @@ export function Brief() {
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 9 }}>
-            <button onClick={() => navigate('/closeout')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 10, background: T.brass, color: T.forest, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const }}>
-              Open today's closeout <Icon name="arrow" size={14} color={T.forest} />
+            <button onClick={() => navigate('/agents')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 10, background: T.brass, color: T.forest, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const }}>
+              Open Agent Console <Icon name="arrow" size={14} color={T.forest} />
             </button>
             <button onClick={runNow} disabled={running} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 20px', borderRadius: 10, background: 'transparent', color: T.brass, border: `1px solid rgba(214,193,129,.35)`, cursor: running ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const }}>
               {running
@@ -189,7 +194,7 @@ export function Brief() {
             {decs.map((d, i) => {
               const col = GATE_COLOR[d.gate];
               return (
-                <button key={d.id} onClick={() => navigate('/closeout')} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 11, alignItems: 'center', padding: '12px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, textDecoration: 'none', borderLeft: `3px solid ${d.gate === 'ESCALATION' ? T.danger : 'transparent'}`, width: '100%', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                <button key={d.id} onClick={() => navigate(KIND_ROUTE[d.kind] ?? '/brief')} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 11, alignItems: 'center', padding: '12px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, textDecoration: 'none', borderLeft: `3px solid ${d.gate === 'ESCALATION' ? T.danger : 'transparent'}`, width: '100%', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 999, background: col, flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{d.headline}</div>
