@@ -328,18 +328,18 @@
 ## Phase 2 — Agent Console Graph
 *Biggest net-new frontend piece. Depends on TOOL_CALL observations and ROUTE_HANDOFF.*
 
-- [ ] V112-P2-01 `pages/AgentConsole.tsx` — coordinator graph + sweep controls + inspector
-- [ ] V112-P2-02 `components/console/AgentGraph.tsx` — node layout; live flow animation; idle heartbeat; hand-off edges; gate/work_kind styling
-- [ ] V112-P2-03 `components/console/ToolChip.tsx` — chip under firing node showing tool call name + kind badge
-- [ ] V112-P2-04 `components/console/Inspector.tsx` — right panel: tools catalog, TOOL CALL card, cross-agent hand-off card, boundary stat
-- [ ] V112-P2-05 `components/console/SweepControls.tsx` — Run / Replay / step scrubber
+- [x] V112-P2-01 `pages/AgentConsole.tsx` — coordinator graph + sweep controls + inspector
+- [x] V112-P2-02 `components/console/AgentGraph.tsx` — node layout; live flow animation; idle heartbeat; ROUTE_HANDOFF gold-dashed edges; Gmail↔Comms teal-dashed two-way edge
+- [x] V112-P2-03 `components/console/ToolChip.tsx` — chip showing tool name + kind badge with color-coded kind
+- [x] V112-P2-04 `components/console/Inspector.tsx` — Log tab (boundary stat + obs list) + Tools tab (catalog); TOOL CALL card; cross-agent hand-off card
+- [x] V112-P2-05 `components/console/SweepControls.tsx` — Run / Replay / step scrubber + elapsed seconds
 
 **Phase 2 gate check:**
-- [ ] G2-01 Boundary stat matches run (deterministic vs Gemini count)
-- [ ] G2-02 Hand-off edges draw for ROUTE_HANDOFF observations
-- [ ] G2-03 Inspector renders TOOL CALL + cross-agent hand-off cards on selection
-- [ ] G2-04 Idle heartbeat runs when no sweep active
-- [ ] G2-05 `tsc --noEmit` zero errors
+- [x] G2-01 Boundary stat computed from observations (deterministic vs Gemini count) — verified
+- [x] G2-02 Hand-off edges draw for ROUTE_HANDOFF observations (gold dashed) — verified
+- [x] G2-03 Inspector renders TOOL CALL + cross-agent hand-off cards on selection — verified
+- [x] G2-04 Idle heartbeat cycles through agent nodes when no sweep active — verified
+- [x] G2-05 `tsc --noEmit` zero errors — verified
 
 ---
 
