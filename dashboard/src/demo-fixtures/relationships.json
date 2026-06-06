@@ -1,0 +1,57 @@
+[
+  {
+    "matter_id": "whitmore-employment-2026",
+    "matter_name": "Whitmore Group Employment Advisory",
+    "client_id": "whitmore-group",
+    "client_name": "Whitmore Group",
+    "last_client_contact": "2026-06-09",
+    "days_since_contact": 16,
+    "silence_threshold_days": 14,
+    "going_quiet": true,
+    "status": "ACTIVE"
+  },
+  {
+    "matter_id": "mercer-v-dunlap-2026",
+    "matter_name": "Mercer Industries v. Dunlap Construction",
+    "client_id": "mercer-industries",
+    "client_name": "Mercer Industries",
+    "last_client_contact": "2026-06-23",
+    "days_since_contact": 2,
+    "silence_threshold_days": 14,
+    "going_quiet": false,
+    "status": "ACTIVE"
+  },
+  {
+    "matter_id": "okafor-v-lindqvist-2026",
+    "matter_name": "Okafor v. Lindqvist",
+    "client_id": "lindqvist-holdings",
+    "client_name": "Lindqvist Holdings",
+    "last_client_contact": "2026-06-24",
+    "days_since_contact": 1,
+    "silence_threshold_days": 14,
+    "going_quiet": false,
+    "status": "ACTIVE"
+  },
+  {
+    "matter_id": "acme-commercial-retainer",
+    "matter_name": "Acme Commercial — GC retainer",
+    "client_id": "acme-commercial",
+    "client_name": "Acme Commercial Partners",
+    "last_client_contact": "2026-06-24",
+    "days_since_contact": 1,
+    "silence_threshold_days": 14,
+    "going_quiet": false,
+    "status": "ACTIVE"
+  },
+  {
+    "matter_id": "reyes-vendor-dispute-2026",
+    "matter_name": "Reyes Logistics — Vendor dispute",
+    "client_id": "reyes-logistics",
+    "client_name": "Reyes Logistics",
+    "last_client_contact": "2026-06-23",
+    "days_since_contact": 2,
+    "silence_threshold_days": 14,
+    "going_quiet": false,
+    "status": "ACTIVE"
+  }
+]

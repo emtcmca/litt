@@ -1,0 +1,73 @@
+[
+  {
+    "id": "inb-mercer-001",
+    "firm_id": "strand-okafor",
+    "source_email_id": "email-mercer-20260623",
+    "matter_id": "mercer-v-dunlap-2026",
+    "client_id": "mercer-industries",
+    "from_name": "Sandra Mercer",
+    "from_role": "client",
+    "received_at": "2026-06-23T14:22:00Z",
+    "wait_days": 2,
+    "urgency": "HIGH",
+    "urgency_signals": ["MSJ hearing Thursday", "exhibits by tomorrow morning", "court deadline"],
+    "message_excerpt": "Dana, the MSJ hearing is Thursday. I need to know our position on the new Dunlap exhibits by tomorrow morning. The exhibits were filed late and I'm not sure our response covers them.",
+    "summary": "Client requesting position on late-filed Dunlap exhibits before MSJ hearing Thursday. Needs reply by tomorrow morning.",
+    "action_items": [
+      { "text": "Confirm position on Dunlap exhibits", "handoff_agent": null },
+      { "text": "Verify late-filed exhibits are covered in response", "handoff_agent": "deadline_agent" }
+    ],
+    "suggested_reply_comm_id": "comm-mercer-inb-001",
+    "suggested_reply_body": "Sandra, thank you for flagging this. I've reviewed the late-filed exhibits and can confirm our opposition covers them in Section III. The hearing Thursday is on track — I'll send our finalized position by end of business today.",
+    "cross_agent": true,
+    "status": "REPLY_HELD",
+    "version": 1
+  },
+  {
+    "id": "inb-lindqvist-001",
+    "firm_id": "strand-okafor",
+    "source_email_id": "email-lindqvist-20260624",
+    "matter_id": "okafor-v-lindqvist-2026",
+    "client_id": "lindqvist-holdings",
+    "from_name": "Karl Lindqvist",
+    "from_role": "client",
+    "received_at": "2026-06-24T09:15:00Z",
+    "wait_days": 1,
+    "urgency": "MEDIUM",
+    "urgency_signals": ["deposition schedule"],
+    "message_excerpt": "Can you send me the updated deposition schedule when it's confirmed? I need to block time on my calendar.",
+    "summary": "Client requesting updated deposition schedule for calendar planning.",
+    "action_items": [
+      { "text": "Send confirmed deposition schedule", "handoff_agent": null }
+    ],
+    "suggested_reply_comm_id": "comm-lindqvist-inb-001",
+    "suggested_reply_body": "Karl, I'll send the confirmed deposition schedule as soon as we have it locked in with opposing counsel — expecting confirmation by end of week.",
+    "cross_agent": false,
+    "status": "REPLY_HELD",
+    "version": 1
+  },
+  {
+    "id": "inb-acme-001",
+    "firm_id": "strand-okafor",
+    "source_email_id": "email-acme-20260624",
+    "matter_id": "acme-commercial-retainer",
+    "client_id": "acme-commercial",
+    "from_name": "James Okafor",
+    "from_role": "billing_contact",
+    "received_at": "2026-06-24T16:40:00Z",
+    "wait_days": 1,
+    "urgency": "MEDIUM",
+    "urgency_signals": ["invoice", "retainer renewal"],
+    "message_excerpt": "We haven't received the June invoice yet. Also, can you confirm the retainer renewal terms for Q3? Budget planning is coming up.",
+    "summary": "Billing contact requesting June invoice and Q3 retainer renewal terms for budget planning.",
+    "action_items": [
+      { "text": "Send June invoice", "handoff_agent": "billing_agent" },
+      { "text": "Confirm Q3 retainer renewal terms", "handoff_agent": null }
+    ],
+    "suggested_reply_comm_id": null,
+    "suggested_reply_body": null,
+    "cross_agent": true,
+    "status": "AWAITING_TRIAGE",
+    "version": 1
+  }
+]

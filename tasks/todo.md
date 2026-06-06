@@ -379,6 +379,57 @@
 ---
 ---
 
+# Litt — v1.1.3 Console UI Overhaul
+
+**Sprint:** Post-v1.1.2 — active  
+**Status key:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked  
+**Full spec:** `docs/console-ui-build-plan-v1.1.3.md`  
+**Gate definition:** Gate 1 = `tsc --noEmit` clean · Gate 2 = Playwright screenshot diff · Gate 3 = human visual review vs prototype screens
+
+---
+
+## Phase 0 — Design System Foundation ✓ COMPLETE
+
+- [x] V113-P0a Add brand tokens to `dashboard/src/index.css` (9 CSS vars: forest, brass, gold, danger, audit palette)
+- [x] V113-P0b Add `litt-pulse` CSS animation + `.litt-pulse` class to `index.css`
+- [x] V113-P0c Create `dashboard/src/tokens.ts` — T constant mirroring litt-flows.jsx prototype
+- [x] V113-P0d Create 8 shared atoms in `dashboard/src/components/ui/`: Mono, Icon (19 SVGs), Btn (5 variants), PageHead, Shell, ClsChip, GateChip, SubHead
+- [x] V113-P0e Playwright visual harness: `playwright.visual.config.ts`, `tests/visual/fixtures.ts` stub, package.json scripts, `.gitignore` entry
+- [x] V113-P0f 9 demo fixture JSON files in `dashboard/src/demo-fixtures/`: brief, sweep, tools, deadlines, inbound, commitments, relationships, budgets, audit-log + `index.ts` barrel; `fixtures.ts` updated with real data
+
+**Gate 1 verified:** `npx tsc --noEmit` exit 0
+
+---
+
+## Phase 1 — Shell, Rail, Routing
+
+- [ ] V113-P1a Update `App.tsx` — add Overview at `/`, move DailyCloseoutBrief to `/brief`, add `/brief` route, remove DemoBanner import, keep `/audit` + `/ledger`
+- [ ] V113-P1b Rebuild `ConsoleShell.tsx` — `height: 100vh; display: flex; background: #14221F`; no DemoBanner; rail left, content right
+- [ ] V113-P1c Rebuild `ConsoleRail.tsx` — 232px forest bg, brass active pill, system status block (pulse dot + "All systems nominal" + last sweep + demo date + integrations + DEMO pill when `brief.demo_mode`), 3-user dropdown, SVG Icon set, ungrouped Overview/Brief at top
+
+---
+
+## Phase 2 — Overview page
+
+- [ ] V113-P2 Build `dashboard/src/pages/Overview.tsx` — eyebrow from `brief.generated_at`, greet() pool, 5 book cards from `sections.*`, system row with navigate to /agents /policy /integrations
+
+---
+
+## Phases 3–12 — Remaining Pages
+
+- [ ] V113-P3 Deadlines page — ClsChip, timeline, DeadlineBook
+- [ ] V113-P4 Collect page — WIP review list, scrubber flags, Approve
+- [ ] V113-P5 AgentConsole page — graph, inspector, sweep controls
+- [ ] V113-P6 AuditLedger page — stat strip, filters, rows, JSON export
+- [ ] V113-P7 Policy page — local state, firm policy + attorney overrides
+- [ ] V113-P8 Relationships page — silence bar, going-quiet, inbound cards
+- [ ] V113-P9 Budgets page — BudgetBar per client
+- [ ] V113-P10 Anomalies page — detector roster, expand cards
+- [ ] V113-P11 Integrations page — integration tiles
+- [ ] V113-P12 Brief page — port console-brief.jsx
+
+---
+
 # Litt — v1.0 Hackathon Sprint Task List ✓ SPRINT COMPLETE
 
 **Sprint:** May 30 – June 5, 2026  

@@ -1,0 +1,229 @@
+{
+  "firm_id": "strand-okafor",
+  "firm_name": "Strand & Okafor LLP",
+  "attorney_id": "dana-strand",
+  "attorney_name": "Dana Strand",
+  "generated_at": "2026-06-25T17:00:00Z",
+  "demo_mode": true,
+  "sections": {
+    "deadlines": {
+      "count": 12,
+      "has_critical": true,
+      "items": [
+        {
+          "deadline_id": "dl-mercer-001",
+          "version": 1,
+          "matter_id": "mercer-v-dunlap-2026",
+          "matter_name": "Mercer Industries v. Dunlap Construction",
+          "client_id": "mercer-industries",
+          "client_name": "Mercer Industries",
+          "description": "Opposition to MSJ",
+          "due_date": "2026-07-01",
+          "days_out": 6,
+          "classification": "HARD_LEGAL",
+          "status": "ACTIVE",
+          "verification_status": "UNCONFIRMED",
+          "last_confirmed_by": null,
+          "last_confirmed_at": null,
+          "is_unconfirmed": true,
+          "escalation_level": "7_DAY",
+          "source_type": "calendar",
+          "source_document_id": null,
+          "source_excerpt": "Opposition to MSJ due — court order, Dunlap Construction case",
+          "court": "Cuyahoga County Court of Common Pleas",
+          "jurisdiction": "Ohio",
+          "detected_at": "2026-06-24T15:00:00Z",
+          "conflict_detail": null
+        },
+        {
+          "deadline_id": "dl-okafor-disc",
+          "version": 1,
+          "matter_id": "okafor-v-lindqvist-2026",
+          "matter_name": "Okafor v. Lindqvist",
+          "client_id": "lindqvist-holdings",
+          "client_name": "Lindqvist Holdings",
+          "description": "Discovery cutoff",
+          "due_date": "2026-07-16",
+          "days_out": 21,
+          "classification": "HARD_LEGAL",
+          "status": "ACTIVE",
+          "verification_status": "CONFIRMED",
+          "last_confirmed_by": "dana-strand",
+          "last_confirmed_at": "2026-06-20T10:00:00Z",
+          "is_unconfirmed": false,
+          "escalation_level": null,
+          "source_type": "calendar",
+          "source_document_id": null,
+          "source_excerpt": null,
+          "court": null,
+          "jurisdiction": "Ohio",
+          "detected_at": "2026-06-10T09:00:00Z",
+          "conflict_detail": null
+        },
+        {
+          "deadline_id": "dl-acme-renew",
+          "version": 1,
+          "matter_id": "acme-commercial-retainer",
+          "matter_name": "Acme Commercial — GC retainer",
+          "client_id": "acme-commercial",
+          "client_name": "Acme Commercial Partners",
+          "description": "Contract renewal notice",
+          "due_date": "2026-07-27",
+          "days_out": 32,
+          "classification": "HARD_CONTRACTUAL",
+          "status": "ACTIVE",
+          "verification_status": "CONFIRMED",
+          "last_confirmed_by": "marcus-okafor",
+          "last_confirmed_at": "2026-06-15T14:00:00Z",
+          "is_unconfirmed": false,
+          "escalation_level": null,
+          "source_type": "contract",
+          "source_document_id": null,
+          "source_excerpt": null,
+          "court": null,
+          "jurisdiction": null,
+          "detected_at": "2026-06-01T08:00:00Z",
+          "conflict_detail": null
+        }
+      ]
+    },
+    "time_entries": {
+      "count": 7,
+      "total_wip_usd": 14200,
+      "items": [
+        {
+          "entry_id": "te-001",
+          "version": 1,
+          "matter_id": "mercer-v-dunlap-2026",
+          "matter_name": "Mercer Industries v. Dunlap Construction",
+          "client_id": "mercer-industries",
+          "client_name": "Mercer Industries",
+          "attorney_id": "dana-strand",
+          "entry_date": "2026-06-24",
+          "hours": 4.0,
+          "amount": 1500,
+          "narrative": null,
+          "status": "PENDING",
+          "scrubber_flags": [
+            {
+              "check_name": "MISSING_NARRATIVE",
+              "severity": "BLOCK",
+              "message": "No narrative — reconstruction & LEDES-rejection risk.",
+              "matched_text": null
+            }
+          ],
+          "has_block": true,
+          "has_warn": false,
+          "task_code": null,
+          "activity_code": null,
+          "session_minutes_actual": null,
+          "suggested_narrative": null
+        }
+      ]
+    },
+    "budget_risks": {
+      "count": 1,
+      "items": [
+        {
+          "client_id": "acme-commercial",
+          "client_name": "Acme Commercial Partners",
+          "budget_cap": 15000,
+          "budget_billed": 9000,
+          "approved_unbilled": 2700,
+          "total_committed": 11700,
+          "utilization_pct": 78,
+          "alert_status": "WARN",
+          "threshold_pct": 75
+        }
+      ]
+    },
+    "client_silence": {
+      "count": 1,
+      "items": [
+        {
+          "matter_id": "whitmore-employment-2026",
+          "matter_name": "Whitmore Group Employment Advisory",
+          "client_id": "whitmore-group",
+          "client_name": "Whitmore Group",
+          "days_since_contact": 16,
+          "threshold_days": 14,
+          "last_contact_date": "2026-06-09",
+          "comm_draft_id": "comm-whitmore-001"
+        }
+      ]
+    },
+    "anomalies": {
+      "count": 1,
+      "items": [
+        {
+          "escalation_id": "anom-001",
+          "matter_id": "mercer-v-dunlap-2026",
+          "entity_id": "te-001",
+          "entity_type": "time_entry",
+          "risk_level": "ELEVATED",
+          "priority": 2,
+          "what_is_happening": "Missing narrative on te-001 — Mercer Industries, $1,500",
+          "why_it_matters": "No narrative creates LEDES rejection risk and makes reconstruction impossible if the entry is challenged.",
+          "what_litt_has_done": "Held te-001 before billing and flagged for your review. Entry cannot advance until a narrative is added.",
+          "what_attorney_must_decide": "Add a narrative to approve this entry, or write it off.",
+          "created_at": "2026-06-25T16:32:00Z"
+        }
+      ]
+    },
+    "compound_escalations": {
+      "count": 0,
+      "items": []
+    },
+    "inbox_items": {
+      "count": 3,
+      "items": [
+        {
+          "message_id": "inb-mercer-001",
+          "matter_id": "mercer-v-dunlap-2026",
+          "from_name": "Sandra Mercer",
+          "from_role": "client",
+          "received_at": "2026-06-23T14:22:00Z",
+          "wait_days": 2,
+          "urgency": "HIGH",
+          "message_excerpt": "Dana, the MSJ hearing is Thursday. I need to know our position on the new Dunlap exhibits by tomorrow morning.",
+          "summary": "Client requesting position on Dunlap exhibits before MSJ hearing Thursday.",
+          "action_items": ["Confirm position on Dunlap exhibits", "Reply by tomorrow morning"],
+          "suggested_reply_comm_id": "comm-mercer-inb-001",
+          "cross_agent": true,
+          "status": "REPLY_HELD"
+        },
+        {
+          "message_id": "inb-lindqvist-001",
+          "matter_id": "okafor-v-lindqvist-2026",
+          "from_name": "Karl Lindqvist",
+          "from_role": "client",
+          "received_at": "2026-06-24T09:15:00Z",
+          "wait_days": 1,
+          "urgency": "MEDIUM",
+          "message_excerpt": "Can you send me the updated deposition schedule when it's confirmed?",
+          "summary": "Client requesting updated deposition schedule.",
+          "action_items": ["Send confirmed deposition schedule"],
+          "suggested_reply_comm_id": "comm-lindqvist-inb-001",
+          "cross_agent": false,
+          "status": "REPLY_HELD"
+        },
+        {
+          "message_id": "inb-acme-001",
+          "matter_id": "acme-commercial-retainer",
+          "from_name": "James Okafor",
+          "from_role": "billing_contact",
+          "received_at": "2026-06-24T16:40:00Z",
+          "wait_days": 1,
+          "urgency": "MEDIUM",
+          "message_excerpt": "We haven't received the June invoice yet. Also, can you confirm the retainer renewal terms?",
+          "summary": "Billing contact asking about June invoice and retainer renewal.",
+          "action_items": ["Send June invoice", "Confirm retainer renewal terms"],
+          "suggested_reply_comm_id": null,
+          "cross_agent": true,
+          "status": "AWAITING_TRIAGE"
+        }
+      ]
+    }
+  },
+  "resolved_today": []
+}

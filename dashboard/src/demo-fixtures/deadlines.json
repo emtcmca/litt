@@ -1,0 +1,93 @@
+[
+  {
+    "id": "dl-mercer-001",
+    "status": "ACTIVE",
+    "verification_status": "UNCONFIRMED",
+    "due_date": "2026-07-01",
+    "description": "Opposition to MSJ",
+    "classification": "HARD_LEGAL",
+    "matter_id": "mercer-v-dunlap-2026",
+    "client_id": "mercer-industries",
+    "days_out": 6,
+    "escalation_level": "7_DAY",
+    "email_reference": null
+  },
+  {
+    "id": "dl-okafor-disc",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-07-16",
+    "description": "Discovery cutoff",
+    "classification": "HARD_LEGAL",
+    "matter_id": "okafor-v-lindqvist-2026",
+    "client_id": "lindqvist-holdings",
+    "days_out": 21,
+    "escalation_level": null,
+    "email_reference": null
+  },
+  {
+    "id": "dl-acme-renew",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-07-27",
+    "description": "Contract renewal notice",
+    "classification": "HARD_CONTRACTUAL",
+    "matter_id": "acme-commercial-retainer",
+    "client_id": "acme-commercial",
+    "days_out": 32,
+    "escalation_level": null,
+    "email_reference": null
+  },
+  {
+    "id": "dl-mercer-exp",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-08-06",
+    "description": "Expert disclosure",
+    "classification": "HARD_LEGAL",
+    "matter_id": "mercer-v-dunlap-2026",
+    "client_id": "mercer-industries",
+    "days_out": 42,
+    "escalation_level": null,
+    "email_reference": null
+  },
+  {
+    "id": "dl-whit-review",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-07-09",
+    "description": "Policy review delivery",
+    "classification": "SOFT_INTERNAL",
+    "matter_id": "whitmore-employment-2026",
+    "client_id": "whitmore-group",
+    "days_out": 14,
+    "escalation_level": null,
+    "email_reference": null
+  },
+  {
+    "id": "dl-reyes-ans",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-07-05",
+    "description": "Answer to complaint",
+    "classification": "HARD_LEGAL",
+    "matter_id": "reyes-vendor-dispute-2026",
+    "client_id": "reyes-logistics",
+    "days_out": 10,
+    "escalation_level": null,
+    "email_reference": null
+  },
+  {
+    "id": "dl-reyes-commit",
+    "status": "ACTIVE",
+    "verification_status": "CONFIRMED",
+    "due_date": "2026-07-02",
+    "description": "Answer to client — your commitment",
+    "classification": "SOFT_INTERNAL",
+    "matter_id": "reyes-vendor-dispute-2026",
+    "client_id": "reyes-logistics",
+    "days_out": 7,
+    "escalation_level": null,
+    "email_reference": null
+  }
+]

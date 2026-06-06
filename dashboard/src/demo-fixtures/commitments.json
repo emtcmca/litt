@@ -1,0 +1,70 @@
+[
+  {
+    "id": "cm-mercer",
+    "quote": "I'll send the updated exhibit list by end of day tomorrow.",
+    "client": "Mercer Industries",
+    "matter": "v. Dunlap Construction",
+    "captured": "today",
+    "due": "Jun 26, 2026",
+    "daysOut": 1,
+    "status": "pending",
+    "onBook": false
+  },
+  {
+    "id": "cm-whit",
+    "quote": "I'll get you the policy review summary by Sunday.",
+    "client": "Whitmore Group",
+    "matter": "Employment advisory",
+    "captured": "Jun 22",
+    "due": "Jun 28, 2026",
+    "daysOut": 3,
+    "status": "due-soon",
+    "onBook": true
+  },
+  {
+    "id": "cm-reyes",
+    "quote": "I'll have our answer to you by Friday.",
+    "client": "Reyes Logistics",
+    "matter": "Vendor dispute",
+    "captured": "Jun 23",
+    "due": "Jul 2, 2026",
+    "daysOut": 7,
+    "status": "tracked",
+    "onBook": true
+  },
+  {
+    "id": "cm-acme",
+    "quote": "We'll circulate the revised draft to you next week.",
+    "client": "Acme Commercial Partners",
+    "matter": "GC retainer",
+    "captured": "Jun 19",
+    "due": "Jul 6, 2026",
+    "daysOut": 11,
+    "status": "tracked",
+    "onBook": false
+  },
+  {
+    "id": "cm-lind",
+    "quote": "I'll confirm the deposition schedule by Monday.",
+    "client": "Lindqvist Holdings",
+    "matter": "Okafor v. Lindqvist",
+    "captured": "Jun 15",
+    "due": "Jun 20, 2026",
+    "daysOut": -5,
+    "status": "kept",
+    "onBook": false,
+    "closedNote": "Fulfilled Jun 19 — a day early"
+  },
+  {
+    "id": "cm-bell",
+    "quote": "I'll send the signed engagement letter by Tuesday.",
+    "client": "Bell Manufacturing",
+    "matter": "Matter intake",
+    "captured": "Jun 13",
+    "due": "Jun 17, 2026",
+    "daysOut": -8,
+    "status": "slipped",
+    "onBook": false,
+    "closedNote": "Re-sent Jun 22 — 5 days late"
+  }
+]

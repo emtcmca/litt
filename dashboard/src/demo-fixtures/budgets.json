@@ -1,0 +1,52 @@
+[
+  {
+    "client_id": "acme-commercial",
+    "client_name": "Acme Commercial Partners",
+    "utilization_pct": 78,
+    "billed_to_date": 9000,
+    "approved_unbilled": 2700,
+    "total_committed": 11700,
+    "budget_cap": 15000,
+    "alert_status": "WARN"
+  },
+  {
+    "client_id": "mercer-industries",
+    "client_name": "Mercer Industries",
+    "utilization_pct": 56,
+    "billed_to_date": 18100,
+    "approved_unbilled": 4300,
+    "total_committed": 22400,
+    "budget_cap": 40000,
+    "alert_status": "OK"
+  },
+  {
+    "client_id": "lindqvist-holdings",
+    "client_name": "Lindqvist Holdings",
+    "utilization_pct": 36,
+    "billed_to_date": 7200,
+    "approved_unbilled": 1800,
+    "total_committed": 9000,
+    "budget_cap": 25000,
+    "alert_status": "OK"
+  },
+  {
+    "client_id": "reyes-logistics",
+    "client_name": "Reyes Logistics",
+    "utilization_pct": 41,
+    "billed_to_date": 3100,
+    "approved_unbilled": 1820,
+    "total_committed": 4920,
+    "budget_cap": 12000,
+    "alert_status": "OK"
+  },
+  {
+    "client_id": "whitmore-group",
+    "client_name": "Whitmore Group",
+    "utilization_pct": 42,
+    "billed_to_date": 2400,
+    "approved_unbilled": 960,
+    "total_committed": 3360,
+    "budget_cap": 8000,
+    "alert_status": "OK"
+  }
+]

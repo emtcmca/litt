@@ -1,0 +1,494 @@
+[
+  {
+    "observation_id": "obs-001",
+    "timestamp": "2026-06-25T17:00:01Z",
+    "agent_name": "coordinator",
+    "observation_type": "SIGNAL_RECEIVED",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Closeout sweep triggered for strand-okafor · 5:00 PM.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": { "tool": null, "handoff": null }
+  },
+  {
+    "observation_id": "obs-002",
+    "timestamp": "2026-06-25T17:00:02Z",
+    "agent_name": "coordinator",
+    "observation_type": "ROUTING_DECISION",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "classify_signal() routed every signal class to its domain agent.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-001",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "classify_signal",
+        "kind": "compute",
+        "signature": "classify_signal(signal) → AgentId",
+        "result": "18 signals → 4 agents"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-003",
+    "timestamp": "2026-06-25T17:00:03Z",
+    "agent_name": "comms_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "tool_write",
+    "model_name": null,
+    "confidence": null,
+    "description": "Read the inbox (read-only) — 3 client messages await a response.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "scan_inbox",
+        "kind": "read",
+        "signature": "scan_inbox(scope=\"clients\") → Message[]",
+        "result": "3 messages awaiting your reply"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-004",
+    "timestamp": "2026-06-25T17:00:04Z",
+    "agent_name": "comms_agent",
+    "observation_type": "REASONING",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Scored each message by urgency — deterministic signals, no model.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-003",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "score_urgency",
+        "kind": "compute",
+        "signature": "score_urgency(msg) → 0..1",
+        "result": "Mercer 0.88 · high"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-005",
+    "timestamp": "2026-06-25T17:00:05Z",
+    "agent_name": "comms_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "llm_assisted",
+    "model_name": "gemini-2.5-pro",
+    "confidence": 0.95,
+    "description": "Gemini summarized each message and extracted its action items.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-004",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "summarize_message",
+        "kind": "gemini",
+        "signature": "summarize_message(msg) → {summary, action_items[]}",
+        "result": "summary + 2 action items"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-006",
+    "timestamp": "2026-06-25T17:00:06Z",
+    "agent_name": "comms_agent",
+    "observation_type": "ROUTE_HANDOFF",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "route",
+    "model_name": null,
+    "confidence": null,
+    "description": "Sandra's email names a Thursday court deadline — handed to the Deadline Monitor to verify.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-005",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "route_to_agent",
+        "kind": "compute",
+        "signature": "route_to_agent(\"deadline\", ctx) → ack",
+        "result": "→ Deadline Monitor"
+      },
+      "handoff": { "from": "comms_agent", "to": "deadline_agent", "entity_id": "dl-mercer-001", "reason": "Court deadline named in client email" }
+    }
+  },
+  {
+    "observation_id": "obs-007",
+    "timestamp": "2026-06-25T17:00:07Z",
+    "agent_name": "deadline_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "tool_write",
+    "model_name": null,
+    "confidence": null,
+    "description": "Pulled the matter's active deadlines from the store.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-006",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "get_active_deadlines",
+        "kind": "read",
+        "signature": "get_active_deadlines(matter_id) → Deadline[]",
+        "result": "Mercer opposition · Jul 1"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-008",
+    "timestamp": "2026-06-25T17:00:08Z",
+    "agent_name": "deadline_agent",
+    "observation_type": "ESCALATION",
+    "commitment_level": "ESCALATION",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "6 days out, HARD_LEGAL, unconfirmed → surfaced as critical. Needs you.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-007",
+    "audit_log_id": null,
+    "attorney_next_action": "Confirm you own this deadline in the closeout brief.",
+    "data": {
+      "tool": {
+        "name": "apply_escalation_tier",
+        "kind": "compute",
+        "signature": "apply_escalation_tier(6, HARD_LEGAL) → 7_DAY",
+        "result": "CRITICAL · unconfirmed"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-009",
+    "timestamp": "2026-06-25T17:00:09Z",
+    "agent_name": "comms_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "BLOCKED",
+    "work_kind": "llm_assisted",
+    "model_name": "gemini-2.5-pro",
+    "confidence": 0.95,
+    "description": "With the date verified, Gemini drafted Sandra's reply — every fact cited.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-008",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "draft_reply",
+        "kind": "gemini",
+        "signature": "draft_reply(msg, facts[]) → Draft",
+        "result": "reply drafted · 2 citations"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-010",
+    "timestamp": "2026-06-25T17:00:10Z",
+    "agent_name": "comms_agent",
+    "observation_type": "APPROVAL_GATE_APPLIED",
+    "commitment_level": "BLOCKED",
+    "work_kind": "human_gate",
+    "model_name": null,
+    "confidence": null,
+    "description": "Reply held — Litt never sends without your approval.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-009",
+    "audit_log_id": null,
+    "attorney_next_action": "Review and approve the drafted reply to Sandra Mercer.",
+    "data": {
+      "tool": {
+        "name": "hold_for_approval",
+        "kind": "compute",
+        "signature": "hold_for_approval(draft) → Held",
+        "result": "queued for your signature"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-011",
+    "timestamp": "2026-06-25T17:00:11Z",
+    "agent_name": "comms_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "llm_assisted",
+    "model_name": "gemini-2.5-pro",
+    "confidence": 0.91,
+    "description": "From a reply you sent Reyes, Litt extracted a promise you made — \"answer by Friday.\"",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "extract_commitments",
+        "kind": "gemini",
+        "signature": "extract_commitments(thread) → Promise[]",
+        "result": "\"answer by Friday\" · Reyes"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-012",
+    "timestamp": "2026-06-25T17:00:12Z",
+    "agent_name": "comms_agent",
+    "observation_type": "ROUTE_HANDOFF",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "route",
+    "model_name": null,
+    "confidence": null,
+    "description": "Handed the promise to the Deadline Monitor — now watched like any other date.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-011",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "register_commitment",
+        "kind": "write",
+        "signature": "register_commitment(promise) → SoftDeadline",
+        "result": "soft deadline · Jul 2"
+      },
+      "handoff": { "from": "comms_agent", "to": "deadline_agent", "entity_id": "cm-reyes", "reason": "Commitment extracted from sent reply" }
+    }
+  },
+  {
+    "observation_id": "obs-013",
+    "timestamp": "2026-06-25T17:00:13Z",
+    "agent_name": "billing_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "tool_write",
+    "model_name": null,
+    "confidence": null,
+    "description": "Pulled every pending time entry from the billing store.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "get_pending_entries",
+        "kind": "read",
+        "signature": "get_pending_entries() → Entry[]",
+        "result": "9 pending · $14,200"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-014",
+    "timestamp": "2026-06-25T17:00:14Z",
+    "agent_name": "billing_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "REVIEW_REQUIRED",
+    "work_kind": "tool_write",
+    "model_name": null,
+    "confidence": null,
+    "description": "Ran all 9 entries through the 7-rule scrubber — one came back flagged.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-013",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "run_prebill_scrubber",
+        "kind": "compute",
+        "signature": "run_prebill_scrubber(entry) → Flag[]",
+        "result": "te-001 · MISSING_NARRATIVE"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-015",
+    "timestamp": "2026-06-25T17:00:15Z",
+    "agent_name": "billing_agent",
+    "observation_type": "RESULT",
+    "commitment_level": "REVIEW_REQUIRED",
+    "work_kind": "tool_write",
+    "model_name": null,
+    "confidence": null,
+    "description": "Held te-001 before it could be billed — $1,500, no narrative.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-014",
+    "audit_log_id": "ae-te-001-hold",
+    "attorney_next_action": "Add a narrative to approve, or write off te-001.",
+    "data": {
+      "tool": {
+        "name": "hold_entry",
+        "kind": "write",
+        "signature": "hold_entry(te-001, flag) → Held",
+        "result": "held before billing"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-016",
+    "timestamp": "2026-06-25T17:00:16Z",
+    "agent_name": "billing_agent",
+    "observation_type": "RESULT",
+    "commitment_level": "REVIEW_REQUIRED",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Acme utilization 78% → crossed the 75% WARN threshold.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-015",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "compute_budget_utilization",
+        "kind": "compute",
+        "signature": "compute_budget_utilization(matter) → pct",
+        "result": "Acme 78% · WARN"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-017",
+    "timestamp": "2026-06-25T17:00:17Z",
+    "agent_name": "anomaly_agent",
+    "observation_type": "TOOL_CALL",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Ran 13 deterministic detectors over the day's entries — one fired.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "run_detectors",
+        "kind": "compute",
+        "signature": "run_detectors(entry) → Anomaly[]",
+        "result": "13 detectors · 1 fired"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-018",
+    "timestamp": "2026-06-25T17:00:18Z",
+    "agent_name": "anomaly_agent",
+    "observation_type": "REASONING",
+    "commitment_level": "REVIEW_REQUIRED",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Scored the missing-narrative anomaly — severity × confidence → ELEVATED.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-017",
+    "audit_log_id": null,
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "score_risk",
+        "kind": "compute",
+        "signature": "score_risk(anomaly) → severity×conf",
+        "result": "ELEVATED · 0.82"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-019",
+    "timestamp": "2026-06-25T17:00:19Z",
+    "agent_name": "anomaly_agent",
+    "observation_type": "APPROVAL_GATE_APPLIED",
+    "commitment_level": "BLOCKED",
+    "work_kind": "human_gate",
+    "model_name": null,
+    "confidence": null,
+    "description": "Won't clear without your reason — Litt never dismisses anything silently.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": "obs-018",
+    "audit_log_id": null,
+    "attorney_next_action": "Provide a reason to clear the missing-narrative anomaly.",
+    "data": {
+      "tool": {
+        "name": "require_reason",
+        "kind": "compute",
+        "signature": "require_reason(anomaly) → Blocked",
+        "result": "reason required to clear"
+      },
+      "handoff": null
+    }
+  },
+  {
+    "observation_id": "obs-020",
+    "timestamp": "2026-06-25T17:00:20Z",
+    "agent_name": "coordinator",
+    "observation_type": "RESULT",
+    "commitment_level": "AUTO_SAFE",
+    "work_kind": "deterministic",
+    "model_name": null,
+    "confidence": null,
+    "description": "Assembled the closeout — 5 items, 1 critical · every step logged.",
+    "evidence": [],
+    "run_id": "run-demo-001",
+    "parent_observation_id": null,
+    "audit_log_id": "ae-brief-001",
+    "attorney_next_action": null,
+    "data": {
+      "tool": {
+        "name": "assemble_brief",
+        "kind": "write",
+        "signature": "assemble_brief(items) → Brief",
+        "result": "Brief · 5 items, 1 critical"
+      },
+      "handoff": null
+    }
+  }
+]
