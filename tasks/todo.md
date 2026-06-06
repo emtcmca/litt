@@ -1,4 +1,212 @@
-# Litt — Sprint Task List
+# Litt — v1.1.1 Agent Respec Task List
+
+**Sprint:** Post-hackathon — active  
+**Status key:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked  
+**Full spec:** `docs/agent-respec-build-plan-v1.1.1.md` (gate definitions + design decisions)  
+**Total gates:** 75 · **Total tasks:** 92
+
+---
+
+## Phase 0 — Data Model & Foundation
+*Must complete before any agent work. Gates: G0-01 → G0-06*
+
+### models.py additions
+- [ ] V11-P0-01 Add 6 new `CommTrigger` enum values: `BUDGET_THRESHOLD_CROSSED`, `DEADLINE_CONFIRMED_NO_UPDATE`, `INVOICE_GENERATED`, `ACTIVITY_WITHOUT_UPDATE`, `DEADLINE_EXTENSION_REQUEST`, `INBOUND_REPLY` — *Note: `UNANSWERED_CLIENT_EMAIL` and `CLIENT_QUESTION_DETECTED` removed; handled by inbound urgency scoring not outbound triggers*
+- [ ] V11-P0-02 Add `AnomalyType` enum (11 values): `ROUND_HOURS_NO_SESSION`, `DUPLICATE_ENTRY_CANDIDATE`, `AI_DISCLOSURE_GAP`, `STALE_VERIFIED_DEADLINE`, `LATE_ENTRY_CREATION`, `ENTRY_CLUSTERING`, `SEMANTIC_DUPLICATE_CANDIDATE`, `RATE_ANOMALY`, `INVOICE_STALENESS`, `NARRATIVE_INSUFFICIENT`, `HOURS_NARRATIVE_MISMATCH`
+- [ ] V11-P0-03 Add `ObservationType` values: `MATTER_SYNTHESIS`, `COMPOUND_RISK`, `INBOX_TRIAGE`, `WARN_NOTICE`, `ROUTE_HANDOFF`
+- [ ] V11-P0-04 Add inbound triage enums: `InboundUrgency` (HIGH/MEDIUM/LOW), `InboundStatus` (AWAITING_TRIAGE/TRIAGED/REPLY_HELD/HANDLED/SNOOZED/DISMISSED), `InboundActionItem(text, handoff_agent)` — *no `IncomingEmailClassification`; urgency is deterministic Python scoring, not LLM classification*
+- [ ] V11-P0-05 Add `VerificationStatus.pending_verification` value
+- [ ] V11-P0-06 Add `InboundMessage` Pydantic model extending `LittBaseModel` — fields: `source_email_id`, `matter_id`, `client_id`, `from_name`, `from_role`, `received_at`, `wait_days`, `urgency`, `urgency_signals`, `message_excerpt`, `summary`, `action_items`, `suggested_reply_comm_id`, `cross_agent`, `status`, `version`; collection `inbound_messages`
+- [ ] V11-P0-07 Add `writing_style: dict` field to `Attorney` model in `models.py`
+
+### Tool layer additions
+- [ ] V11-P0-08 Extend `log_anomaly()` signature in `alerts.py`: add optional `severity: str = "BLOCK"`, `gemini_assessment: Optional[str]`, `suggested_narrative: Optional[str]`, `confidence: Optional[float]` — verify existing callers unbroken
+- [ ] V11-P0-09 Create `backend/app/tools/inbound.py` [NEW] with 3 tool functions: `create_inbound_message()`, `snooze_inbound()`, `dismiss_inbound()` — each writes to `firms/{firm_id}/inbound_messages/`, calls `log_audit_event()`; status transitions via `_INBOUND_TRANSITIONS` dict
+- [ ] V11-P0-10 Update `create_client_comm()` in `comms.py` — store both `draft_body` (with `[f#]` citations) and `draft_body_clean` (stripped)
+- [ ] V11-P0-11 Add `check_invoice_readiness()` to `billing.py` — read-only, returns `{ready, blocking_entries, warn_entries}`; no Firestore writes
+- [ ] V11-P0-12 Create `backend/app/tools/registry.py` [NEW] — `ToolKind` enum, `ToolSpec` dataclass, `TOOL_REGISTRY` dict (≥18 entries covering all 4 agents + coordinator); `GET /api/tools` endpoint returns registry list
+- [ ] V11-P0-13 Add `GET /api/inbound?firm_id&attorney_id` endpoint — returns `InboundMessage[]` with inlined `ClientCommunication.draft_body_clean` for any `suggested_reply_comm_id`
+- [ ] V11-P0-14 Add `GET /api/deadlines?firm_id` endpoint — full book of all ACTIVE deadlines with `days_out` and `escalation_level` (reuse `deadline_agent._CADENCE` / `_get_escalation_level`); no new write path
+
+### Seed data
+- [ ] V11-P0-15 Add 4 fixture `InboundMessage` docs to `seed_demo.py`: `inbound-mercer-q1` (HIGH, mentions Thursday deadline), `inbound-acme-billing` (MEDIUM, budget concern), `inbound-opp-counsel-001` (HIGH, opposing counsel), `inbound-whitmore-update` (LOW, acknowledgment); all `status: "AWAITING_TRIAGE"`
+- [ ] V11-P0-16 Add `writing_style` dict to `dana-strand` attorney doc in `seed_demo.py` — tone, salutation preference, signature style, paragraph length
+
+**Phase 0 gate check:**
+- [ ] G0-01 `models.py` compiles — all new enums, `InboundMessage` model, `writing_style` field present; `from app.models import AnomalyType, InboundUrgency, InboundStatus` runs clean
+- [ ] G0-02 `InboundMessage(**fixture_data).model_dump()` valid; `suggested_reply_comm_id` optional
+- [ ] G0-03 `log_anomaly()` accepts new args without breaking existing callers (`pytest tests/test_tools.py` green)
+- [ ] G0-04 `inbound_messages` collection has 4 docs for strand-okafor after seed; all `status: "AWAITING_TRIAGE"`
+- [ ] G0-05 `attorneys/dana-strand` has `writing_style.tone` and `writing_style.salutation`
+- [ ] G0-06 `from app.tools.inbound import create_inbound_message, snooze_inbound, dismiss_inbound` runs clean
+- [ ] G0-07 `from app.tools.registry import TOOL_REGISTRY` runs; `len(TOOL_REGISTRY) >= 18`
+- [ ] G0-08 `GET /api/inbound?firm_id=strand-okafor` returns 4 items with `urgency`, `status`, `urgency_signals`
+- [ ] G0-09 `GET /api/deadlines?firm_id=strand-okafor` returns all ACTIVE deadlines with `days_out` and `escalation_level`
+
+---
+
+## Phase 1 — AnomalyAgent
+*5 new detectors + priority sorting + 5 Gemini integrations. Gates: G1-01 → G1-14*
+
+### New Python detectors
+- [ ] V11-P1-01 `LATE_ENTRY_CREATION` — fire when `created_at - entry_date > 3 days`; priority 2; no Gemini
+- [ ] V11-P1-02 `ENTRY_CLUSTERING` — fire when same attorney/matter/date has `>8h billed` or `>5 entries`; priority 3
+- [ ] V11-P1-03 `SEMANTIC_DUPLICATE_CANDIDATE` Python pre-filter — edit distance + shared-token check; flags pairs for Gemini review when threshold met
+- [ ] V11-P1-04 `RATE_ANOMALY` — fire when hourly rate deviates `>15%` from matter baseline; priority 2
+- [ ] V11-P1-05 `INVOICE_STALENESS` — fire when APPROVED entries older than `invoice_cycle_days`; priority 2
+
+### Signal handling
+- [ ] V11-P1-06 Sort all signals by priority descending before emitting observations
+
+### Gemini integration functions
+- [ ] V11-P1-07 `_call_gemini_anomaly_enrichment()` — priority-gated: only called for priority≥3, HARD_LEGAL context, >70% budget, or specific high-risk types; returns structured enrichment added to observation
+- [ ] V11-P1-08 `_call_gemini_narrative_quality()` — assess narrative text; emit `NARRATIVE_INSUFFICIENT` if `confidence≥0.65`; include `suggested_narrative` in `log_anomaly()` call
+- [ ] V11-P1-09 `_call_gemini_hours_plausibility()` — assess unusual hour totals; emit BLOCK if `confidence≥0.65`, WARN if `<0.65`; never gate on Gemini alone
+- [ ] V11-P1-10 `_call_gemini_semantic_duplicate()` — called only when Python pre-filter flags ≥4 entries on matter; returns duplicate pair IDs + rationale
+- [ ] V11-P1-11 `_call_gemini_matter_synthesis()` — called when ≥2 signals share `matter_id`; returns MATTER_SYNTHESIS observation text; logged as observation, never gates
+
+### Updated log_anomaly calls
+- [ ] V11-P1-12 Update all `log_anomaly()` calls in anomaly_agent.py to pass `severity`, `gemini_assessment`, `suggested_narrative`, `confidence` where applicable
+
+### Tests
+- [ ] V11-P1-13 `pytest tests/test_anomaly_agent.py` — all 5 new detectors fire on fixture data
+- [ ] V11-P1-14 `pytest tests/test_anomaly_agent.py` — Gemini gate respected: enrichment NOT called for priority<3 plain signals
+
+**Phase 1 gate check:**
+- [ ] G1-01 through G1-14 — per spec
+
+---
+
+## Phase 2 — BillingAgent
+*Expand to APPROVED entries, WARN surfacing, budget signals, Gemini narrative, readiness check. Gates: G2-01 → G2-08*
+
+- [ ] V11-P2-01 Expand entry scan to include APPROVED entries (previously PENDING only)
+- [ ] V11-P2-02 Surface WARN-severity flags for soft issues — written to brief as `WARN_NOTICE`, no hard attorney gate
+- [ ] V11-P2-03 Budget threshold detection — compute utilization per client; emit signal at 70% and 90% thresholds
+- [ ] V11-P2-04 Build and return `budget_signals` dict from agent run — keyed by `client_id`, value is utilization data; passed to Coordinator for CommsAgent Round 2
+- [ ] V11-P2-05 Call Gemini for narrative improvement suggestion on `NARRATIVE_INSUFFICIENT` entries — populate `suggested_narrative` in `log_anomaly()` call (do not auto-apply)
+- [ ] V11-P2-06 Call `check_invoice_readiness()` before `generate_invoice()`; abort with 400 and block reason if status=BLOCK
+- [ ] V11-P2-07 Wire `/api/billing/invoice` POST route to enforce readiness check
+- [ ] V11-P2-08 `pytest tests/test_billing_agent.py` — APPROVED entries detected; WARN emitted; `budget_signals` dict populated; readiness check blocks invoice on BLOCK condition
+
+---
+
+## Phase 3 — DeadlineAgent
+*Readiness monitoring, extension drafting, soft watch, conflict advancement, clustering. Gates: G3-01 → G3-10*
+
+- [ ] V11-P3-01 Readiness monitoring pass — read-only observation on each approaching deadline; checks for open items without writing Firestore
+- [ ] V11-P3-02 Extension request draft — trigger when deadline is 1_DAY or CRITICAL and no work logged on matter in last 5 days; call Gemini to draft extension request; store as `create_client_comm()` with `CommTrigger.DEADLINE_EXTENSION_REQUEST`
+- [ ] V11-P3-03 21-day soft watch — log observation when deadline is 21 days out and not yet verified; no escalation record; severity WARN
+- [ ] V11-P3-04 30-day soft watch — log observation when deadline is 30 days out; no escalation record; severity WARN
+- [ ] V11-P3-05 `conflict_flagged` → `pending_verification` advancement — Gemini extraction confidence≥0.80 triggers `verify_deadline()` with `pending_verification` status; attorney confirms or rejects
+- [ ] V11-P3-06 Cadence gap detection — fire WARN observation if escalation cadence skipped a level (e.g., 14_DAY → CRITICAL with no 7_DAY or 3_DAY record)
+- [ ] V11-P3-07 Deadline clustering — group ≥3 matters with deadlines within a 5-day window into single clustering observation; note capacity pressure
+- [ ] V11-P3-08 `pytest tests/test_deadline_agent.py` — readiness monitoring fires; 21/30-day watch produces observation with no escalation write; clustering groups matters correctly
+- [ ] V11-P3-09 `pytest tests/test_deadline_agent.py` — `conflict_flagged` advances to `pending_verification` at confidence≥0.80; does NOT advance at confidence<0.80
+- [ ] V11-P3-10 `pytest tests/test_deadline_agent.py` — extension draft produced on correct trigger; NOT produced when matter has recent activity or deadline not at 1_DAY/CRITICAL
+
+---
+
+## Phase 4 — CommsAgent
+*7 triggers, attorney style profile, multi-tone drafting, citation stripping, inbound triage. Gates: G4-01 → G4-15*
+
+### Multi-trigger outbound system (5 triggers — inbound urgency signals are NOT outbound triggers)
+- [ ] V11-P4-01 `BUDGET_THRESHOLD_CROSSED` — fires when `budget_signals` from BillingAgent contains client; drafts budget status update
+- [ ] V11-P4-02 `DEADLINE_CONFIRMED_NO_UPDATE` — fires when deadline verified but no client comm in 7 days; drafts status update to client
+- [ ] V11-P4-03 `INVOICE_GENERATED` — fires when invoice generation logged in audit trail for matter; drafts invoice cover note
+- [ ] V11-P4-04 `ACTIVITY_WITHOUT_UPDATE` — fires when time entries logged on matter but no client comm in 14 days; drafts matter update
+- [ ] V11-P4-05 `DEADLINE_EXTENSION_REQUEST` — fires when extension_request observation from DeadlineAgent present; drafts extension request to opposing counsel or court
+
+### Attorney style profile
+- [ ] V11-P4-06 Load `writing_style` from `attorneys/{attorney_id}` Firestore doc; inject into Gemini system prompt as context — tone, salutation, paragraph length, signature
+- [ ] V11-P4-07 Map each `CommTrigger` to draft tone (`update` / `billing` / `reassurance` / `action_required`); pass tone to Gemini prompt
+
+### Citation stripping
+- [ ] V11-P4-08 Strip `[f1]`/`[f2]` etc. citation markers from `draft_body` to produce `draft_body_clean` before calling `create_client_comm()`; store both fields
+
+### Inbound triage pass (deterministic urgency, Gemini summary + draft, ROUTE_HANDOFF)
+- [ ] V11-P4-09 Python urgency scoring — implement `URGENCY_SIGNALS` rubric: decision-maker (3pts), mentions deadline (3pts), wait_days≥2 (2pts), direct question (1pt), thread followup (1pt), names matter (1pt); HIGH≥5, MEDIUM≥2, else LOW
+- [ ] V11-P4-10 `_mentions_deadline()` and `_has_question()` — deterministic regex/keyword functions; no Gemini; labeled as `work_kind="deterministic"` in observations
+- [ ] V11-P4-11 For HIGH/MEDIUM urgency: call `_call_gemini_summarize_message()` → `{summary, action_items}`; Python tags `action_items` with `handoff_agent` based on keyword rules
+- [ ] V11-P4-12 For HIGH urgency: call `_call_gemini_draft_reply()` using FactPacket + `[fN]` citations; call `create_client_comm(trigger=INBOUND_REPLY, status=DRAFT_GENERATED)`; emit `APPROVAL_GATE_APPLIED` observation
+- [ ] V11-P4-13 Call `create_inbound_message()` for each message (idempotency: `inbound-{source_email_id}-{date}`); LOW urgency creates record only — no Gemini
+- [ ] V11-P4-14 Opposing counsel pass — when `from_role` or email domain matches known opposing contact: Gemini `summary` prompt instructs action items + deadline extraction; no draft created; `attorney_action_required=True`
+
+### Cross-agent routing
+- [ ] V11-P4-15 Emit `ROUTE_HANDOFF` observation when `action_item.handoff_agent` is set: populate `data.handoff = {from, to, entity_id, reason}`, `work_kind="route"`, `commitment_level=AUTO_SAFE`
+- [ ] V11-P4-16 Add `"route"` → `work_kind` mapping in `AgentRunTimeline.tsx` `WORK_KIND_SPEC` (brass/gold color per design system)
+
+### Tests
+- [ ] V11-P4-17 `pytest tests/test_comms_agent.py` — all 5 outbound triggers produce comms with correct `trigger` field; fixture data drives each
+- [ ] V11-P4-18 `pytest tests/test_comms_agent.py` — `draft_body_clean` has no `[f#]` markers; `writing_style` injected; urgency scoring correct; LOW urgency produces no Gemini call; ROUTE_HANDOFF emitted for deadline-mentioning inbound
+
+---
+
+## Phase 5 — Coordinator
+*Parallel execution, correlation pass, compound escalation, budget passthrough. Gates: G5-01 → G5-08*
+
+- [ ] V11-P5-01 Parallel Round 1 — run BillingAgent, DeadlineAgent, AnomalyAgent simultaneously via `ThreadPoolExecutor`
+- [ ] V11-P5-02 Parallel Round 2 — run CommsAgent with `budget_signals` dict from Round 1 BillingAgent result
+- [ ] V11-P5-03 30-second timeout per agent — catch `TimeoutError`; mark agent result as partial; log observation; do not crash brief
+- [ ] V11-P5-04 Cross-agent correlation pass — after both rounds, group all signals by `matter_id`
+- [ ] V11-P5-05 `CompoundSignal` dataclass — fields: `matter_id`, `contributing_agents` (list), `signals` (list), `severity`
+- [ ] V11-P5-06 `log_escalation(EscalationType.COMPOUND, ...)` when ≥2 agents fire signals on same matter — one compound escalation record per matter
+- [ ] V11-P5-07 `matter_signals` dict built from correlation pass; passed to brief assembler for synthesis section ordering
+- [ ] V11-P5-08 `pytest tests/test_coordinator.py` — parallel execution verified via timing; compound escalation fires; timeout produces partial result not crash; `budget_signals` reaches CommsAgent
+
+---
+
+## Phase 6 — Frontend
+*Gemini attribution, WARN notices, compound card, inbox section, synthesis card, TypeScript sync. Gates: G6-01 → G6-14*
+
+### New components
+- [ ] V11-P6-01 `GeminiLabel` component — small "G" logo/badge; renders inline on any AI-enriched brief item; always visible (not tooltip)
+- [ ] V11-P6-02 `WarnNotice` component — brief-visible soft notice strip; no approval gate; dismissible by attorney
+- [ ] V11-P6-03 Inline narrative replacement UI — display `suggested_narrative` in brief; "Apply" button calls `PUT /api/billing/entry/{id}/narrative`; confirms success before advancing
+- [ ] V11-P6-04 `CompoundEscalationCard` — single card for compound escalations; shows contributing agents and signals; expandable detail
+- [ ] V11-P6-05 Inbox brief section — new section listing `IncomingEmail` items grouped by `triage_status`
+- [ ] V11-P6-06 Email triage card — per email: shows sender, subject, classification badge, draft response (if any), action buttons (Dismiss / Approve Response)
+- [ ] V11-P6-07 Matter synthesis card — `MATTER_SYNTHESIS` observation displayed as a synthesis card leading the matter's section in brief
+- [ ] V11-P6-08 Gemini attribution display — `GeminiLabel` renders alongside any `gemini_assessment` field in brief items
+
+### Type sync
+- [ ] V11-P6-09 `types.ts` — add `IncomingEmail`, `IncomingEmailClassification`, `IncomingEmailTriageStatus`, `CommTrigger` (all 7 values), `AnomalyType` (all 11 values), `ObservationType` additions
+- [ ] V11-P6-10 `types.ts` — add `CompoundEscalation` type matching Coordinator output structure
+- [ ] V11-P6-11 Brief API response shape — add `compound_escalations: CompoundEscalation[]` and `inbox_items: IncomingEmail[]` sections; update `GET /api/brief` response model
+
+### Verification
+- [ ] V11-P6-12 `npm run typecheck` — zero TypeScript errors
+- [ ] V11-P6-13 Screenshot verification — all new components visible in browser before commit
+- [ ] V11-P6-14 Regression check — `AuditLog`, `TimerHUD`, `SourceDrawer`, existing brief items all render correctly after new component additions
+
+---
+
+## v1.1.1 Summary
+
+| Phase | Agent / Layer | Tasks | Gates |
+|---|---|---|---|
+| 0 | Foundation | 16 | 9 |
+| 1 | AnomalyAgent | 14 | 14 |
+| 2 | BillingAgent | 8 | 8 |
+| 3 | DeadlineAgent | 10 | 10 |
+| 4 | CommsAgent | 18 | 16 |
+| 5 | Coordinator | 8 | 8 |
+| 6 | Frontend | 14 | 14 |
+| **Total** | | **88** | **79** |
+
+**Reconciliation notes (vs. prior v1.1.1 spec):**
+- `IncomingEmail` → `InboundMessage`; collection `incoming_emails` → `inbound_messages`
+- `IncomingEmailClassification` enum removed — replaced by deterministic urgency scoring rubric
+- `IncomingEmailTriageStatus` → `InboundStatus` (different state names, SNOOZED added)
+- `UNANSWERED_CLIENT_EMAIL` / `CLIENT_QUESTION_DETECTED` CommTrigger values removed — inbound conditions, not outbound triggers; `INBOUND_REPLY` added
+- 4 `comms.py` tool additions → 3 functions in new `tools/inbound.py` [NEW]
+- Added: `ObservationType.ROUTE_HANDOFF`, `data.tool` sub-shape on TOOL_CALL observations, `tools/registry.py`, `GET /api/tools`, `GET /api/deadlines` full book, `GET /api/inbound`
+- Added: cross-agent routing section (Phase 4.7), `work_kind="route"` for ROUTE_HANDOFF observations
+
+---
+---
+
+# Litt — v1.0 Hackathon Sprint Task List ✓ SPRINT COMPLETE
 
 **Sprint:** May 30 – June 5, 2026  
 **Status key:** `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked
@@ -714,4 +922,19 @@
 | HUD Phase 3 | 11 | Visual timer works, persists across refresh |
 | HUD Phase 4 | 15 | Full E2E capture → Firestore |
 | HUD Phase 5 | 8 | Demo scene ready, script updated |
-| **Total** | **175** | |
+| Test Feature | 1 | README System Status placeholder |
+| **Total** | **176** | |
+
+---
+
+## Test Feature — System Status README Section
+
+- [ ] README-01 Add `## System Status` placeholder section to `dashboard/README.md`
+  - Document `GET /health` and `GET /api/demo/ready` endpoints
+  - Note Cloud Run URL pattern
+  - Mark section `<!-- placeholder -->`
+
+**Acceptance criteria:**
+- Section heading exists in README
+- No existing content removed
+- Renders as valid markdown

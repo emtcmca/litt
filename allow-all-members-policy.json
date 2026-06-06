@@ -1,0 +1,10 @@
+{
+  "name": "projects/litt-hackathon/policies/iam.allowedPolicyMemberDomains",
+  "spec": {
+    "rules": [
+      {
+        "allowAll": true
+      }
+    ]
+  }
+}

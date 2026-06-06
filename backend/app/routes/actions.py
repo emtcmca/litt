@@ -491,6 +491,7 @@ class TimerCaptureRequest(BaseModel):
     attorney_id: str
     session_minutes: int
     narrative: str
+    raw_note: Optional[str] = None
     used_gemini: bool = False
     idempotency_key: Optional[str] = None
 
@@ -520,7 +521,7 @@ def timer_capture(req: TimerCaptureRequest):
     attorney_doc = collection_ref(req.firm_id, "attorneys").document(req.attorney_id).get()
     rate = 350.0
     if attorney_doc.exists:
-        rate = float(attorney_doc.to_dict().get("hourly_rate", 350.0))
+        rate = float(attorney_doc.to_dict().get("default_rate", 350.0))
 
     return _tool_resp(write_time_entry(
         firm_id=req.firm_id,
@@ -533,6 +534,7 @@ def timer_capture(req: TimerCaptureRequest):
         actor=req.attorney_id,
         idempotency_key=_idem(req.idempotency_key),
         narrative=req.narrative,
+        raw_note=req.raw_note,
         ai_assisted=req.used_gemini,
         ai_tool="litt-narrative-normalizer" if req.used_gemini else None,
         model=_cfg.GEMINI_MODEL if req.used_gemini else None,

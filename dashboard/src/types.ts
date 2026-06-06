@@ -412,6 +412,7 @@ export interface TimerCaptureRequest {
   attorney_id: string;
   session_minutes: number;
   narrative: string;
+  raw_note?: string;
   used_gemini: boolean;
   idempotency_key?: string;
 }

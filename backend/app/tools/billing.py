@@ -146,6 +146,7 @@ def write_time_entry(
     task_code: Optional[str] = None,
     activity_code: Optional[str] = None,
     narrative: Optional[str] = None,
+    raw_note: Optional[str] = None,
     billing_increment: float = 0.1,
     ai_assisted: bool = False,
     ai_tool: Optional[str] = None,
@@ -178,6 +179,7 @@ def write_time_entry(
         "task_code": task_code,
         "activity_code": activity_code,
         "narrative": narrative,
+        "raw_note": raw_note,
         "status": "PENDING",
         "invoice_id": None,
         "ai_assisted": ai_assisted,
@@ -209,7 +211,7 @@ def write_time_entry(
         actor=actor,
         entity_type="time_entry",
         entity_id=entry_id,
-        after_state={"hours": float(hours), "amount": float(amount), "status": "PENDING"},
+        after_state={"hours": float(hours), "amount": float(amount), "status": "PENDING", "raw_note": raw_note},
         idempotency_key=idempotency_key,
     )
 
@@ -452,7 +454,7 @@ def update_entry_narrative(
     audit_id = log_audit_event(
         firm_id=firm_id,
         tier=AuditTier.operational,
-        event_type="ENTRY_NARRATIVE_UPDATED",
+        event_type="ENTRY_NARRATIVE_AMENDED",
         actor=actor,
         entity_type="time_entry",
         entity_id=entry_id,

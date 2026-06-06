@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AuditLogEvent, AuditTier } from '../types';
 import { getAuditLog } from '../api';
+import { DemoBanner } from '../components/DemoBanner';
+
+const DEMO_FIRM_NAME = 'Strand & Okafor LLP';
+const DEMO_DATE      = '2026-05-29';
 
 const FIRM_ID = 'strand-okafor';
 
@@ -214,38 +218,75 @@ export function AuditLog() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)' }}>
+      <DemoBanner firmName={DEMO_FIRM_NAME} demoDate={DEMO_DATE} />
+
       {/* Topbar */}
       <div style={{
-        height: 48,
         background: 'var(--color-background-primary)',
         borderBottom: '1px solid var(--color-border-tertiary)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
-        gap: 16,
+        gap: 0,
         position: 'sticky',
-        top: 0,
+        top: 33,          /* below DemoBanner (33px = 8px padding * 2 + 12px font + ~5px) */
         zIndex: 50,
+        minHeight: 58,
       }}>
-        <Link to="/" style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 11,
-          color: 'var(--color-text-info)',
-          textDecoration: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}>
-          ← Brief
-        </Link>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Audit Log
-        </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>
-          {FIRM_ID} · {loading ? '…' : `${total} events`}
-        </span>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        {/* Brand identity — mirrors main dashboard topbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0 }}>
+          <Link to="/" aria-label="Back to brief" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <span
+              role="img"
+              aria-label="Litt"
+              style={{
+                display:             'block',
+                flexShrink:          0,
+                width:               76,
+                height:              42,
+                backgroundImage:     'url("/icons-logo/litt_logo_main_no_tagline.png")',
+                backgroundSize:      '94px auto',
+                backgroundRepeat:    'no-repeat',
+                backgroundPosition:  'left center',
+                mixBlendMode:        'multiply',
+              }}
+            />
+          </Link>
+
+          <div style={{ borderLeft: '1px solid var(--color-border-tertiary)', paddingLeft: 14, marginLeft: 14 }}>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#14221F', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+              {DEMO_FIRM_NAME}
+            </span>
+            <span style={{ display: 'block', fontSize: 10, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)', marginTop: 2, letterSpacing: '0.04em' }}>
+              {FIRM_ID}
+            </span>
+          </div>
+
+          <div style={{ borderLeft: '1px solid var(--color-border-tertiary)', paddingLeft: 14, marginLeft: 14 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+              Audit Log
+            </span>
+            <span style={{ display: 'block', fontSize: 10, color: 'var(--color-text-tertiary)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+              {loading ? '…' : `${total} events`}
+            </span>
+          </div>
+        </div>
+
+        {/* Back link + filters — pushed right */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link to="/" style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            color: 'var(--color-text-info)',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            marginRight: 8,
+          }}>
+            ← Brief
+          </Link>
           <select value={tierFilter} onChange={e => setTierFilter(e.target.value)} style={selectStyle}>
             {TIER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>

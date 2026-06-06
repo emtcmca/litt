@@ -1,4 +1,122 @@
-# Litt — Locked Build Plan v1.0
+# Litt — Active Build Plan v1.1.1 (Agent Respec & Scope Enhancement)
+
+**Sprint:** Post-hackathon — starts when v1.0 submission complete  
+**Full spec:** `docs/agent-respec-build-plan-v1.1.1.md` (authoritative — all gate definitions live there)  
+**Total completion gates:** 75 across 7 phases  
+**Status:** Planning complete — ready for implementation
+
+---
+
+## What This Sprint Builds
+
+Five agents expanded in scope, Gemini added where it earns it, coordinator parallelized with compound escalation detection, frontend updated with Gemini attribution, WARN notices, inbox triage section, and inline narrative replacement.
+
+Core pattern unchanged: **Detection → Python. Assessment → Gemini. Decision → Attorney.**
+
+---
+
+## Non-Negotiables (Carried Forward from v1.0)
+
+- Agents never write Firestore directly — all writes through tool layer
+- Every Firestore write calls `log_audit_event()`
+- `audit_log` and `deadline_events` are CREATE-only
+- Gemini never used for state transitions, routing decisions, or arithmetic
+- Attorney approval gates remain on all billing, deadline, comms, and dismissal actions
+- `config.get_effective_date()` everywhere — no `date.today()` or `datetime.now()`
+
+---
+
+## Design Decisions (Locked)
+
+| Decision | Resolution |
+|---|---|
+| CommsAgent voice | Professional/competent/personable partner attorney tone. v1.2: Gemini analyzes sent-mail folder for attorney voice fine-tuning. |
+| Inbox triage | Full scope in v1.1.1, fixture-based. Live Gmail OAuth in v1.2. |
+| WARN flags | Brief-visible soft notice. No approval gate. Recommendation only. |
+| Compound escalations | One compound escalation per matter when ≥2 agents fire signals. Individual items remain alongside. |
+| Multi-trigger drafts | Separate draft per trigger type. Consolidation deferred to v1.2 (requires message-type classification taxonomy first). |
+| Gemini attribution | Small Gemini label/logo on every AI-enriched item. Always visible, not tooltip. |
+| Narrative replacement | Inline in brief with one-click Apply. Routes through `update_entry_narrative()`. |
+| Synthesis placement | Synthesis card alongside individual anomaly items, not instead of them. Synthesis leads the matter section. |
+
+---
+
+## Phase Summary
+
+| Phase | Agent / Layer | Key Changes | Gates |
+|---|---|---|---|
+| 0 | Data Model & Foundation | New enums, `IncomingEmail` model, attorney style profile, `log_anomaly()` signature extension, new tool functions, seed fixtures | G0-01 → G0-06 |
+| 1 | AnomalyAgent | 5 new Python detectors, priority sorting, 5 Gemini integration functions, enriched anomaly logging | G1-01 → G1-14 |
+| 2 | BillingAgent | Expand to APPROVED entries, WARN surfacing, budget signal emission, Gemini narrative suggestions, invoice readiness check | G2-01 → G2-08 |
+| 3 | DeadlineAgent | Readiness monitoring, extension request drafting, 21/30-day soft watch, conflict_flagged advancement, gap detection, clustering | G3-01 → G3-10 |
+| 4 | CommsAgent | Multi-trigger outbound (6 new triggers), attorney style profile, multi-tone drafting, citation stripping, inbound triage pass, email classification, response drafting | G4-01 → G4-15 |
+| 5 | Coordinator | Parallel execution, cross-agent correlation, compound escalation production, budget signal passthrough, matter grouping, timeout handling | G5-01 → G5-08 |
+| 6 | Frontend | GeminiLabel component, WarnNotice component, inline narrative replacement, CompoundEscalationCard, Inbox brief section, matter synthesis card, TypeScript type sync | G6-01 → G6-14 |
+
+---
+
+## Build Order
+
+```
+Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+```
+
+Phases 1–4 may partially overlap once Phase 0 is gate-checked. Phase 5 requires 1–4 complete. Phase 6 requires 5 complete.
+
+**Phase 5 exception:** CommsAgent (Phase 4) depends on BillingAgent's budget signal output. Coordinator execution restructured as two rounds: Round 1 (Billing + Deadline + Anomaly in parallel) → Round 2 (Comms with budget signals from Round 1).
+
+---
+
+## v1.1.1 Reconciliations (vs. original spec — applied 2026-06-06)
+
+After reviewing `docs/ui-ux-design-handoff/`, seven reconciliations applied to the v1.1.1 spec:
+
+1. `IncomingEmail` model → `InboundMessage`; collection `incoming_emails` → `inbound_messages`
+2. `IncomingEmailClassification` enum removed — replaced by deterministic `InboundUrgency` scoring rubric
+3. `IncomingEmailTriageStatus` → `InboundStatus` (SNOOZED added, REPLY_HELD replaces RESPONSE_DRAFTED)
+4. `UNANSWERED_CLIENT_EMAIL` / `CLIENT_QUESTION_DETECTED` removed from CommTrigger; `INBOUND_REPLY` added
+5. 4 `comms.py` tool additions → 3 functions in new `tools/inbound.py` [NEW]
+6. Added `ObservationType.ROUTE_HANDOFF`, `data.tool` sub-shape on TOOL_CALL, `tools/registry.py`, `GET /api/tools`, `GET /api/deadlines`, `GET /api/inbound`
+7. Cross-agent routing section added to Phase 4 (deterministic Python hand-off rules, ROUTE_HANDOFF observations)
+
+Gate count: 75 → 79.
+
+---
+
+## v1.1.2 — Console UI Overhaul
+
+**Full spec:** `docs/console-ui-build-plan-v1.1.2.md`  
+**Depends on:** v1.1.1 all gates pass
+
+New Console shell + 10-page surface with Agent console graph. Nothing from v1.0/v1.1.1 is thrown away — reorganized and extended. Key deliverables:
+- `ConsoleShell` + `ConsoleRail` (Watch/Collect/Prove/Tune four-section rail)
+- Deadlines hero (full book, 45-day timeline, cadence ladder)
+- Agent console graph (node graph, tool chips, inspector, hand-off edges, idle heartbeat, boundary stat)
+- Relationships page (InboundCard + going-quiet; commitments deferred to v1.2)
+- Collect, Budgets, Anomalies, Integrations, Audit Ledger upgrade, Policy stub
+
+---
+
+## v1.2 Deferred Items
+
+Do not build in v1.1.1 or v1.1.2:
+
+- **Commitment capture + lifecycle** — `Commitment` model, `commitment_extractor.py`, `tools/commitments.py`, CommitmentTracker UI (StageRail, Mark kept/Slipped, ledger flash), commitment → SOFT_INTERNAL deadline link
+- **FirmPolicy + AttorneyPolicyOverride** — configurable trust dial, tighten-only enforcement, agents read effective posture for `commitment_level`, Policy page real UI
+- Gmail OAuth live inbox integration (replaces fixture-based `source_emails`)
+- Gemini sent-mail analysis for attorney voice fine-tuning
+- Consolidated multi-trigger matter-status email (requires message-type classification taxonomy)
+- Multi-firm UI
+- Production authentication system
+- Auto-send client communications (never)
+- Auto-approve billing (never)
+- Auto-verify legal deadlines (never)
+
+---
+
+---
+
+# Litt — Locked Build Plan v1.0 ✓ COMPLETE
 
 **Sprint:** May 30 – June 5, 2026 (6 days)  
 **Submission deadline:** June 5, 5:00 PM PT  
@@ -1119,3 +1237,58 @@ backend/app/routes/
 ├── brief.py                  ← add GET /api/matters
 ├── actions.py                ← add POST /api/actions/timer/{normalize-narrative,capture}
 ```
+
+---
+
+# Test Feature Plan: System Status Section in Dashboard README
+
+**Added:** June 5, 2026
+**Scope:** XS — single file edit
+
+## Overview
+
+Add a placeholder "System Status" section to `dashboard/README.md`. The current file is the default Vite/React template README. This section will document how to check backend health, demo readiness, and Cloud Run service status — useful for developers and judges running the dashboard locally or evaluating the live deployment.
+
+## Architecture Decisions
+
+- No code changes. README only.
+- Section placed after the existing "React Compiler" section — logically first custom content in an otherwise template file.
+- Links to existing endpoints (`/health`, `/api/demo/ready`) rather than duplicating their docs.
+
+## Task List
+
+### Phase 1: README Addition
+- [ ] README-01: Add "System Status" section to `dashboard/README.md`
+
+### Checkpoint: Complete
+- [ ] Section renders correctly as markdown (validate in VS Code preview or GitHub)
+- [ ] No existing README content removed or modified
+
+## Task Detail
+
+## Task 1: Add "System Status" section to dashboard README
+
+**Description:** Insert a placeholder section that documents the key status-check endpoints available when running the Litt dashboard. This gives developers a quick reference for validating local and deployed environments.
+
+**Acceptance criteria:**
+- [ ] Section heading `## System Status` exists in `dashboard/README.md`
+- [ ] Section documents `GET /health` (backend liveness) and `GET /api/demo/ready` (demo readiness)
+- [ ] Section notes the Cloud Run deployed URL pattern
+- [ ] Section is marked `<!-- placeholder -->` to indicate it is a stub
+
+**Verification:**
+- [ ] Manual check: open `dashboard/README.md` in VS Code — section appears after "React Compiler" heading
+- [ ] No build or type-check failures (README change has no code impact)
+
+**Dependencies:** None
+
+**Files touched:**
+- `dashboard/README.md`
+
+**Estimated scope:** XS (1 file, 10–15 lines)
+
+## Risks and Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| README is still the Vite template — section may be replaced in a future README rewrite | Low | Mark as placeholder; easy to update |
