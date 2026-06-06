@@ -620,6 +620,112 @@ def seed_firm_data(db=None) -> None:
     for msg in inbound_messages:
         _col(db, "inbound_messages").document(msg["id"]).set(msg)
 
+    # -- Pre-seeded escalations (5 ANOMALY + 2 COMPOUND) --
+    # These populate the brief's Anomalies and Compound Risk sections without
+    # requiring a live Gemini sweep to have run first. Dates anchor to DEMO_DT.
+    seed_escalations = [
+        {   # te-001: missing narrative, BLOCK
+            "id": "esc-seed-001", "firm_id": FIRM_ID, "type": "ANOMALY",
+            "matter_id": "mercer-v-dunlap", "entity_id": "te-001",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 3, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "MISSING NARRATIVE on entry te-001: Entry has no narrative. Narrative is required before billing.",
+                "why_it_matters": "Entries without a narrative cannot be invoiced — they will be rejected by the client's billing system and blocked at the LEDES export stage.",
+                "what_litt_has_done": "Flagged MISSING_NARRATIVE on te-001 during prebill scrubber pass. Entry is BLOCKED from billing until resolved.",
+                "what_attorney_must_decide": "Add a narrative that describes the work performed, then release the hold or write off the entry.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # te-005: forbidden phrase, BLOCK
+            "id": "esc-seed-002", "firm_id": FIRM_ID, "type": "ANOMALY",
+            "matter_id": "acme-contract-review-2026", "entity_id": "te-005",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 3, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "FORBIDDEN PHRASE on te-005: Narrative contains 'review documents' — prohibited by Acme's outside counsel guidelines.",
+                "why_it_matters": "Acme Commercial's billing guidelines explicitly prohibit vague phrases like 'review documents'. This entry will be rejected on submission.",
+                "what_litt_has_done": "Flagged FORBIDDEN_PHRASE on te-005 during prebill scrubber pass. Entry is BLOCKED from billing.",
+                "what_attorney_must_decide": "Rewrite the narrative to describe the specific documents reviewed and the purpose of the review.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # te-010: AI disclosure gap, BLOCK
+            "id": "esc-seed-003", "firm_id": FIRM_ID, "type": "ANOMALY",
+            "matter_id": "acme-contract-review-2026", "entity_id": "te-010",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 2, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "AI DISCLOSURE GAP on te-010: Entry is AI-assisted but client_ai_disclosure_status is not set. Acme requires disclosure before invoicing.",
+                "why_it_matters": "ABA Formal Opinion 512 requires disclosure of AI use to clients when material to the matter. Acme's guidelines make this mandatory for billing.",
+                "what_litt_has_done": "Flagged AI_DISCLOSURE_GAP on te-010. Entry BLOCKED until disclosure status is confirmed.",
+                "what_attorney_must_decide": "Set client_ai_disclosure_status to 'included', 'not_required', or 'withheld' and document the basis.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # te-009: round hours, no session, WARN
+            "id": "esc-seed-004", "firm_id": FIRM_ID, "type": "ANOMALY",
+            "matter_id": "rivera-employment-2026", "entity_id": "te-009",
+            "status": "PENDING", "routed_to": "kofi-okafor",
+            "priority": 2, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "ROUND HOURS on te-009: 4.0 hours logged with no session timer data. Round-number entries without a session log are a common audit target.",
+                "why_it_matters": "Clients and auditors flag round-hour entries as potentially estimated rather than tracked. This creates billing dispute risk.",
+                "what_litt_has_done": "Flagged ROUND_HOURS_NO_SESSION on te-009 during prebill sweep. Entry carries a WARN — not blocked, but requires confirmation.",
+                "what_attorney_must_decide": "Verify the hours are accurate. Add a session note or adjust to the actual tracked time.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # te-011: duplicate entry candidate
+            "id": "esc-seed-005", "firm_id": FIRM_ID, "type": "ANOMALY",
+            "matter_id": "mercer-v-dunlap", "entity_id": "te-011",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 2, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "DUPLICATE CANDIDATE: te-011 matches te-001 — same attorney, matter, date, and hours (1.4h). One may be a double-entry.",
+                "why_it_matters": "Double billing is a serious ethics violation. Litt cannot confirm which entry is correct — only you can.",
+                "what_litt_has_done": "Flagged DUPLICATE_ENTRY_CANDIDATE on te-011. Entry is BLOCKED pending your review.",
+                "what_attorney_must_decide": "Confirm which entry reflects actual work and write off or delete the duplicate.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # COMPOUND: mercer-v-dunlap — deadline + billing both flagged
+            "id": "esc-seed-006", "firm_id": FIRM_ID, "type": "COMPOUND",
+            "matter_id": "mercer-v-dunlap", "entity_id": "mercer-v-dunlap",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 3, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "Multiple agents flagged mercer-v-dunlap: deadline_agent (MSJ opposition due in 6 days, unconfirmed) + billing_agent (te-001 missing narrative, te-011 duplicate candidate).",
+                "why_it_matters": "When deadline pressure and billing issues appear on the same matter simultaneously, the combined risk is higher than either alone. A billing dispute on a matter with an imminent court deadline is a serious operational exposure.",
+                "what_litt_has_done": "Correlated signals from deadline_agent and billing_agent. Compound escalation created to surface the combined risk.",
+                "what_attorney_must_decide": "Resolve the billing holds on te-001 and te-011, then confirm the July 1 deadline before COB today.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+        {   # COMPOUND: acme-contract-review-2026 — billing + budget both flagged
+            "id": "esc-seed-007", "firm_id": FIRM_ID, "type": "COMPOUND",
+            "matter_id": "acme-contract-review-2026", "entity_id": "acme-contract-review-2026",
+            "status": "PENDING", "routed_to": "dana-strand",
+            "priority": 2, "workflow_state": None, "workflow_status": None, "resolved_at": None,
+            "brief": {
+                "what_is_happening": "Multiple agents flagged acme-contract-review-2026: billing_agent (te-005 forbidden phrase, te-010 AI disclosure gap) + budget at 92% CRITICAL.",
+                "why_it_matters": "Billing entries are blocked from invoicing while the matter is simultaneously over the budget warning threshold. Client has already asked about the budget cap.",
+                "what_litt_has_done": "Correlated signals from billing_agent and budget utilization monitor. Compound escalation created.",
+                "what_attorney_must_decide": "Resolve the billing blocks on te-005 and te-010, then respond to James Whitfield's budget inquiry before issuing an invoice.",
+                "decision_deadline": None, "risk_level": "ELEVATED",
+            },
+            "created_at": DEMO_DT, "updated_at": DEMO_DT,
+        },
+    ]
+    for esc in seed_escalations:
+        _col(db, "escalations").document(esc["id"]).set(esc)
+
     # -- v1.1 supplemental fixtures (Rivera + Okafor calendar gap) --
     # Additive only — no existing v1.0 records are modified.
     _seed_v11_fixtures(db)
