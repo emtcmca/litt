@@ -210,6 +210,7 @@ class EscalationType(str, Enum):
     BILLING = "BILLING"
     COMMS = "COMMS"
     ANOMALY = "ANOMALY"
+    COMPOUND = "COMPOUND"
 
 
 class EscalationStatus(str, Enum):

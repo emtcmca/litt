@@ -450,13 +450,12 @@ class DeadlineAgent:
                                 create_client_comm(
                                     firm_id=firm_id,
                                     matter_id=matter_id,
-                                    attorney_id="dana-strand",
+                                    client_id=matter.get("client_id", ""),
                                     trigger=CommTrigger.DEADLINE_EXTENSION_REQUEST.value,
-                                    recipient_name=client_name or "Opposing Counsel",
-                                    subject=f"Extension Request — {dl.get('description', 'Filing Deadline')}",
                                     draft_body=draft,
-                                    idempotency_key=idem_ext,
+                                    source_map=[],
                                     actor="system",
+                                    idempotency_key=idem_ext,
                                 )
                                 observations.append(_obs(
                                     observation_type=ObservationType.APPROVAL_GATE_APPLIED,
@@ -710,10 +709,16 @@ class DeadlineAgent:
             },
         ))
 
+        matters_from_escalations = list({
+            dl.get("matter_id")
+            for dl in verified
+            if dl.get("matter_id")
+        })
         return {
             "agent": self.name,
             "deadlines_scanned": deadlines_scanned,
             "escalations_created": total_escalations,
             "escalation_ids": escalations_created,
+            "matters_touched": matters_from_escalations,
             "observations": observations,
         }

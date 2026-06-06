@@ -1,30 +1,33 @@
 """
 Coordinator — Python routing layer that orchestrates sub-agents.
 
-Routing is deterministic Python (SIGNAL_ROUTING dict + classify_signal()).
-Gemini is never asked "which agent should handle this signal?"
+v1.1.1 changes:
+  - Parallel Round 1: BillingAgent, DeadlineAgent, AnomalyAgent via ThreadPoolExecutor
+  - Round 2: CommsAgent receives budget_signals from BillingAgent
+  - 30-second timeout per agent; partial results never crash the brief
+  - Correlation pass: groups signals by matter_id; emits CompoundSignal
+  - log_escalation(COMPOUND) when ≥2 agents fire on the same matter
+  - matter_signals dict returned in timeline for brief assembler ordering
 
 Architecture:
   Coordinator.execute_sweep(firm_id)
-    → BillingAgent.run(firm_id)     [scans time entries, logs anomalies]
-    → DeadlineAgent.run(firm_id)    [scans deadlines, logs escalations]
-    → [CommsAgent, AnomalyAgent — Day 4]
-    → return SweepResult
+    Round 1 (parallel): BillingAgent · DeadlineAgent · AnomalyAgent
+    Round 2 (sequential): CommsAgent(budget_signals=billing.budget_signals)
+    Correlation pass → CompoundSignal per multi-agent matter
+    → AgentRunTimeline
 
-MCP toolset connection:
-  In production (v1.1), this coordinator runs as a separate Cloud Run service
-  and connects to the tool layer via MCPToolset(SseServerParams(url=MCP_URL)).
-  In v1.0, coordinator and tools share the same FastAPI process, so tool
-  functions are called directly as Python imports.
+Routing is deterministic Python. Gemini never decides which agent handles a signal.
 """
 
 from __future__ import annotations
 
 import time
 import uuid
+from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import Enum
-from typing import Dict, List
+from typing import Any, Dict, List, Optional, Set
 
 from app.agents.anomaly_agent import AnomalyAgent
 from app.agents.billing_agent import BillingAgent
@@ -32,6 +35,7 @@ from app.agents.comms_agent import CommsAgent
 from app.agents.deadline_agent import DeadlineAgent
 from app.config import get_effective_datetime
 from app.db import collection_ref
+from app.models import EscalationType, RiskLevel, ToolResult
 from app.observability import (
     AgentObservation,
     AgentRunTimeline,
@@ -39,6 +43,17 @@ from app.observability import (
     ObservationType,
     generate_observation_id,
 )
+from app.tools.alerts import log_escalation
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+AGENT_TIMEOUT_SECONDS = 30
+
+# ---------------------------------------------------------------------------
+# Signal routing (deterministic Python — no LLM)
+# ---------------------------------------------------------------------------
 
 
 class SignalType(str, Enum):
@@ -82,6 +97,94 @@ def route_signal(signal_type_str: str) -> List[str]:
     return [agent_name]
 
 
+# ---------------------------------------------------------------------------
+# CompoundSignal
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class CompoundSignal:
+    matter_id: str
+    contributing_agents: List[str]
+    signals: List[str]
+    severity: str = "ELEVATED"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _empty_result(agent_name: str) -> Dict[str, Any]:
+    """Safe partial result when an agent times out or errors."""
+    return {
+        "agent": agent_name,
+        "partial": True,
+        "anomalies_logged": 0,
+        "new_anomalies": 0,
+        "existing_anomalies": 0,
+        "escalations_created": 0,
+        "comms_created": 0,
+        "budget_signals": {},
+        "matters_touched": [],
+        "observations": [],
+    }
+
+
+def _safe_result(
+    future: Future,
+    agent_name: str,
+    timeout: int = AGENT_TIMEOUT_SECONDS,
+) -> Dict[str, Any]:
+    """
+    Fetch future result with timeout. Returns partial result on failure.
+    Timeout or exception never crashes the sweep.
+    """
+    try:
+        return future.result(timeout=timeout)
+    except FutureTimeoutError:
+        return {**_empty_result(agent_name), "error": "timeout"}
+    except Exception as exc:
+        return {**_empty_result(agent_name), "error": str(exc)}
+
+
+def _correlation_pass(
+    results: List[Dict[str, Any]],
+) -> List[CompoundSignal]:
+    """
+    Group matters by how many agents touched them.
+    Returns CompoundSignal for every matter touched by ≥2 agents.
+    """
+    matter_agents: Dict[str, Set[str]] = {}
+
+    for result in results:
+        agent_name = result.get("agent", "unknown")
+        for matter_id in result.get("matters_touched", []):
+            if not matter_id:
+                continue
+            if matter_id not in matter_agents:
+                matter_agents[matter_id] = set()
+            matter_agents[matter_id].add(agent_name)
+
+    compounds: List[CompoundSignal] = []
+    for matter_id, agents in matter_agents.items():
+        if len(agents) >= 2:
+            severity = "CRITICAL" if len(agents) >= 3 else "ELEVATED"
+            compounds.append(CompoundSignal(
+                matter_id=matter_id,
+                contributing_agents=sorted(agents),
+                signals=[f"{a} flagged {matter_id}" for a in sorted(agents)],
+                severity=severity,
+            ))
+
+    return compounds
+
+
+# ---------------------------------------------------------------------------
+# Coordinator
+# ---------------------------------------------------------------------------
+
+
 class Coordinator:
     """
     Orchestrates sub-agents for a firm sweep.
@@ -98,10 +201,9 @@ class Coordinator:
         """
         Run all four sub-agents, emit coordinator-level observations, return AgentRunTimeline.
 
-        Observation order (for frontend playback):
-          pre-run:   SIGNAL_RECEIVED, ROUTING_DECISION, TOOL_CALL (coordinator)
-          mid-run:   sub-agent observations (Phase 4 adds via result["observations"])
-          post-run:  RESULT, APPROVAL_GATE_APPLIED (coordinator)
+        Round 1 (parallel): BillingAgent, DeadlineAgent, AnomalyAgent
+        Round 2 (sequential): CommsAgent with budget_signals from BillingAgent
+        Correlation pass: CompoundSignal per matter touched by ≥2 agents
         """
         run_id = f"sweep-{uuid.uuid4().hex[:12]}"
         start_wall = time.time()
@@ -120,7 +222,7 @@ class Coordinator:
                 **kwargs,
             )
 
-        # --- Pre-run: 3 coordinator observations ---
+        # --- Pre-run observations ---
 
         pre_obs: List[AgentObservation] = [
             _obs(
@@ -132,47 +234,185 @@ class Coordinator:
             _obs(
                 observation_type=ObservationType.ROUTING_DECISION,
                 commitment_level=CommitmentLevel.AUTO_SAFE,
-                description="Deterministic routing: all 4 sub-agents scheduled",
-                data={"agents": ["billing_agent", "deadline_agent", "comms_agent", "anomaly_agent"]},
+                description=(
+                    "Round 1 (parallel): billing, deadline, anomaly — "
+                    "Round 2 (sequential): comms with budget_signals"
+                ),
+                data={
+                    "round_1": ["billing_agent", "deadline_agent", "anomaly_agent"],
+                    "round_2": ["comms_agent"],
+                    "timeout_seconds": AGENT_TIMEOUT_SECONDS,
+                },
             ),
             _obs(
                 observation_type=ObservationType.TOOL_CALL,
                 commitment_level=CommitmentLevel.AUTO_SAFE,
-                description="Dispatching sub-agents — billing, deadline, comms, anomaly",
+                description="Dispatching Round 1 sub-agents in parallel",
             ),
         ]
 
-        # --- Sub-agent runs ---
-        # Each result dict may include "observations" (Phase 4 adds them).
-        # Collected here so coordinator is unchanged when sub-agents are instrumented.
+        # --- Round 1: parallel execution ---
 
         sub_obs: List[AgentObservation] = []
 
-        billing_result = self._billing.run(firm_id, run_id=run_id)
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            billing_future = executor.submit(self._billing.run, firm_id, run_id)
+            deadline_future = executor.submit(self._deadline.run, firm_id, run_id)
+            anomaly_future = executor.submit(self._anomaly.run, firm_id, run_id)
+
+            billing_result = _safe_result(billing_future, "billing_agent")
+            deadline_result = _safe_result(deadline_future, "deadline_agent")
+            anomaly_result = _safe_result(anomaly_future, "anomaly_agent")
+
+        # Emit timeout observations if any agent was partial
+        for result, label in [
+            (billing_result, "billing_agent"),
+            (deadline_result, "deadline_agent"),
+            (anomaly_result, "anomaly_agent"),
+        ]:
+            if result.get("partial"):
+                sub_obs.append(_obs(
+                    observation_type=ObservationType.WARN_NOTICE,
+                    commitment_level=CommitmentLevel.AUTO_SAFE,
+                    description=(
+                        f"{label} did not complete within {AGENT_TIMEOUT_SECONDS}s — "
+                        f"partial result used: {result.get('error', 'unknown error')}"
+                    ),
+                    data={"agent": label, "partial": True, "error": result.get("error", "")},
+                ))
+
         sub_obs.extend(billing_result.get("observations", []))
-
-        deadline_result = self._deadline.run(firm_id, run_id=run_id)
         sub_obs.extend(deadline_result.get("observations", []))
-
-        comms_result = self._comms.run(firm_id, run_id=run_id)
-        sub_obs.extend(comms_result.get("observations", []))
-
-        anomaly_result = self._anomaly.run(firm_id, run_id=run_id)
         sub_obs.extend(anomaly_result.get("observations", []))
 
-        # --- Counts (new vs. existing-idempotency-hit) ---
+        # --- Round 2: CommsAgent with budget_signals from billing ---
+
+        budget_signals = billing_result.get("budget_signals", {})
+
+        sub_obs.append(_obs(
+            observation_type=ObservationType.ROUTING_DECISION,
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            description=(
+                f"Round 2: comms_agent receiving {len(budget_signals)} budget signal(s) "
+                f"from billing_agent"
+            ),
+            data={"budget_signal_clients": list(budget_signals.keys())},
+        ))
+
+        try:
+            comms_result = self._comms.run(
+                firm_id, run_id=run_id, budget_signals=budget_signals
+            )
+        except Exception as exc:
+            comms_result = {**_empty_result("comms_agent"), "error": str(exc)}
+            sub_obs.append(_obs(
+                observation_type=ObservationType.WARN_NOTICE,
+                commitment_level=CommitmentLevel.AUTO_SAFE,
+                description=f"comms_agent failed: {exc}",
+                data={"agent": "comms_agent", "error": str(exc)},
+            ))
+
+        sub_obs.extend(comms_result.get("observations", []))
+
+        # --- Correlation pass ---
+
+        all_results = [billing_result, deadline_result, anomaly_result, comms_result]
+        compound_signals = _correlation_pass(all_results)
+
+        matter_signals: Dict[str, Dict[str, Any]] = {}
+        compound_esc_ids: List[str] = []
+
+        for cs in compound_signals:
+            matter_signals[cs.matter_id] = {
+                "contributing_agents": cs.contributing_agents,
+                "signal_count": len(cs.contributing_agents),
+                "severity": cs.severity,
+            }
+
+            idem = f"compound-{cs.matter_id}-{get_effective_datetime().strftime('%Y%m%d')}"
+            esc_result = log_escalation(
+                firm_id=firm_id,
+                escalation_type=EscalationType.COMPOUND.value,
+                entity_id=cs.matter_id,
+                routed_to="dana-strand",
+                actor="system",
+                idempotency_key=idem,
+                what_is_happening=(
+                    f"Multiple agents flagged {cs.matter_id}: "
+                    + ", ".join(cs.contributing_agents)
+                ),
+                why_it_matters=(
+                    "When ≥2 operational domains flag the same matter simultaneously, "
+                    "the risk profile is compounded — a billing issue alongside a deadline "
+                    "pressure is more urgent than either alone."
+                ),
+                what_litt_has_done=(
+                    f"Detected cross-agent signals from: {', '.join(cs.contributing_agents)}. "
+                    "Compound escalation created for coordinated attorney review."
+                ),
+                what_attorney_must_decide=(
+                    f"Review the compound risk on {cs.matter_id} holistically — "
+                    "resolve each contributing signal before closing this escalation."
+                ),
+                risk_level=cs.severity,
+                matter_id=cs.matter_id,
+                priority=3 if cs.severity == "CRITICAL" else 2,
+            )
+            if isinstance(esc_result, ToolResult):
+                compound_esc_ids.append(esc_result.entity_id)
+
+            sub_obs.append(_obs(
+                observation_type=ObservationType.COMPOUND_RISK,
+                commitment_level=CommitmentLevel.ESCALATION,
+                description=(
+                    f"Compound risk: {cs.matter_id} flagged by "
+                    f"{len(cs.contributing_agents)} agents "
+                    f"({', '.join(cs.contributing_agents)})"
+                ),
+                data={
+                    "matter_id": cs.matter_id,
+                    "contributing_agents": cs.contributing_agents,
+                    "severity": cs.severity,
+                    "compound_escalation_id": esc_result.entity_id if isinstance(esc_result, ToolResult) else None,
+                },
+                attorney_next_action=(
+                    f"Review compound risk on matter {cs.matter_id}: "
+                    + ", ".join(cs.contributing_agents)
+                    + " all flagged this matter."
+                ),
+            ))
+
+        if compound_signals:
+            sub_obs.append(_obs(
+                observation_type=ObservationType.ROUTING_DECISION,
+                commitment_level=CommitmentLevel.ESCALATION,
+                description=(
+                    f"Correlation pass: {len(compound_signals)} matter(s) with "
+                    f"cross-agent compound risk"
+                ),
+                data={
+                    "compound_matter_ids": [cs.matter_id for cs in compound_signals],
+                    "compound_escalation_ids": compound_esc_ids,
+                },
+            ))
+
+        # --- Counts ---
 
         new_anomalies = (
-            billing_result.get("new_anomalies", billing_result["anomalies_logged"])
-            + anomaly_result.get("new_anomalies", anomaly_result["anomalies_logged"])
+            billing_result.get("new_anomalies", 0)
+            + anomaly_result.get("new_anomalies", 0)
         )
         existing_anomalies = (
             billing_result.get("existing_anomalies", 0)
             + anomaly_result.get("existing_anomalies", 0)
         )
-        new_escalations = deadline_result["escalations_created"] + new_anomalies
+        new_escalations = (
+            deadline_result.get("escalations_created", 0)
+            + new_anomalies
+            + len(compound_signals)
+        )
 
-        # --- Post-run: 2 coordinator observations ---
+        # --- Post-run observations ---
 
         gate_level = CommitmentLevel.ESCALATION if new_escalations > 0 else CommitmentLevel.AUTO_SAFE
         attorney_action = (
@@ -180,7 +420,6 @@ class Coordinator:
             if new_escalations > 0
             else None
         )
-
         existing_note = (
             f" · {existing_anomalies} existing already under review (idempotency skip)"
             if existing_anomalies > 0 else ""
@@ -191,17 +430,21 @@ class Coordinator:
                 observation_type=ObservationType.RESULT,
                 commitment_level=gate_level,
                 description=(
-                    f"Sub-agents complete: {new_escalations} new escalation(s), "
-                    f"{new_anomalies} new anomal{'ies' if new_anomalies != 1 else 'y'}"
+                    f"Sweep complete: {new_escalations} new escalation(s), "
+                    f"{new_anomalies} new anomal{'ies' if new_anomalies != 1 else 'y'}, "
+                    f"{len(compound_signals)} compound risk(s)"
                     + existing_note
                 ),
                 data={
                     "billing_new_anomalies": billing_result.get("new_anomalies", 0),
-                    "deadline_escalations": deadline_result["escalations_created"],
-                    "comms_created": comms_result["comms_created"],
+                    "deadline_escalations": deadline_result.get("escalations_created", 0),
+                    "comms_created": comms_result.get("comms_created", 0),
                     "anomaly_new_anomalies": anomaly_result.get("new_anomalies", 0),
                     "total_new_escalations": new_escalations,
+                    "compound_escalations": len(compound_signals),
+                    "compound_matter_ids": [cs.matter_id for cs in compound_signals],
                     "existing_anomalies_skipped": existing_anomalies,
+                    "matter_signals": matter_signals,
                 },
             ),
             _obs(
@@ -219,6 +462,7 @@ class Coordinator:
                 data={
                     "gate": gate_level.value,
                     "new_escalations_count": new_escalations,
+                    "compound_escalations_count": len(compound_signals),
                     "existing_anomalies_skipped": existing_anomalies,
                 },
                 attorney_next_action=attorney_action,
@@ -250,6 +494,6 @@ class Coordinator:
                 timeline.model_dump(mode="json")
             )
         except Exception:
-            pass  # telemetry write failure never aborts a sweep
+            pass
 
         return timeline

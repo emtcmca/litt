@@ -894,6 +894,7 @@ class AnomalyAgent:
             },
         ))
 
+        matters_touched = list({s.matter_id for s in signals if s.matter_id})
         return {
             "agent": self.name,
             "signals_detected": len(signals),
@@ -901,5 +902,6 @@ class AnomalyAgent:
             "new_anomalies": len(new_logged),
             "existing_anomalies": len(existing_logged),
             "escalation_ids": new_logged,
+            "matters_touched": matters_touched,
             "observations": observations,
         }

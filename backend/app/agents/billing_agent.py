@@ -131,6 +131,7 @@ class BillingAgent:
         warn_count = 0
         entries_scanned = 0
         block_obs_emitted = False
+        matters_touched: set = set()
 
         for entry in scannable:
             entries_scanned += 1
@@ -139,6 +140,10 @@ class BillingAgent:
 
             if not result.flags:
                 continue
+
+            mid = entry.get("matter_id")
+            if mid:
+                matters_touched.add(mid)
 
             for flag in result.flags:
                 entry_id = entry["id"]
@@ -294,5 +299,6 @@ class BillingAgent:
             "warn_flags": warn_count,
             "escalation_ids": new_anomalies,
             "budget_signals": budget_signals,
+            "matters_touched": list(matters_touched),
             "observations": observations,
         }

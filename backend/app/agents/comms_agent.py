@@ -541,6 +541,7 @@ class CommsAgent:
         ))
 
         comms_created: List[str] = []
+        matters_touched_comms: set = set()
 
         # -----------------------------------------------------------------------
         # V11-P4-01 through V11-P4-05: Outbound trigger loop
@@ -1094,10 +1095,16 @@ class CommsAgent:
             },
         ))
 
+        matters_touched_comms = list({
+            obs.data.get("matter_id")
+            for obs in observations
+            if obs.data.get("matter_id")
+        })
         return {
             "agent": self.name,
             "comms_created": total_comms,
             "comm_ids": comms_created,
             "inbound_triaged": inbound_triaged,
+            "matters_touched": matters_touched_comms,
             "observations": observations,
         }

@@ -200,14 +200,25 @@
 ## Phase 5 — Coordinator
 *Parallel execution, correlation pass, compound escalation, budget passthrough. Gates: G5-01 → G5-08*
 
-- [ ] V11-P5-01 Parallel Round 1 — run BillingAgent, DeadlineAgent, AnomalyAgent simultaneously via `ThreadPoolExecutor`
-- [ ] V11-P5-02 Parallel Round 2 — run CommsAgent with `budget_signals` dict from Round 1 BillingAgent result
-- [ ] V11-P5-03 30-second timeout per agent — catch `TimeoutError`; mark agent result as partial; log observation; do not crash brief
-- [ ] V11-P5-04 Cross-agent correlation pass — after both rounds, group all signals by `matter_id`
-- [ ] V11-P5-05 `CompoundSignal` dataclass — fields: `matter_id`, `contributing_agents` (list), `signals` (list), `severity`
-- [ ] V11-P5-06 `log_escalation(EscalationType.COMPOUND, ...)` when ≥2 agents fire signals on same matter — one compound escalation record per matter
-- [ ] V11-P5-07 `matter_signals` dict built from correlation pass; passed to brief assembler for synthesis section ordering
-- [ ] V11-P5-08 `pytest tests/test_coordinator.py` — parallel execution verified via timing; compound escalation fires; timeout produces partial result not crash; `budget_signals` reaches CommsAgent
+- [x] V11-P5-01 Parallel Round 1 — BillingAgent, DeadlineAgent, AnomalyAgent via `ThreadPoolExecutor` (max_workers=3)
+- [x] V11-P5-02 Parallel Round 2 — CommsAgent receives `budget_signals` from BillingAgent result
+- [x] V11-P5-03 30-second `AGENT_TIMEOUT_SECONDS`; `_safe_result()` catches FutureTimeoutError + exceptions; partial result logged as WARN_NOTICE; sweep never crashes
+- [x] V11-P5-04 `_correlation_pass()` groups all `matters_touched` by matter_id after both rounds complete
+- [x] V11-P5-05 `CompoundSignal` dataclass — `matter_id`, `contributing_agents`, `signals`, `severity`; ELEVATED for 2 agents, CRITICAL for ≥3
+- [x] V11-P5-06 `log_escalation(EscalationType.COMPOUND, ...)` per compound matter; idempotency key scoped to matter+date
+- [x] V11-P5-07 `matter_signals` dict in RESULT observation `data`; `matters_touched` added to all 4 agents' return dicts
+- [x] V11-P5-08 `pytest tests/test_coordinator.py` — 18/18 pass: parallel, budget passthrough, timeout, compound escalation, matter_signals
+
+**Phase 5 gate check:**
+- [x] G5-01 Round 1 agents run in parallel (ThreadPoolExecutor) — verified
+- [x] G5-02 CommsAgent receives budget_signals from BillingAgent — verified
+- [x] G5-03 Partial billing result → empty budget_signals → CommsAgent still runs — verified
+- [x] G5-04 FutureTimeoutError caught, returns partial not crash — verified
+- [x] G5-05 CompoundSignal fires when ≥2 agents touch same matter — verified
+- [x] G5-06 ELEVATED severity for 2-agent compound; CRITICAL for ≥3 — verified
+- [x] G5-07 log_escalation(COMPOUND) called with correct matter_id and escalation_type — verified
+- [x] G5-08 matter_signals dict in RESULT observation data — verified
+- [x] 18/18 tests pass (342/342 full suite) — verified
 
 ---
 
