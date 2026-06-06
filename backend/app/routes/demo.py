@@ -142,6 +142,14 @@ def _check_whitmore_silence(firm_id: str) -> dict:
     return {"pass": True, "detail": f"{days_since} days since last contact (threshold {threshold})"}
 
 
+def _check_console_inbound(firm_id: str) -> dict:
+    """Console: ≥3 inbound messages in AWAITING_TRIAGE status."""
+    docs = list(collection_ref(firm_id, "inbound_messages").where("status", "==", "AWAITING_TRIAGE").stream())
+    if len(docs) < 3:
+        return {"pass": False, "detail": f"only {len(docs)} AWAITING_TRIAGE inbound messages (need ≥3)"}
+    return {"pass": True, "detail": f"{len(docs)} AWAITING_TRIAGE inbound messages"}
+
+
 @router.get("/demo/ready")
 def demo_ready():
     firm_id = config.DEMO_FIRM_ID
@@ -152,6 +160,7 @@ def demo_ready():
             "te_001_missing_narrative": _check_te_001_missing_narrative(firm_id),
             "acme_budget_warn": _check_acme_budget_warn(firm_id),
             "whitmore_client_silence": _check_whitmore_silence(firm_id),
+            "console_inbound_messages": _check_console_inbound(firm_id),
         }
     except Exception as e:
         return {"ok": False, "error": str(e), "demo_date": config.DEMO_DATE_STR, "firm_id": firm_id}

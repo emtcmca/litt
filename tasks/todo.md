@@ -363,9 +363,10 @@
 ---
 
 ## Phase 4 — Polish + Demo Hardening
-- [ ] V112-P4-01 Wire email digest deep-links to Console routes
-- [ ] V112-P4-02 Extend `GET /api/demo/ready` with Console conditions (≥3 inbound, policy stub)
-- [ ] V112-P4-03 Update `seed_demo.py` + `reset_demo.py` for full Console state
+- [x] V112-P4-01 Wire deep-links to Console routes — DailyCloseoutBrief "Audit Log" link changed from `/audit` → `/ledger`
+- [x] V112-P4-02 Extend `GET /api/demo/ready` with Console condition — `console_inbound_messages` check: ≥3 AWAITING_TRIAGE inbound messages
+- [x] V112-P4-03 Seed/reset already supports inbound_messages (4 AWAITING_TRIAGE fixtures seeded); verified in seeder.py
+- [x] V112-P4-04 test_demo_readiness.py updated — 3 endpoint tests updated for 6 checks; 1 new test added for console_inbound_messages fail case; 343/343 pass
 - [ ] V112-P4-04 Screenshot every surface
 - [ ] V112-P4-05 Verify boundary stat, hand-off edges, all date math against demo date
 

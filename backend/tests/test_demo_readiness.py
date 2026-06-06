@@ -302,33 +302,23 @@ class TestWhitmoreSilenceCheck:
 
 
 # ---------------------------------------------------------------------------
-# demo_ready endpoint — all 5 checks
+# demo_ready endpoint — all 6 checks (5 original + console_inbound_messages)
 # ---------------------------------------------------------------------------
 
 class TestDemoReadyEndpoint:
-    def _all_pass_mocks(self):
-        """Patch all 5 check functions to return pass=True."""
-        return {
-            "app.routes.demo._check_deadline_mercer": {"pass": True, "detail": "ok"},
-            "app.routes.demo._check_te_005_scrubber": {"pass": True, "detail": "ok"},
-            "app.routes.demo._check_te_001_missing_narrative": {"pass": True, "detail": "ok"},
-            "app.routes.demo._check_acme_budget_warn": {"pass": True, "detail": "ok"},
-            "app.routes.demo._check_whitmore_silence": {"pass": True, "detail": "ok"},
-        }
-
     def test_ok_true_when_all_pass(self):
-        patches = self._all_pass_mocks()
         with (
             patch("app.routes.demo._check_deadline_mercer", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_te_005_scrubber", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_te_001_missing_narrative", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_acme_budget_warn", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_whitmore_silence", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_console_inbound", return_value={"pass": True, "detail": "4 inbound"}),
         ):
             from app.routes.demo import demo_ready
             result = demo_ready()
         assert result["ok"] is True
-        assert len(result["checks"]) == 5
+        assert len(result["checks"]) == 6
 
     def test_ok_false_when_one_fails(self):
         with (
@@ -337,11 +327,26 @@ class TestDemoReadyEndpoint:
             patch("app.routes.demo._check_te_001_missing_narrative", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_acme_budget_warn", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_whitmore_silence", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_console_inbound", return_value={"pass": True, "detail": "4 inbound"}),
         ):
             from app.routes.demo import demo_ready
             result = demo_ready()
         assert result["ok"] is False
         assert result["checks"]["deadline_mercer_escalates"]["pass"] is False
+
+    def test_ok_false_when_console_inbound_fails(self):
+        with (
+            patch("app.routes.demo._check_deadline_mercer", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_te_005_scrubber", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_te_001_missing_narrative", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_acme_budget_warn", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_whitmore_silence", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_console_inbound", return_value={"pass": False, "detail": "only 0 inbound"}),
+        ):
+            from app.routes.demo import demo_ready
+            result = demo_ready()
+        assert result["ok"] is False
+        assert result["checks"]["console_inbound_messages"]["pass"] is False
 
     def test_response_has_required_keys(self):
         with (
@@ -350,6 +355,7 @@ class TestDemoReadyEndpoint:
             patch("app.routes.demo._check_te_001_missing_narrative", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_acme_budget_warn", return_value={"pass": True, "detail": "ok"}),
             patch("app.routes.demo._check_whitmore_silence", return_value={"pass": True, "detail": "ok"}),
+            patch("app.routes.demo._check_console_inbound", return_value={"pass": True, "detail": "4 inbound"}),
         ):
             from app.routes.demo import demo_ready
             result = demo_ready()

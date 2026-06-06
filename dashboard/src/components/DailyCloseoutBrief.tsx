@@ -1963,7 +1963,7 @@ export function DailyCloseoutBrief() {
             <div className="litt-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <DemoResetButton firmId={FIRM_ID} onReset={loadBrief} />
               <Link
-                to="/audit"
+                to="/ledger"
                 style={{
                   border:       `1px solid ${C.line}`,
                   borderRadius: 8,
