@@ -8,6 +8,8 @@ from app.brief.schemas import BriefResponse, SweepRunResponse
 from app.agents.coordinator import Coordinator
 from app.db import collection_ref
 from app.observability import AgentRunTimeline
+from app.tools.registry import TOOL_REGISTRY
+from app.agents.deadline_agent import _CADENCE, _get_escalation_level
 
 router = APIRouter()
 
@@ -149,6 +151,65 @@ def get_matters(firm_id: str):
                 "client_name": client_name,
             })
         result.sort(key=lambda x: x["name"])
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/tools")
+def get_tools():
+    """Returns the full tool registry — machine-readable catalog for Console UI."""
+    return [spec.to_dict() for spec in TOOL_REGISTRY.values()]
+
+
+@router.get("/deadlines")
+def get_deadlines_full(firm_id: str):
+    """Full book of all ACTIVE deadlines with days_out and escalation_level."""
+    from app.config import get_effective_date
+    try:
+        today = get_effective_date()
+        docs = list(collection_ref(firm_id, "deadlines").where("status", "==", "ACTIVE").stream())
+        result = []
+        for doc in docs:
+            d = doc.to_dict()
+            due_raw = d.get("due_date")
+            if isinstance(due_raw, str):
+                from datetime import date as _date
+                due = _date.fromisoformat(due_raw)
+            elif hasattr(due_raw, "date"):
+                due = due_raw.date()
+            else:
+                due = due_raw
+            days_out = (due - today).days if due else None
+            level_pair = _get_escalation_level(days_out) if days_out is not None else None
+            result.append({
+                **d,
+                "days_out": days_out,
+                "escalation_level": level_pair[0] if level_pair else None,
+            })
+        result.sort(key=lambda x: x.get("days_out") or 9999)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/inbound")
+def get_inbound(firm_id: str, attorney_id: str = "dana-strand"):
+    """Returns all inbound_messages for a firm, with inlined draft_body_clean for any suggested reply."""
+    try:
+        docs = list(collection_ref(firm_id, "inbound_messages").stream())
+        result = []
+        for doc in docs:
+            d = doc.to_dict()
+            # Inline the clean draft body for suggested reply if present
+            reply_comm_id = d.get("suggested_reply_comm_id")
+            if reply_comm_id:
+                comm_doc = collection_ref(firm_id, "client_communications").document(reply_comm_id).get()
+                if comm_doc.exists:
+                    comm = comm_doc.to_dict()
+                    d["suggested_reply_body"] = comm.get("draft_body_clean") or comm.get("draft_body")
+            result.append(d)
+        result.sort(key=lambda x: x.get("urgency", "LOW"), reverse=False)
         return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

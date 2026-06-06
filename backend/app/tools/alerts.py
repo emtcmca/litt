@@ -133,10 +133,18 @@ def log_anomaly(
     actor: str,
     idempotency_key: str,
     matter_id: Optional[str] = None,
+    severity: str = "BLOCK",
+    gemini_assessment: Optional[str] = None,
+    suggested_narrative: Optional[str] = None,
+    confidence: Optional[float] = None,
 ) -> Union[ToolResult, ToolError]:
     """
     Convenience wrapper — creates an ANOMALY escalation and logs ANOMALY_DETECTED.
     anomaly_type: e.g. "MISSING_NARRATIVE", "ROUND_HOURS_NO_SESSION"
+    severity: "BLOCK" (hard gate) or "WARN" (soft notice, no approval gate)
+    gemini_assessment: optional Gemini-generated context string
+    suggested_narrative: optional Gemini-suggested replacement narrative
+    confidence: optional 0.0–1.0 Gemini confidence score
     """
     result = log_escalation(
         firm_id=firm_id,
@@ -155,6 +163,18 @@ def log_anomaly(
     )
 
     if isinstance(result, ToolResult):
+        after_state: Dict[str, Any] = {
+            "anomaly_type": anomaly_type,
+            "escalation_id": result.entity_id,
+            "severity": severity,
+        }
+        if gemini_assessment:
+            after_state["gemini_assessment"] = gemini_assessment
+        if suggested_narrative:
+            after_state["suggested_narrative"] = suggested_narrative
+        if confidence is not None:
+            after_state["confidence"] = confidence
+
         log_audit_event(
             firm_id=firm_id,
             tier=AuditTier.operational,
@@ -162,7 +182,7 @@ def log_anomaly(
             actor=actor,
             entity_type="time_entry",
             entity_id=entry_id,
-            after_state={"anomaly_type": anomaly_type, "escalation_id": result.entity_id},
+            after_state=after_state,
         )
 
     return result

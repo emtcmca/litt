@@ -39,7 +39,13 @@ def test_observation_type_values():
     assert ObservationType.RESULT == "RESULT"
     assert ObservationType.ESCALATION == "ESCALATION"
     assert ObservationType.APPROVAL_GATE_APPLIED == "APPROVAL_GATE_APPLIED"
-    assert len(ObservationType) == 7
+    # v1.1.1 added 5 new values
+    assert ObservationType.MATTER_SYNTHESIS == "MATTER_SYNTHESIS"
+    assert ObservationType.COMPOUND_RISK == "COMPOUND_RISK"
+    assert ObservationType.INBOX_TRIAGE == "INBOX_TRIAGE"
+    assert ObservationType.WARN_NOTICE == "WARN_NOTICE"
+    assert ObservationType.ROUTE_HANDOFF == "ROUTE_HANDOFF"
+    assert len(ObservationType) == 12
 
 
 def test_commitment_level_values():

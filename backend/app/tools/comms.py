@@ -5,6 +5,7 @@ CRITICAL: Only log_client_comm_sent() updates last_client_contact.
 approve_client_comm_draft() and queue_client_comm_for_delivery() do NOT.
 """
 
+import re as _re
 import uuid
 from typing import List, Optional, Union
 
@@ -28,6 +29,11 @@ def _check_comm_transition(current: str, new: str) -> bool:
     return new in _COMM_TRANSITIONS.get(current, [])
 
 
+def _strip_citations(text: str) -> str:
+    """Remove [f1], [f2], etc. citation markers from draft body."""
+    return _re.sub(r"\[f\d+\]", "", text).strip()
+
+
 def create_client_comm(
     firm_id: str,
     matter_id: str,
@@ -37,14 +43,18 @@ def create_client_comm(
     source_map: List[dict],
     actor: str,
     idempotency_key: str,
+    draft_body_clean: Optional[str] = None,
 ) -> Union[ToolResult, ToolError]:
-    """Create a new client_communication record in DRAFT_GENERATED status."""
+    """Create a new client_communication record in DRAFT_GENERATED status.
+    draft_body_clean: citation-stripped version; auto-generated from draft_body if not provided.
+    """
     existing = check_idempotency(firm_id, idempotency_key)
     if existing:
         return ToolResult(entity_id=existing, entity_type="client_communication", audit_event_id=existing)
 
     now = get_effective_datetime()
     comm_id = f"comm-{uuid.uuid4().hex[:10]}"
+    clean = draft_body_clean if draft_body_clean is not None else _strip_citations(draft_body)
 
     doc = {
         "id": comm_id,
@@ -53,6 +63,7 @@ def create_client_comm(
         "client_id": client_id,
         "trigger": trigger,
         "draft_body": draft_body,
+        "draft_body_clean": clean,
         "source_map": source_map,
         "status": CommStatus.DRAFT_GENERATED.value,
         "approved_by": None,

@@ -467,6 +467,40 @@ def update_entry_narrative(
     return ToolResult(entity_id=entry_id, entity_type="time_entry", audit_event_id=audit_id)
 
 
+def check_invoice_readiness(
+    firm_id: str,
+    client_id: str,
+) -> Dict[str, Any]:
+    """
+    Read-only check — returns {ready, blocking_entries, warn_entries}.
+    blocking_entries: PENDING entries (not yet approved) that would block invoice generation.
+    warn_entries: APPROVED entries with scrubber flags that an attorney should review.
+    No Firestore writes.
+    """
+    pending_snap = (
+        collection_ref(firm_id, "time_entries")
+        .where("client_id", "==", client_id)
+        .where("status", "==", "PENDING")
+        .get()
+    )
+    approved_snap = (
+        collection_ref(firm_id, "time_entries")
+        .where("client_id", "==", client_id)
+        .where("status", "==", "APPROVED")
+        .get()
+    )
+
+    blocking = [e.to_dict().get("id", e.id) for e in pending_snap]
+    warn = [e.to_dict().get("id", e.id) for e in approved_snap
+            if not e.to_dict().get("narrative")]
+
+    return {
+        "ready": len(blocking) == 0,
+        "blocking_entries": blocking,
+        "warn_entries": warn,
+    }
+
+
 def generate_invoice(
     firm_id: str,
     client_id: str,

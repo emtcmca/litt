@@ -29,8 +29,9 @@ _COLLECTIONS = [
     "deadlines", "deadline_events", "client_communications",
     "invoices", "escalations", "audit_log", "ingestion_signals",
     "idempotency_keys",
-    "source_emails",  # v1.1 — Rivera opposing-counsel email
-    "agent_runs",     # observability telemetry — cleared on reset so timelines don't accumulate
+    "source_emails",      # v1.1 — Rivera opposing-counsel email
+    "agent_runs",         # observability telemetry — cleared on reset so timelines don't accumulate
+    "inbound_messages",   # v1.1.1 — inbound triage pass
 ]
 
 
@@ -114,7 +115,16 @@ def seed_firm_data(db=None) -> None:
         "default_rate": 350, "billing_increment": 0.1,
         "timekeeper_id": "ds001", "timekeeper_classification": "AT",
         "rate_overrides": {}, "permission_scope": ["billing", "deadlines", "comms", "admin"],
-        "is_backup_contact": True, "created_at": FIRM_SETUP_DT, "updated_at": FIRM_SETUP_DT,
+        "is_backup_contact": True,
+        "writing_style": {
+            "tone": "professional and warm",
+            "salutation": "Dear [First Name],",
+            "closing": "Best regards,\nDana Strand",
+            "paragraph_length": "short",
+            "avoid": ["passive voice", "legalese in client letters"],
+            "preferred_update_structure": "status first, next steps second, ask at end",
+        },
+        "created_at": FIRM_SETUP_DT, "updated_at": FIRM_SETUP_DT,
     })
     _col(db, "attorneys").document("kofi-okafor").set({
         "id": "kofi-okafor", "firm_id": FIRM_ID,
@@ -501,6 +511,114 @@ def seed_firm_data(db=None) -> None:
         "first_seen_at": _dt(2026, 5, 8, 11), "last_seen_at": _dt(2026, 5, 8, 11),
         "created_at": _dt(2026, 5, 8, 11), "updated_at": _dt(2026, 5, 8, 11),
     })
+
+    # -- v1.1.1 inbound messages (4 fixtures, all AWAITING_TRIAGE) --
+    inbound_messages = [
+        {
+            "id": "inbound-mercer-q1",
+            "firm_id": FIRM_ID,
+            "source_email_id": None,
+            "matter_id": "mercer-v-dunlap",
+            "client_id": "mercer-industries",
+            "from_name": "Patricia Mercer",
+            "from_role": "client",
+            "received_at": _dt(2026, 6, 23, 11, 30),
+            "wait_days": 2,
+            "urgency": "HIGH",
+            "urgency_signals": ["mentions deadline", "decision-maker", "wait_days >= 2"],
+            "message_excerpt": (
+                "Dana, just checking in on the Dunlap opposition brief — do you still expect to "
+                "file by Thursday? I want to be sure we're on track given the July 1st deadline."
+            ),
+            "summary": None,
+            "action_items": [{"text": "Confirm opposition brief status for July 1 deadline", "handoff_agent": "deadline_agent"}],
+            "suggested_reply_comm_id": None,
+            "cross_agent": True,
+            "status": "AWAITING_TRIAGE",
+            "version": 1,
+            "created_at": _dt(2026, 6, 23, 11, 30),
+            "updated_at": _dt(2026, 6, 23, 11, 30),
+        },
+        {
+            "id": "inbound-acme-billing",
+            "firm_id": FIRM_ID,
+            "source_email_id": None,
+            "matter_id": "acme-contract-review-2026",
+            "client_id": "acme-commercial",
+            "from_name": "James Whitfield",
+            "from_role": "client",
+            "received_at": _dt(2026, 6, 22, 14, 0),
+            "wait_days": 3,
+            "urgency": "MEDIUM",
+            "urgency_signals": ["budget concern", "wait_days >= 2"],
+            "message_excerpt": (
+                "Hi Dana, I noticed we're getting close to our $15,000 budget on the MSA review. "
+                "Can you give me a sense of what's left to complete and whether we'll need to extend the cap?"
+            ),
+            "summary": None,
+            "action_items": [{"text": "Provide budget status update and remaining scope estimate", "handoff_agent": "billing_agent"}],
+            "suggested_reply_comm_id": None,
+            "cross_agent": True,
+            "status": "AWAITING_TRIAGE",
+            "version": 1,
+            "created_at": _dt(2026, 6, 22, 14, 0),
+            "updated_at": _dt(2026, 6, 22, 14, 0),
+        },
+        {
+            "id": "inbound-opp-counsel-001",
+            "firm_id": FIRM_ID,
+            "source_email_id": None,
+            "matter_id": "mercer-v-dunlap",
+            "client_id": "mercer-industries",
+            "from_name": "Robert Dunlap (Counsel)",
+            "from_role": "opposing_counsel",
+            "received_at": _dt(2026, 6, 24, 9, 15),
+            "wait_days": 1,
+            "urgency": "HIGH",
+            "urgency_signals": ["opposing counsel", "mentions deadline", "decision-maker"],
+            "message_excerpt": (
+                "Ms. Strand, we are proposing a mutual 14-day extension on all pending summary judgment "
+                "briefing. Please advise by COB Friday whether plaintiff agrees to the proposed extension."
+            ),
+            "summary": None,
+            "action_items": [
+                {"text": "Advise on 14-day extension proposal — requires attorney decision", "handoff_agent": None},
+                {"text": "If extension agreed, update dl-mercer-001 due date", "handoff_agent": "deadline_agent"},
+            ],
+            "suggested_reply_comm_id": None,
+            "cross_agent": True,
+            "status": "AWAITING_TRIAGE",
+            "version": 1,
+            "created_at": _dt(2026, 6, 24, 9, 15),
+            "updated_at": _dt(2026, 6, 24, 9, 15),
+        },
+        {
+            "id": "inbound-whitmore-update",
+            "firm_id": FIRM_ID,
+            "source_email_id": None,
+            "matter_id": "whitmore-employment-2026",
+            "client_id": "whitmore-group",
+            "from_name": "Sandra Whitmore",
+            "from_role": "client",
+            "received_at": _dt(2026, 6, 25, 8, 0),
+            "wait_days": 0,
+            "urgency": "LOW",
+            "urgency_signals": [],
+            "message_excerpt": (
+                "Thank you for the handbook update, Dana. Happy to connect whenever you have availability."
+            ),
+            "summary": None,
+            "action_items": [],
+            "suggested_reply_comm_id": None,
+            "cross_agent": False,
+            "status": "AWAITING_TRIAGE",
+            "version": 1,
+            "created_at": _dt(2026, 6, 25, 8, 0),
+            "updated_at": _dt(2026, 6, 25, 8, 0),
+        },
+    ]
+    for msg in inbound_messages:
+        _col(db, "inbound_messages").document(msg["id"]).set(msg)
 
     # -- v1.1 supplemental fixtures (Rivera + Okafor calendar gap) --
     # Additive only — no existing v1.0 records are modified.

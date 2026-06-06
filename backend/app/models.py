@@ -122,8 +122,38 @@ class SourceType(str, Enum):
 
 class VerificationStatus(str, Enum):
     unverified = "unverified"
+    pending_verification = "pending_verification"
     attorney_verified = "attorney_verified"
     superseded = "superseded"
+
+
+class AnomalyType(str, Enum):
+    ROUND_HOURS_NO_SESSION = "ROUND_HOURS_NO_SESSION"
+    DUPLICATE_ENTRY_CANDIDATE = "DUPLICATE_ENTRY_CANDIDATE"
+    AI_DISCLOSURE_GAP = "AI_DISCLOSURE_GAP"
+    STALE_VERIFIED_DEADLINE = "STALE_VERIFIED_DEADLINE"
+    LATE_ENTRY_CREATION = "LATE_ENTRY_CREATION"
+    ENTRY_CLUSTERING = "ENTRY_CLUSTERING"
+    NARRATIVE_INSUFFICIENT = "NARRATIVE_INSUFFICIENT"
+    HOURS_NARRATIVE_MISMATCH = "HOURS_NARRATIVE_MISMATCH"
+    SEMANTIC_DUPLICATE_CANDIDATE = "SEMANTIC_DUPLICATE_CANDIDATE"
+    RATE_ANOMALY = "RATE_ANOMALY"
+    INVOICE_STALENESS = "INVOICE_STALENESS"
+
+
+class InboundUrgency(str, Enum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class InboundStatus(str, Enum):
+    AWAITING_TRIAGE = "AWAITING_TRIAGE"
+    TRIAGED = "TRIAGED"
+    REPLY_HELD = "REPLY_HELD"
+    HANDLED = "HANDLED"
+    SNOOZED = "SNOOZED"
+    DISMISSED = "DISMISSED"
 
 
 class DeadlineEventType(str, Enum):
@@ -144,6 +174,13 @@ class CommTrigger(str, Enum):
     DEADLINE_APPROACHING = "DEADLINE_APPROACHING"
     INVOICE_ISSUED = "INVOICE_ISSUED"
     ATTORNEY_INITIATED = "ATTORNEY_INITIATED"
+    # v1.1.1 outbound triggers
+    BUDGET_THRESHOLD_CROSSED = "BUDGET_THRESHOLD_CROSSED"
+    DEADLINE_CONFIRMED_NO_UPDATE = "DEADLINE_CONFIRMED_NO_UPDATE"
+    INVOICE_GENERATED = "INVOICE_GENERATED"
+    ACTIVITY_WITHOUT_UPDATE = "ACTIVITY_WITHOUT_UPDATE"
+    DEADLINE_EXTENSION_REQUEST = "DEADLINE_EXTENSION_REQUEST"
+    INBOUND_REPLY = "INBOUND_REPLY"
 
 
 class CommStatus(str, Enum):
@@ -269,6 +306,11 @@ class EscalationBrief(BaseModel):
     risk_level: RiskLevel = RiskLevel.ROUTINE
 
 
+class InboundActionItem(BaseModel):
+    text: str
+    handoff_agent: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Firestore collection models
 # ---------------------------------------------------------------------------
@@ -283,6 +325,7 @@ class Attorney(LittBaseModel):
     rate_overrides: Dict[str, Decimal] = Field(default_factory=dict)
     permission_scope: List[PermissionScope] = Field(default_factory=list)
     is_backup_contact: bool = False
+    writing_style: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Client(LittBaseModel):
@@ -450,6 +493,26 @@ class Escalation(LittBaseModel):
     workflow_state: Optional[Dict[str, Any]] = None
     workflow_status: Optional[WorkflowStatus] = None
     resolved_at: Optional[datetime] = None
+
+
+class InboundMessage(LittBaseModel):
+    """Inbound message from client, opposing counsel, or other contact. Collection: inbound_messages."""
+    source_email_id: Optional[str] = None
+    matter_id: Optional[str] = None
+    client_id: Optional[str] = None
+    from_name: str
+    from_role: str = "client"
+    received_at: datetime
+    wait_days: int = 0
+    urgency: InboundUrgency = InboundUrgency.LOW
+    urgency_signals: List[str] = Field(default_factory=list)
+    message_excerpt: str = ""
+    summary: Optional[str] = None
+    action_items: List[InboundActionItem] = Field(default_factory=list)
+    suggested_reply_comm_id: Optional[str] = None
+    cross_agent: bool = False
+    status: InboundStatus = InboundStatus.AWAITING_TRIAGE
+    version: int = 1
 
 
 # ---------------------------------------------------------------------------
