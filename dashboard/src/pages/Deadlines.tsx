@@ -288,7 +288,7 @@ function DeadlineBook({ items, total }: { items: PinnedDeadline[]; total: number
         gap: 10, padding: '8px 16px',
         borderBottom: `1px solid ${T.soft}`,
       }}>
-        {['Matter · what's due', 'Class', 'Due'].map(h => (
+        {["Matter · what's due", 'Class', 'Due'].map(h => (
           <Mono key={h} style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.08em', color: T.faint }}>
             {h}
           </Mono>
