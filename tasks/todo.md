@@ -451,6 +451,7 @@
 - [x] V113-RP7C Agent instrumentation — billing/deadline/comms/anomaly agents emit TOOL_CALL with `data.tool.{name,kind,signature,result}`; Gemini TOOL_CALLs conditional on non-None return
 - [x] V113-RP7D test_agent_observations.py — TestToolCallEnrichment class (11 tests); 354/354 full suite green
 - [x] V113-RP8a Deploy — litt-backend 00011-7ld + litt-dashboard 00016-dcr deployed; 6/6 demo/ready pass
+- [x] V113-RP8b Smoke tests — dashboard/tests/13-resolve-panel.spec.ts; 8/8 Playwright tests pass (5 variants + destructive gate + audit switch + inbound render)
 
 ---
 

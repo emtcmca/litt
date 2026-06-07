@@ -770,10 +770,10 @@ Rule: gemini TOOL_CALL only when `_call_gemini_*` actually returned a result thi
 
 Pre-commit checklist:
 - [x] `tsc --noEmit` clean
-- [ ] All 5 seed variants open from Brief (deadline/billing/budget/anomaly/silence)
-- [ ] Destructive actions blocked without reason
-- [ ] Audit preview updates on radio switch
-- [ ] Inbound and compound shapes load without crash (can defer if no seed data)
+- [x] All 5 seed variants open from Brief (deadline/billing/budget/anomaly/silence)
+- [x] Destructive actions blocked without reason
+- [x] Audit preview updates on radio switch
+- [x] Inbound and compound shapes load without crash (can defer if no seed data)
 - [x] `pytest` green (backend — 354/354)
 - [x] `tasks/todo.md` and `tasks/plan.md` updated
 - [x] `error-log.md` appended for any errors diagnosed this session
