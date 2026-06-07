@@ -1,3 +1,4 @@
+// @deprecated — replaced by ResolvePanel (dashboard/src/components/console/ResolvePanel.tsx)
 import type { BriefBudgetItem } from '../../types';
 
 interface Props {

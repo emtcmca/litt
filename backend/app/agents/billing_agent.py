@@ -124,6 +124,14 @@ class BillingAgent:
             observation_type=ObservationType.TOOL_CALL,
             commitment_level=CommitmentLevel.AUTO_SAFE,
             description=f"Running pre-bill scrubber on {len(scannable)} entries",
+            data={
+                "tool": {
+                    "name": "run_prebill_scrubber",
+                    "kind": "compute",
+                    "signature": "(firm_id, entries: list[TimeEntry]) -> ScrubberResult",
+                    "result": {"entry_count": len(scannable)},
+                }
+            },
         ))
 
         new_anomalies: List[str] = []
@@ -186,6 +194,24 @@ class BillingAgent:
                     suggested_narrative = None
                     if flag.check_name == "narrative_absent":
                         suggested_narrative = _call_gemini_narrative_suggestion(entry)
+                        if suggested_narrative:
+                            observations.append(_obs(
+                                observation_type=ObservationType.TOOL_CALL,
+                                commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                                description=f"Gemini suggested narrative for entry {entry_id}",
+                                work_kind="llm_assisted",
+                                model_name=config.GEMINI_MODEL,
+                                confidence=None,
+                                data={
+                                    "tool": {
+                                        "name": "suggest_narrative",
+                                        "kind": "gemini",
+                                        "signature": "(entry_id, activity_code, hours, flags) -> str | None",
+                                        "result": {"suggested_length": len(suggested_narrative)},
+                                    }
+                                },
+                                evidence=[entry_id],
+                            ))
 
                     outcome = log_anomaly(
                         firm_id=firm_id,

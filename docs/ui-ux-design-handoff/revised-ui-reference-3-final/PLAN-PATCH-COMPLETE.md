@@ -158,6 +158,124 @@ referenced by P5/P0f below.
 
 ---
 
+## E. Resolve Panel — action/resolution modals (item B-RESOLVE)
+
+The modal that opens when an attorney acts on any Brief/Console item. **One parameterized
+`ResolvePanel`, not bespoke per-type modals.** Retire the old
+`components/modals/{Deadline,BillingWIP,Budget,Anomaly,ClientComms}Modal.tsx` from the resolve
+flow — they were carried into the build by mistake. Full detail + the 5 seed screenshots live in
+`RESOLVE-PANEL-SPEC.md`; this section is the build-ready summary + design params for the variants
+that have **no screenshot proof** (must be built to written spec).
+
+Canonical source: `prototype-source/litt-flows.jsx` → `ResolvePanel` / `ProofBlock` /
+`buildAuditEvent`; atoms `Btn`/`Icon`/`Mono`/`GateChip`. Tokens: `design-system.md`.
+
+### E.1 Base anatomy (all variants share this shell)
+Centered modal, dimmed backdrop `rgba(28,30,26,.46)`+blur, click-out/`✕`/`Cancel` close. Card
+`background:T.surface`, radius **16**, border `T.line`, width `min(580px,96vw)`, `maxHeight 92vh`
+scroll. Order: **(1) Header** — 30px kind-icon tile tinted by `GATE_TONE[gate]` + `Mono` uppercase
+kind label + client; `✕`. **(2)** `<h2>` headline 20/600 + plain sub 14/`T.muted`. **(3) Stakes
+notice** — tinted row, `alert` icon; ESCALATION→`T.dangerSoft`+red border, else `T.wash2`+gold.
+**(4) Action selector** *(if `alt`)* — two radios; selected = `T.forest` bg + `T.brass` text +
+filled dot. **(5) Required input** *(if action.need)* — label + `· required` (gold=narrative,
+danger=reason) + textarea; border turns `T.teal` when filled. **(6) Proof block** — collapsible
+"Show Litt's work — source, routing & confidence" → `ProofBlock` (Reading/Litt did/Source/Routing
+chips). **(7) Audit preview** — dark `T.audit` panel: shield + "WILL BE WRITTEN TO THE AUDIT LOG"
++ `event` (brass) + `actor · entity · tier`, **recomputed live as the action changes**. **(8)
+Footer** — `Cancel` (ghost) + primary `Btn` (`danger` kind for writeoff/dismiss, else `primary`),
+disabled until required text valid (`≥8` narrative / `≥4` reason).
+**Invariants:** no silent action (destructive/dismiss require a reason); audit preview tracks the
+selected action; primary disabled until valid.
+
+**Input modes the component must support:** `none` · `textarea(reason|narrative)` ·
+`date+select` (E.3a) · `numeric(new_hours,new_amount)+reason` (E.3b). Drive everything from a
+normalized **item descriptor** (`{kind, gate, headline, plain, stakes, action, alt?, need?,
+proof, draft?}`) so most variants need no new component.
+
+### E.2 Seed variants (designed + captured — build identical to PNGs)
+| kind/gate | primary · alt | input | event · tier | screen | api |
+|---|---|---|---|---|---|
+| deadline · ESCALATION | Confirm · Extend/reassign | none · reason | `deadline.confirmed`/`.extended` · legal | `resolve-01-deadline.png` | `confirmDeadline`/`extendDeadline` |
+| billing · REVIEW | Add narrative & approve · Write off | narrative · reason | `billing.approved`/`.written_off` · legal | `resolve-02-billing-narrative.png` | `approveBilling`+`updateNarrative`/`writeOffBilling` |
+| anomaly · REVIEW | Dismiss with reason | reason | `anomaly.dismissed` · operational | `resolve-03-anomaly.png` | `dismissAlert` |
+| budget · REVIEW | Acknowledge & log review · Request increase | none · reason | `budget.reviewed`/`.increase_requested` · operational | `resolve-04-budget.png` | `dismissAlert`(ack)/open request |
+| silence · BLOCKED | Review & approve draft · Dismiss | none · reason | `comms.approved`/`.dismissed` · operational | `resolve-05-silence-comms.png` (draft preview block) | `approveComm`→`queueComm`→`confirm-sent`/`dismissComm` |
+
+### E.3 NEW variants — NO screenshot; build to these design params
+These cover prod item types absent from the demo seed. Reuse the E.1 shell unless noted.
+
+**E.3a — Deadline VERIFY (extracted candidate)** 🔴 *new input mode*
+Trigger: `verification_status=pending_verification` / `conflict_flagged` (Gemini-extracted).
+Header kind `deadline`, gate **ESCALATION** (red tile). Headline "Verify this deadline before
+it's calendared". Plain: "Litt extracted this date from an email — confirm it's real before it
+goes on the book." Stakes (red): "An unverified date is not yet protecting you — verify the date
+and class, or mark it not a deadline." **Inputs (replace the textarea):** a **date field**
+(label "Confirmed due date", default = extracted date) **+ a classification `select`**
+(`HARD_LEGAL · HARD_CONTRACTUAL · SOFT_INTERNAL · ADMINISTRATIVE`, default = extracted class).
+Both required. Action selector: **Verify deadline** (primary) · **Not a deadline** (alt, `reason`,
+danger). Proof shows source email quote + `confidence` chip. Audit: `deadline.verified` · legal
+(verify) / `deadline.dismissed` · operational (alt). API: `verifyDeadline({confirmed_date,
+classification})` / `dismissAlert`. Layout: date+select sit in the input slot as a 2-col row
+(date left, select right), each `flex:1`, same 9px-radius `T.line` inputs as the textarea.
+
+**E.3b — Billing WRITE-DOWN (partial reduction)** 🟠 *new input mode, extends billing variant*
+Add a **third** action radio to the billing card: **Write down**. When selected, reveal **two
+numeric fields** — "New hours" and "New amount ($)" (small, side by side, `flex:1`, numeric,
+prefilled with current values) — **plus** a `reason` textarea (required). Primary label "Write
+down & approve" (`primary` kind — it's an approval, not a destructive purge). Audit
+`billing.written_down` · legal. API `writeDownBilling({new_hours,new_amount,reason})`. Validation:
+both numbers > 0 and < current, reason `≥4`.
+
+**E.3c — Billing scrubber BLOCK (vs WARN)** 🟠 *severity variant of billing*
+Trigger: a scrubber **BLOCK** flag (e.g. `NARRATIVE_FORBIDDEN_PHRASE`/guideline violation), not
+the seed's WARN. Same billing shell but: gate **ESCALATION** (red stakes), and a **flagged-phrase
+callout** above the input — a `T.dangerSoft` row showing the offending phrase in `T.danger` mono
+with the guideline source (`scrubber_flags[].matched_text` + `.message`). Primary "Revise
+narrative & approve" requires editing the narrative so it no longer contains the phrase
+(re-run `getScrubber` on submit; keep disabled while `has_block`). Alt "Write off" (reason).
+Audit `billing.approved` (post-revision) · legal. API `updateNarrative`→`approveBilling`;
+`getScrubber` to re-validate.
+
+**E.3d — Inbound reply triage (`INBOX_TRIAGE`)** 🔴 *new shape (not the 2-radio pattern)*
+Reuse the expanded `InboundCard` body inside the modal shell. Sections: header (sender avatar +
+name/role + client/matter + urgency pill `High/Med/Low · awaiting Nd`); **read-only message**
+(italic, left-border, "from Gmail · read-only"); a 2-col triage grid — **"What they need"**
+(summary) + **"Why it surfaced"** signal chips | **"Action items"** (each with optional cross-agent
+`→ Deadline Monitor`/`→ Billing` chip) and a "Handed to {agent}" box when `cross_agent`;
+**Suggested reply** card (held, "Gemini" badge, **editable** textarea prefilled with
+`suggested_reply_body`, grounding rows). Footer actions: **Approve & send** (primary forest) ·
+**Edit** (focus the reply) · **Snooze** · **Hand off**. Audit `comms.approved`→`comms.sent` · ops.
+API: `approveComm`→`queueComm`→`confirm-sent`; `snoozeInbound`; `dismissInbound`. Width may grow to
+`min(680px,96vw)` to fit the 2-col grid. Data exists: `InboundMessage` + `suggested_reply_body`.
+
+**E.3e — Compound escalation (`COMPOUND_RISK`)** 🟠 *new shape*
+Cross-signal risk on one matter (the `CompoundEscalationCard` content, in a modal). Header kind
+`shield`/gate per severity (`ELEVATED`=gold, `CRITICAL`=red); headline = the matter risk (e.g.
+"Three signals are compounding on Mercer"). Body: **contributing-signals list** — each row an icon
++ one-liner ("Court deadline · 6d · unconfirmed", "Budget · 78%", "Silent · 16d") linking to that
+item; then a **"why this compounds"** synthesis paragraph (`what_is_happening`/`why_it_matters`).
+Actions: **Acknowledge & triage** (primary, `none`) · **Open matter** (navigate) · **Dismiss**
+(alt, `reason`, danger). Proof shows the coordinator route + the member escalation IDs. Audit
+`compound.acknowledged`/`compound.dismissed` · operational. API `dismissAlert` (alert_type
+`compound`) + client-side navigation.
+
+**E.3f — Universal fallback** 🟢
+The other 11 `AnomalyType`s and other `CommTrigger`s reuse the **anomaly (E.2)** and **comms
+(E.2)** variants respectively — **data-driven** from the escalation/draft record (headline,
+stakes, proof, draft). No new component; ensure copy/proof come from the record, not hardcoded.
+
+### E.4 Build + acceptance
+Build one `components/console/ResolvePanel.tsx` (+ `ProofBlock`, `buildAuditEvent`-equiv) from
+`litt-flows.jsx`; data-drive from the item descriptor; implement the 4 input modes + the 2 new
+shapes (E.3d, E.3e). Wire each action to its `api.ts` fn; one audit event per confirm; honor
+`expected_version`/`expected_status` + `idempotency_key`. **Acceptance:** every item type opens
+the correct variant (never an old modal); dismiss/destructive blocked until reason entered; audit
+preview matches the selected action and the event written; E.3a date+select & E.3b numeric inputs
+validate; inbound (E.3d) + compound (E.3e) render their dedicated shapes. Capture screenshots for
+E.3a–E.3e (harness `_resolve-capture.html`) once descriptors exist, then gate them.
+
+---
+
 ## D. Apply-order checklist
 
 1. ☐ A1/A2 recorded; **schedule `BACKEND-TASK-tool-observations.md`** (it unblocks Phase 5 live).
@@ -167,4 +285,6 @@ referenced by P5/P0f below.
 5. ☐ B-5.1/.2/.4 (Agent Console bindings) — backed by the Phase-5 backend task.
 6. ☐ B-3.1 (deadline name join), B-8.2 (commitments local), B-10.1 (detector roster static).
 7. ☐ B-0f.1 (sweep.json real shape + `data.tool`), B-0d.1 (symbol-not-line).
-8. ☐ Confirm §C items are untouched.
+8. ☐ **B-RESOLVE** (§E): one `ResolvePanel`, retire old modals; build 5 seed variants (gated vs
+   PNGs) + the new E.3a–E.3e variants to written params; data-drive E.3f.
+9. ☐ Confirm §C items are untouched.

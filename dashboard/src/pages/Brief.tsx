@@ -1,21 +1,33 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { BriefResponse, BriefSections, ToolResult } from '../types';
+import type { ActionResult, BriefResponse, BriefSections } from '../types';
 import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
 import { getBrief, runSweep } from '../api';
-import { DeadlineModal } from '../components/modals/DeadlineModal';
-import type { DeadlineAction } from '../components/modals/DeadlineModal';
-import { BillingWIPModal } from '../components/modals/BillingWIPModal';
-import type { BillingAction } from '../components/modals/BillingWIPModal';
-import { BudgetModal } from '../components/modals/BudgetModal';
-import { AnomalyModal } from '../components/modals/AnomalyModal';
-import { ClientCommsModal } from '../components/modals/ClientCommsModal';
+import { ResolvePanel } from '../components/console/ResolvePanel';
+import type { ItemDescriptor } from '../components/console/resolveTypes';
+import {
+  buildDeadlineDescriptor,
+  buildDeadlineVerifyDescriptor,
+  buildBillingDescriptor,
+  buildBudgetDescriptor,
+  buildAnomalyDescriptor,
+  buildSilenceDescriptor,
+  buildInboundDescriptor,
+  buildCompoundDescriptor,
+} from '../components/console/buildDescriptor';
 
 const FIRM_ID = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
 
+// gate uses Brief's internal values; mapped to GATE_TONE keys in descriptor factory calls below
 type ModalState = { kind: string; id: string; gate: 'ESCALATION' | 'REVIEW_REQUIRED' | 'AUTO_SAFE' } | null;
+
+function toResolveGate(g: string): string {
+  if (g === 'REVIEW_REQUIRED') return 'REVIEW';
+  if (g === 'AUTO_SAFE') return 'REVIEW';
+  return g; // ESCALATION passes through
+}
 
 interface Decision {
   id: string;
@@ -90,6 +102,26 @@ function deriveDecisions(sections: BriefSections): Decision[] {
     });
   }
 
+  for (const m of sections.inbox_items?.items ?? []) {
+    decs.push({
+      id: m.message_id,
+      gate: m.urgency === 'HIGH' ? 'ESCALATION' : 'REVIEW_REQUIRED',
+      headline: m.summary ?? m.message_excerpt.slice(0, 80),
+      kind: 'inbound',
+      client: m.from_name,
+    });
+  }
+
+  for (const c of sections.compound_escalations?.items ?? []) {
+    decs.push({
+      id: c.escalation_id,
+      gate: c.risk_level === 'CRITICAL' ? 'ESCALATION' : 'REVIEW_REQUIRED',
+      headline: c.what_is_happening,
+      kind: 'compound',
+      client: c.matter_id ?? '',
+    });
+  }
+
   const ord: Record<string, number> = { ESCALATION: 0, REVIEW_REQUIRED: 1, AUTO_SAFE: 2 };
   return decs.sort((a, b) => ord[a.gate] - ord[b.gate]);
 }
@@ -146,24 +178,54 @@ export function Brief() {
 
   const s = brief!.sections;
   const closeModal = () => setModal(null);
-  const onModalSuccess = (_r: ToolResult, _id: string) => { setModal(null); load(); };
+  const onModalSuccess = (_r: ActionResult, _id: string) => { setModal(null); load(); };
+
   let modalContent: React.ReactNode = null;
-  if (modal) {
+  if (modal && brief) {
+    let descriptor: ItemDescriptor | null = null;
+    const rg = toResolveGate(modal.gate);
+
     if (modal.kind === 'deadline') {
       const item = s.deadlines.items.find(i => i.deadline_id === modal.id);
-      if (item) modalContent = <DeadlineModal item={item} action={'confirm' as DeadlineAction} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+      if (item) {
+        // conflict_flagged → verify variant (assembler never passes pending_verification)
+        descriptor = item.verification_status === 'conflict_flagged'
+          ? buildDeadlineVerifyDescriptor(item)
+          : buildDeadlineDescriptor(item, rg);
+      }
     } else if (modal.kind === 'billing') {
       const item = s.time_entries.items.find(i => i.entry_id === modal.id);
-      if (item) { const act: BillingAction = item.has_block ? 'edit' : 'approve'; modalContent = <BillingWIPModal item={item} action={act} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />; }
+      if (item) descriptor = buildBillingDescriptor(item);
     } else if (modal.kind === 'budget risk') {
+      // Composite ID: both sides use ${client_id}-budget
       const item = s.budget_risks.items.find(i => `${i.client_id}-budget` === modal.id);
-      if (item) modalContent = <BudgetModal item={item} onClose={closeModal} />;
+      if (item) descriptor = buildBudgetDescriptor(item);
     } else if (modal.kind === 'anomaly') {
       const item = s.anomalies.items.find(i => i.escalation_id === modal.id);
-      if (item) modalContent = <AnomalyModal item={item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+      if (item) descriptor = buildAnomalyDescriptor(item);
     } else if (modal.kind === 'client silence') {
+      // Composite ID: both sides use ${matter_id}-silence
       const item = s.client_silence.items.find(i => `${i.matter_id}-silence` === modal.id);
-      if (item) modalContent = <ClientCommsModal item={item} firmId={FIRM_ID} attorneyId={ATTORNEY_ID} onClose={closeModal} onSuccess={onModalSuccess} />;
+      if (item) descriptor = buildSilenceDescriptor(item);
+    } else if (modal.kind === 'inbound') {
+      // modal.id = BriefInboundItem.message_id; buildInboundDescriptor takes messageId string
+      const item = s.inbox_items?.items.find(i => i.message_id === modal.id);
+      if (item) descriptor = buildInboundDescriptor(item.message_id);
+    } else if (modal.kind === 'compound') {
+      const item = s.compound_escalations?.items.find(i => i.escalation_id === modal.id);
+      if (item) descriptor = buildCompoundDescriptor(item);
+    }
+
+    if (descriptor) {
+      modalContent = (
+        <ResolvePanel
+          descriptor={descriptor}
+          firmId={FIRM_ID}
+          attorneyId={ATTORNEY_ID}
+          onClose={closeModal}
+          onSuccess={onModalSuccess}
+        />
+      );
     }
   }
 

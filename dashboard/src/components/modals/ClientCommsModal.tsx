@@ -1,3 +1,4 @@
+// @deprecated — replaced by ResolvePanel (dashboard/src/components/console/ResolvePanel.tsx)
 import { useState } from 'react';
 import type { BriefClientSilenceItem, ToolResult } from '../../types';
 import { approveComm, queueComm, dismissComm } from '../../api';

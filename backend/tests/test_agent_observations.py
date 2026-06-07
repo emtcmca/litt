@@ -555,3 +555,390 @@ class TestPhase4Checkpoint:
         assert "deterministic" in work_kinds
         assert "llm_assisted" in work_kinds
         assert "human_gate" in work_kinds
+
+
+# ---------------------------------------------------------------------------
+# Phase 7D: TOOL_CALL data.tool enrichment assertions
+# ---------------------------------------------------------------------------
+
+def _tool_calls(obs_list: list) -> list:
+    """Return TOOL_CALL observations."""
+    return [
+        o for o in obs_list
+        if (o.observation_type if isinstance(o.observation_type, str) else o.observation_type.value) == "TOOL_CALL"
+    ]
+
+
+def _assert_tool_shape(obs) -> None:
+    """Every TOOL_CALL must have data.tool with name, kind, signature, result."""
+    assert "tool" in obs.data, f"TOOL_CALL missing data.tool: {obs.description}"
+    t = obs.data["tool"]
+    assert "name" in t, f"data.tool missing 'name': {obs.description}"
+    assert "kind" in t, f"data.tool missing 'kind': {obs.description}"
+    assert "signature" in t, f"data.tool missing 'signature': {obs.description}"
+    assert "result" in t, f"data.tool missing 'result': {obs.description}"
+
+
+class TestToolCallEnrichment:
+    """Phase 7D: TOOL_CALL observations have data.tool.{name,kind,signature,result}."""
+
+    # --- make_tool_call helper ---
+
+    def test_make_tool_call_shape(self):
+        """make_tool_call returns AgentObservation with correct data.tool shape."""
+        from app.observability import make_tool_call, CommitmentLevel, ObservationType
+
+        obs = make_tool_call(
+            agent_name="billing_agent",
+            tool_name="run_prebill_scrubber",
+            result={"entry_count": 3},
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            confidence=None,
+        )
+        assert obs.observation_type == "TOOL_CALL"
+        _assert_tool_shape(obs)
+        assert obs.data["tool"]["name"] == "run_prebill_scrubber"
+        assert obs.data["tool"]["kind"] == "compute"
+        assert obs.data["tool"]["signature"] != ""
+        assert obs.work_kind == "deterministic"
+
+    def test_make_tool_call_gemini_kind(self):
+        """make_tool_call with gemini tool sets work_kind=llm_assisted and model_name."""
+        from app.observability import make_tool_call, CommitmentLevel
+
+        obs = make_tool_call(
+            agent_name="billing_agent",
+            tool_name="suggest_narrative",
+            result={"suggested_length": 120},
+            commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+            confidence=0.82,
+        )
+        assert obs.data["tool"]["kind"] == "gemini"
+        assert obs.work_kind == "llm_assisted"
+        assert obs.model_name == "gemini-2.5-pro"
+
+    def test_make_tool_call_unknown_tool_safe(self):
+        """make_tool_call with unregistered tool name does not raise."""
+        from app.observability import make_tool_call, CommitmentLevel
+
+        obs = make_tool_call(
+            agent_name="test_agent",
+            tool_name="nonexistent_tool_xyz",
+            result={},
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+        )
+        assert obs.data["tool"]["name"] == "nonexistent_tool_xyz"
+        assert obs.data["tool"]["kind"] == "compute"  # default fallback
+        assert obs.data["tool"]["signature"] == ""
+
+    # --- BillingAgent TOOL_CALL enrichment ---
+
+    def test_billing_run_prebill_scrubber_has_tool_shape(self):
+        """BillingAgent run_prebill_scrubber TOOL_CALL has data.tool fields."""
+        from app.agents.billing_agent import BillingAgent
+        from app.models import ToolError
+
+        agent = BillingAgent()
+        with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no cap")):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = []
+                return s
+            mock_cr.side_effect = side_effect
+            result = agent.run("strand-okafor")
+
+        tc = _tool_calls(result["observations"])
+        assert len(tc) >= 1, "Expected at least 1 TOOL_CALL"
+        scrubber_calls = [o for o in tc if o.data.get("tool", {}).get("name") == "run_prebill_scrubber"]
+        assert len(scrubber_calls) == 1
+        _assert_tool_shape(scrubber_calls[0])
+        assert scrubber_calls[0].data["tool"]["kind"] == "compute"
+
+    def test_billing_gemini_tool_call_only_when_suggestion_returned(self):
+        """suggest_narrative TOOL_CALL fires only when Gemini returns non-None."""
+        from app.agents.billing_agent import BillingAgent
+        from app.scrubber.prebill import ScrubberFlag, ScrubberResult
+        from app.models import ToolError
+
+        agent = BillingAgent()
+        entry = {"id": "te-blank", "status": "PENDING", "client_id": "c1", "matter_id": "m1",
+                 "narrative": None, "hours": 1.0, "entry_date": "2026-05-29"}
+        block_result = ScrubberResult(
+            entry_id="te-blank",
+            flags=[ScrubberFlag(entry_id="te-blank", check_name="narrative_absent",
+                               severity="BLOCK", message="empty", matched_text="")],
+        )
+        entry_doc = MagicMock()
+        entry_doc.to_dict.return_value = entry
+
+        # Case 1: Gemini returns None → no suggest_narrative TOOL_CALL
+        with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
+             patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
+             patch("app.agents.billing_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-1")), \
+             patch("app.agents.billing_agent._call_gemini_narrative_suggestion", return_value=None), \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no cap")):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect
+            result_no_gemini = agent.run("strand-okafor")
+
+        tc_no_gemini = [
+            o for o in _tool_calls(result_no_gemini["observations"])
+            if o.data.get("tool", {}).get("name") == "suggest_narrative"
+        ]
+        assert len(tc_no_gemini) == 0, "suggest_narrative TOOL_CALL should not fire when Gemini returns None"
+
+        # Case 2: Gemini returns a suggestion → suggest_narrative TOOL_CALL fires
+        with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
+             patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
+             patch("app.agents.billing_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-2")), \
+             patch("app.agents.billing_agent._call_gemini_narrative_suggestion",
+                   return_value="Reviewed client file and prepared initial case assessment."), \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no cap")):
+            def side_effect2(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect2
+            result_with_gemini = agent.run("strand-okafor")
+
+        tc_with_gemini = [
+            o for o in _tool_calls(result_with_gemini["observations"])
+            if o.data.get("tool", {}).get("name") == "suggest_narrative"
+        ]
+        assert len(tc_with_gemini) == 1
+        _assert_tool_shape(tc_with_gemini[0])
+        assert tc_with_gemini[0].data["tool"]["kind"] == "gemini"
+        assert tc_with_gemini[0].work_kind == "llm_assisted"
+
+    def test_billing_write_count_unchanged(self):
+        """log_anomaly call count is identical before/after Phase 7 instrumentation."""
+        from app.agents.billing_agent import BillingAgent
+        from app.scrubber.prebill import ScrubberFlag, ScrubberResult
+        from app.models import ToolError
+
+        agent = BillingAgent()
+        entry = {"id": "te-w01", "status": "PENDING", "client_id": "c1", "matter_id": "m1",
+                 "narrative": None, "hours": 1.0, "entry_date": "2026-05-29"}
+        block_result = ScrubberResult(
+            entry_id="te-w01",
+            flags=[ScrubberFlag(entry_id="te-w01", check_name="narrative_absent",
+                               severity="BLOCK", message="empty", matched_text="")],
+        )
+        entry_doc = MagicMock()
+        entry_doc.to_dict.return_value = entry
+
+        with patch("app.agents.billing_agent.collection_ref") as mock_cr, \
+             patch("app.agents.billing_agent.run_prebill_checks", return_value=block_result), \
+             patch("app.agents.billing_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-w01")) as mock_log, \
+             patch("app.agents.billing_agent._call_gemini_narrative_suggestion", return_value="suggestion"), \
+             patch("app.agents.billing_agent.compute_budget_utilization",
+                   return_value=ToolError(error_type="NOT_FOUND", message="no cap")):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect
+            agent.run("strand-okafor")
+            write_count = mock_log.call_count
+
+        # 1 BLOCK flag → 1 log_anomaly call. Must not change due to observation additions.
+        assert write_count == 1, f"Expected 1 log_anomaly call, got {write_count}"
+
+    # --- DeadlineAgent TOOL_CALL enrichment ---
+
+    def test_deadline_get_active_deadlines_tool_call(self):
+        """DeadlineAgent emits get_active_deadlines TOOL_CALL with kind=read."""
+        from app.agents.deadline_agent import DeadlineAgent
+
+        agent = DeadlineAgent()
+        with patch("app.agents.deadline_agent.collection_ref") as mock_cr:
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = []
+                return s
+            mock_cr.side_effect = side_effect
+            result = agent.run("strand-okafor")
+
+        tc = _tool_calls(result["observations"])
+        dl_calls = [o for o in tc if o.data.get("tool", {}).get("name") == "get_active_deadlines"]
+        assert len(dl_calls) == 1
+        _assert_tool_shape(dl_calls[0])
+        assert dl_calls[0].data["tool"]["kind"] == "read"
+
+    def test_deadline_gemini_tool_call_only_when_extraction_returned(self):
+        """extract_deadline_date TOOL_CALL fires only when Gemini extraction returns non-None."""
+        from app.agents.deadline_agent import DeadlineAgent
+
+        agent = DeadlineAgent()
+        conflict_dl = {
+            "id": "dl-cf-01", "status": "ACTIVE",
+            "verification_status": "conflict_flagged",
+            "due_date": "2026-06-05", "description": "Test",
+            "classification": "HARD_LEGAL", "matter_id": "m1",
+            "email_reference": "email-ref-01",
+        }
+
+        # Case 1: Gemini returns None → no extract_deadline_date TOOL_CALL
+        with patch("app.agents.deadline_agent.collection_ref") as mock_cr, \
+             patch("app.agents.deadline_agent._call_gemini_deadline_extraction", return_value=None), \
+             patch("app.agents.deadline_agent.log_escalation",
+                   return_value=MagicMock(entity_id="esc-dl-01")):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                if col == "deadlines":
+                    doc = MagicMock()
+                    doc.to_dict.return_value = conflict_dl
+                    s.stream.return_value = [doc]
+                else:
+                    s.stream.return_value = []
+                return s
+            mock_cr.side_effect = side_effect
+            result_none = agent.run("strand-okafor")
+
+        tc_none = [o for o in _tool_calls(result_none["observations"])
+                   if o.data.get("tool", {}).get("name") == "extract_deadline_date"]
+        assert len(tc_none) == 0
+
+        # Case 2: Gemini returns extraction → TOOL_CALL fires
+        extraction = {"extracted_date": "2026-06-05", "confidence": 0.75, "evidence": "quote"}
+        with patch("app.agents.deadline_agent.collection_ref") as mock_cr, \
+             patch("app.agents.deadline_agent._call_gemini_deadline_extraction",
+                   return_value=extraction), \
+             patch("app.agents.deadline_agent.log_escalation",
+                   return_value=MagicMock(entity_id="esc-dl-02")):
+            def side_effect2(firm_id, col):
+                s = MagicMock()
+                if col == "deadlines":
+                    doc = MagicMock()
+                    doc.to_dict.return_value = conflict_dl
+                    s.stream.return_value = [doc]
+                elif col == "source_emails":
+                    email_doc = MagicMock()
+                    email_doc.exists = True
+                    email_doc.to_dict.return_value = {"body": "response due by Friday"}
+                    s.document.return_value.get.return_value = email_doc
+                    s.stream.return_value = []
+                else:
+                    s.stream.return_value = []
+                return s
+            mock_cr.side_effect = side_effect2
+            result_extracted = agent.run("strand-okafor")
+
+        tc_extracted = [o for o in _tool_calls(result_extracted["observations"])
+                        if o.data.get("tool", {}).get("name") == "extract_deadline_date"]
+        assert len(tc_extracted) == 1
+        _assert_tool_shape(tc_extracted[0])
+        assert tc_extracted[0].data["tool"]["kind"] == "gemini"
+
+    # --- AnomalyAgent TOOL_CALL enrichment ---
+
+    def test_anomaly_run_detectors_tool_call(self):
+        """AnomalyAgent emits run_detectors TOOL_CALL with kind=compute."""
+        from app.agents.anomaly_agent import AnomalyAgent
+
+        agent = AnomalyAgent()
+        with patch("app.agents.anomaly_agent.collection_ref") as mock_cr:
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = []
+                return s
+            mock_cr.side_effect = side_effect
+            result = agent.run("strand-okafor")
+
+        tc = _tool_calls(result["observations"])
+        det_calls = [o for o in tc if o.data.get("tool", {}).get("name") == "run_detectors"]
+        assert len(det_calls) == 1
+        _assert_tool_shape(det_calls[0])
+        assert det_calls[0].data["tool"]["kind"] == "compute"
+
+    def test_anomaly_gemini_enrichment_only_when_returned(self):
+        """assess_narrative_quality TOOL_CALL fires only when enrichment returns non-None."""
+        from app.agents.anomaly_agent import AnomalyAgent
+
+        agent = AnomalyAgent()
+        entry = {"id": "te-round", "status": "PENDING", "attorney_id": "a1", "matter_id": "m1",
+                 "entry_date": "2026-05-29", "hours": 4.0, "session_minutes_actual": None,
+                 "narrative": "worked on case", "client_id": "c1", "created_at": "2026-05-29T10:00:00"}
+        entry_doc = MagicMock()
+        entry_doc.to_dict.return_value = entry
+
+        with patch("app.agents.anomaly_agent.collection_ref") as mock_cr, \
+             patch("app.agents.anomaly_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-round-01")), \
+             patch("app.agents.anomaly_agent._call_gemini_anomaly_enrichment", return_value=None), \
+             patch("app.agents.anomaly_agent._call_gemini_narrative_quality", return_value=(None, None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_hours_plausibility", return_value=(None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_semantic_duplicate", return_value=None), \
+             patch("app.agents.anomaly_agent._call_gemini_matter_synthesis", return_value=None):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect
+            result_none = agent.run("strand-okafor")
+
+        tc_none = [o for o in _tool_calls(result_none["observations"])
+                   if o.data.get("tool", {}).get("name") == "assess_narrative_quality"]
+        assert len(tc_none) == 0
+
+        with patch("app.agents.anomaly_agent.collection_ref") as mock_cr, \
+             patch("app.agents.anomaly_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-round-02")), \
+             patch("app.agents.anomaly_agent._call_gemini_anomaly_enrichment",
+                   return_value="This anomaly represents elevated malpractice risk."), \
+             patch("app.agents.anomaly_agent._call_gemini_narrative_quality", return_value=(None, None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_hours_plausibility", return_value=(None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_semantic_duplicate", return_value=None), \
+             patch("app.agents.anomaly_agent._call_gemini_matter_synthesis", return_value=None):
+            def side_effect2(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect2
+            result_enriched = agent.run("strand-okafor")
+
+        tc_enriched = [o for o in _tool_calls(result_enriched["observations"])
+                       if o.data.get("tool", {}).get("name") == "assess_narrative_quality"]
+        assert len(tc_enriched) == 1
+        _assert_tool_shape(tc_enriched[0])
+        assert tc_enriched[0].data["tool"]["kind"] == "gemini"
+
+    def test_anomaly_write_count_unchanged(self):
+        """log_anomaly call count is unchanged by Phase 7 instrumentation."""
+        from app.agents.anomaly_agent import AnomalyAgent
+
+        agent = AnomalyAgent()
+        entry = {"id": "te-wc", "status": "PENDING", "attorney_id": "a1", "matter_id": "m1",
+                 "entry_date": "2026-05-29", "hours": 4.0, "session_minutes_actual": None,
+                 "narrative": "worked on case", "client_id": "c1", "created_at": "2026-05-29T10:00:00"}
+        entry_doc = MagicMock()
+        entry_doc.to_dict.return_value = entry
+
+        with patch("app.agents.anomaly_agent.collection_ref") as mock_cr, \
+             patch("app.agents.anomaly_agent.log_anomaly",
+                   return_value=MagicMock(entity_id="anom-wc-01")) as mock_log, \
+             patch("app.agents.anomaly_agent._call_gemini_anomaly_enrichment",
+                   return_value="Risk assessment text."), \
+             patch("app.agents.anomaly_agent._call_gemini_narrative_quality", return_value=(None, None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_hours_plausibility", return_value=(None, None)), \
+             patch("app.agents.anomaly_agent._call_gemini_semantic_duplicate", return_value=None), \
+             patch("app.agents.anomaly_agent._call_gemini_matter_synthesis", return_value=None):
+            def side_effect(firm_id, col):
+                s = MagicMock()
+                s.stream.return_value = [entry_doc] if col == "time_entries" else []
+                return s
+            mock_cr.side_effect = side_effect
+            agent.run("strand-okafor")
+            write_count = mock_log.call_count
+
+        assert write_count == 1, f"Expected 1 log_anomaly call, got {write_count}"

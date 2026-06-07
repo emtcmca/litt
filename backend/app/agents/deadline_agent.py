@@ -271,6 +271,20 @@ class DeadlineAgent:
             },
         ))
 
+        observations.append(_obs(
+            observation_type=ObservationType.TOOL_CALL,
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            description=f"Fetched {len(all_deadlines)} deadline(s) from Firestore",
+            data={
+                "tool": {
+                    "name": "get_active_deadlines",
+                    "kind": "read",
+                    "signature": "(firm_id) -> list[Deadline]",
+                    "result": {"count": len(all_deadlines)},
+                }
+            },
+        ))
+
         # -----------------------------------------------------------------------
         # V11-P3-03 / V11-P3-04: Soft watches — unverified + pending_verification
         # 21-day and 30-day watches; no escalation write, WARN_NOTICE only
@@ -580,6 +594,27 @@ class DeadlineAgent:
                     pass
 
             extraction = _call_gemini_deadline_extraction(email_body, description) if email_body else None
+            if extraction:
+                observations.append(_obs(
+                    observation_type=ObservationType.TOOL_CALL,
+                    commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                    description=f"Gemini extracted deadline date for {deadline_id}",
+                    work_kind="llm_assisted",
+                    model_name=config.GEMINI_MODEL,
+                    confidence=extraction.get("confidence"),
+                    data={
+                        "tool": {
+                            "name": "extract_deadline_date",
+                            "kind": "gemini",
+                            "signature": "(text, matter_context) -> ExtractedDeadline | None",
+                            "result": {
+                                "extracted_date": extraction.get("extracted_date"),
+                                "confidence": extraction.get("confidence"),
+                            },
+                        }
+                    },
+                    evidence=[deadline_id],
+                ))
             confidence = extraction.get("confidence", 0.70) if extraction else 0.70
             extracted_date = extraction.get("extracted_date") if extraction else None
             evidence_text = extraction.get("evidence", "") if extraction else ""

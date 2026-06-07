@@ -434,6 +434,26 @@
 
 ---
 
+## v1.1.3 ResolvePanel + TOOL_CALL Enrichment
+
+**Full spec:** `tasks/resolve-panel-build-plan.md`  
+**Status:** Phases 0–7 complete · Phase 8 (deploy + smoke test) in progress
+
+- [x] V113-RP0 resolveTypes.ts — ItemDescriptor contract, 7 descriptor factories, action types, input modes
+- [x] V113-RP1 ProofBlock component — evidence transparency display with kind/value/label rows
+- [x] V113-RP2 ResolvePanel component — action resolution UI, all input modes (confirm/text/date_reason/select)
+- [x] V113-RP3 Optimistic-lock version field — ItemDescriptor + all descriptor builders
+- [x] V113-RP4 Scrubber re-validation gate — billing narrative approval re-checks before persist
+- [x] V113-RP5 Brief page deep-link wiring — decision list opens ResolvePanel per decision type
+- [x] V113-RP6 tsc clean — zero TypeScript errors across all new components
+- [x] V113-RP7A registry.py — `signature` field on ToolSpec + 13 pseudo-tool entries (6 Gemini + 7 read/compute)
+- [x] V113-RP7B observability.py — `_KIND_TO_WORK` mapping + `make_tool_call()` factory helper
+- [x] V113-RP7C Agent instrumentation — billing/deadline/comms/anomaly agents emit TOOL_CALL with `data.tool.{name,kind,signature,result}`; Gemini TOOL_CALLs conditional on non-None return
+- [x] V113-RP7D test_agent_observations.py — TestToolCallEnrichment class (11 tests); 354/354 full suite green
+- [ ] V113-RP8 Deploy + smoke test — backend + dashboard Cloud Run, demo reset, 5 seed variant panels
+
+---
+
 # Litt — v1.0 Hackathon Sprint Task List ✓ SPRINT COMPLETE
 
 **Sprint:** May 30 – June 11, 2026  

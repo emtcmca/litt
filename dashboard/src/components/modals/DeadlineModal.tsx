@@ -1,3 +1,4 @@
+// @deprecated — replaced by ResolvePanel (dashboard/src/components/console/ResolvePanel.tsx)
 import { useEffect, useRef, useState } from 'react';
 import type { BriefDeadlineItem, SourceEmail, ToolResult } from '../../types';
 import { confirmDeadline, extendDeadline, dismissDeadline, verifyDeadline, getSourceEmail } from '../../api';

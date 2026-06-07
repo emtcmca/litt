@@ -17,6 +17,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.config import get_effective_datetime
 
 
+_KIND_TO_WORK: Dict[str, str] = {
+    "read": "deterministic",
+    "compute": "deterministic",
+    "write": "tool_write",
+    "gemini": "llm_assisted",
+}
+
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -124,3 +132,42 @@ def generate_observation_id(agent_name: str, counter: int = 0) -> str:
     ts = get_effective_datetime().strftime("%Y%m%d%H%M%S%f")
     slug = agent_name.lower().replace(" ", "-").replace("_", "-")
     return f"obs-{ts}-{slug}-{counter:03d}"
+
+
+def make_tool_call(
+    agent_name: str,
+    tool_name: str,
+    result: Any,
+    commitment_level: CommitmentLevel,
+    confidence: Optional[float] = None,
+    counter: int = 0,
+) -> "AgentObservation":
+    """
+    Build a TOOL_CALL observation with data.tool enrichment for Agent Console.
+    Looks up kind and signature from TOOL_REGISTRY; safe if tool not registered.
+    """
+    from app.tools.registry import TOOL_REGISTRY  # local import avoids circular dep
+
+    spec = TOOL_REGISTRY.get(tool_name)
+    kind = spec.kind.value if spec else "compute"
+    signature = spec.signature if spec else ""
+    work = _KIND_TO_WORK.get(kind, "deterministic")
+    return AgentObservation(
+        observation_id=generate_observation_id(agent_name, counter),
+        timestamp=get_effective_datetime(),
+        agent_name=agent_name,
+        observation_type=ObservationType.TOOL_CALL,
+        commitment_level=commitment_level,
+        description=f"{tool_name}",
+        work_kind=work,
+        model_name="gemini-2.5-pro" if kind == "gemini" else None,
+        confidence=confidence,
+        data={
+            "tool": {
+                "name": tool_name,
+                "kind": kind,
+                "signature": signature,
+                "result": result,
+            }
+        },
+    )

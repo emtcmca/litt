@@ -1,3 +1,4 @@
+// @deprecated — replaced by ResolvePanel (dashboard/src/components/console/ResolvePanel.tsx)
 import { useState } from 'react';
 import type { BriefAnomalyItem, ToolResult } from '../../types';
 import { dismissAlert } from '../../api';

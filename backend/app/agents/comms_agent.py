@@ -949,6 +949,21 @@ class CommsAgent:
             urgency, signals, score = _score_urgency(msg, matters)
 
             observations.append(_obs(
+                observation_type=ObservationType.TOOL_CALL,
+                commitment_level=CommitmentLevel.AUTO_SAFE,
+                description=f"Urgency scored: {from_name} → {urgency} (score {score})",
+                data={
+                    "tool": {
+                        "name": "score_urgency",
+                        "kind": "compute",
+                        "signature": "(message: InboundMessage, active_deadlines: list[Deadline]) -> UrgencyScore",
+                        "result": {"urgency": urgency, "score": score, "signals": signals},
+                    }
+                },
+                evidence=[source_id],
+            ))
+
+            observations.append(_obs(
                 observation_type=ObservationType.INBOX_TRIAGE,
                 commitment_level=CommitmentLevel.AUTO_SAFE,
                 description=(
@@ -978,6 +993,26 @@ class CommsAgent:
                     summary = gem_result.get("summary", "")
                     action_items = gem_result.get("action_items", [])
                     handoff_agent = _get_handoff_agent(action_items)
+                    observations.append(_obs(
+                        observation_type=ObservationType.TOOL_CALL,
+                        commitment_level=CommitmentLevel.AUTO_SAFE,
+                        description=f"Gemini summarized inbound message from {from_name}",
+                        work_kind="llm_assisted",
+                        model_name=config.GEMINI_MODEL,
+                        data={
+                            "tool": {
+                                "name": "summarize_inbound",
+                                "kind": "gemini",
+                                "signature": "(subject, body, matter_context) -> InboundSummary | None",
+                                "result": {
+                                    "summary": summary,
+                                    "action_item_count": len(action_items),
+                                    "handoff_agent": handoff_agent,
+                                },
+                            }
+                        },
+                        evidence=[source_id],
+                    ))
 
             # Opposing counsel check: special handling (no draft, attorney_action required)
             is_opposing = from_role.lower() in ("opposing_counsel", "opposing counsel", "adverse_party")
@@ -990,6 +1025,23 @@ class CommsAgent:
                 reply_draft = _call_gemini_draft_reply(
                     msg, matter, client, attorney, summary or excerpt[:200]
                 )
+                if reply_draft:
+                    observations.append(_obs(
+                        observation_type=ObservationType.TOOL_CALL,
+                        commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                        description=f"Gemini drafted reply for HIGH-urgency message from {from_name}",
+                        work_kind="llm_assisted",
+                        model_name=config.GEMINI_MODEL,
+                        data={
+                            "tool": {
+                                "name": "draft_inbound_reply",
+                                "kind": "gemini",
+                                "signature": "(subject, body, matter_context, tone) -> str | None",
+                                "result": {"draft_length": len(reply_draft)},
+                            }
+                        },
+                        evidence=[source_id],
+                    ))
                 if reply_draft:
                     idem_reply = f"comms-inbound-reply-{source_id}-{today.isoformat()}"
                     comm_result = create_client_comm(

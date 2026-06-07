@@ -740,6 +740,20 @@ class AnomalyAgent:
         signals.extend(_detect_rate_anomaly(entries, attorneys))
         signals.extend(_detect_invoice_staleness(entries, today))
 
+        observations.append(_obs(
+            observation_type=ObservationType.TOOL_CALL,
+            commitment_level=CommitmentLevel.AUTO_SAFE,
+            description=f"Ran 9 detectors — {len(signals)} signal(s) found",
+            data={
+                "tool": {
+                    "name": "run_detectors",
+                    "kind": "compute",
+                    "signature": "(firm_id, entries: list[TimeEntry]) -> list[AnomalySignal]",
+                    "result": {"signal_count": len(signals), "entry_count": len(entries)},
+                }
+            },
+        ))
+
         # Apply scoring overrides
         for signal in signals:
             apply_scoring_overrides(signal)
@@ -815,6 +829,26 @@ class AnomalyAgent:
             enrichment = _call_gemini_anomaly_enrichment(signal)
             if enrichment:
                 signal.gemini_assessment = enrichment
+                observations.append(_obs(
+                    observation_type=ObservationType.TOOL_CALL,
+                    commitment_level=CommitmentLevel.REVIEW_REQUIRED,
+                    description=f"Gemini assessed anomaly: {signal.anomaly_type} on {signal.entity_id}",
+                    work_kind="llm_assisted",
+                    model_name=config.GEMINI_MODEL,
+                    confidence=signal.confidence,
+                    data={
+                        "tool": {
+                            "name": "assess_narrative_quality",
+                            "kind": "gemini",
+                            "signature": "(entry_id, narrative, activity_code) -> NarrativeQualityResult | None",
+                            "result": {
+                                "anomaly_type": signal.anomaly_type,
+                                "assessment_length": len(enrichment),
+                            },
+                        }
+                    },
+                    evidence=[signal.entity_id],
+                ))
 
         # --- Gemini: matter synthesis for matters with ≥2 signals ---
         matter_signal_groups: Dict[str, List[AnomalySignal]] = defaultdict(list)
