@@ -450,7 +450,7 @@
 - [x] V113-RP7B observability.py — `_KIND_TO_WORK` mapping + `make_tool_call()` factory helper
 - [x] V113-RP7C Agent instrumentation — billing/deadline/comms/anomaly agents emit TOOL_CALL with `data.tool.{name,kind,signature,result}`; Gemini TOOL_CALLs conditional on non-None return
 - [x] V113-RP7D test_agent_observations.py — TestToolCallEnrichment class (11 tests); 354/354 full suite green
-- [ ] V113-RP8 Deploy + smoke test — backend + dashboard Cloud Run, demo reset, 5 seed variant panels
+- [x] V113-RP8a Deploy — litt-backend 00011-7ld + litt-dashboard 00016-dcr deployed; 6/6 demo/ready pass
 
 ---
 

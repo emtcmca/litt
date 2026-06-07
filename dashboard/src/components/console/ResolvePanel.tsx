@@ -89,11 +89,12 @@ export function ResolvePanel({ descriptor, firmId, attorneyId, onClose, onSucces
   // Fetch full InboundMessage on open (thin descriptor → rich message)
   useEffect(() => {
     if (!descriptor.inbound_message_id) return;
+    setIbLoad(true);
     getInbound(firmId).then(msgs => {
       const msg = msgs.find(m => m.id === descriptor.inbound_message_id) ?? null;
       setInboundMsg(msg);
       setReplyText(msg?.suggested_reply_body ?? '');
-    });
+    }).finally(() => setIbLoad(false));
   }, [descriptor.inbound_message_id, firmId]);
 
   const activeAction = descriptor.actions[activeIdx] ?? descriptor.actions[0];

@@ -778,6 +778,12 @@ Pre-commit checklist:
 - [x] `tasks/todo.md` and `tasks/plan.md` updated
 - [x] `error-log.md` appended for any errors diagnosed this session
 
+Deploy complete:
+- [x] `litt-backend` revision `litt-backend-00011-7ld` live
+- [x] `litt-dashboard` revision `litt-dashboard-00016-dcr` live
+- [x] `POST /api/demo/reset` — 131 docs deleted + re-seeded
+- [x] `GET /api/demo/ready` — 6/6 checks pass
+
 Deploy order:
 1. `gcloud run deploy litt-backend --source backend/ ...` (after Phase 7 complete)
 2. `gcloud run deploy litt-dashboard --source dashboard/ ...`
