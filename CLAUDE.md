@@ -61,7 +61,7 @@ cd dashboard && npm test
 
 Copy `.env.example` to `.env` and set values. Required vars:
 - `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS`
-- `LITT_DEMO_MODE=true`, `LITT_DEMO_DATE=2026-05-29`, `LITT_DEMO_FIRM_ID=strand-okafor`
+- `LITT_DEMO_MODE=true`, `LITT_DEMO_DATE=2026-06-25`, `LITT_DEMO_FIRM_ID=strand-okafor`
 - `GEMINI_MODEL=gemini-2.5-pro`, `VERTEX_AI_LOCATION=us-central1`
 
 Never use `date.today()` or `datetime.now()` directly — always use `config.get_effective_date()` / `config.get_effective_datetime()` from `backend/app/config.py`.
@@ -176,7 +176,7 @@ Every document in every collection is under `firms/{firm_id}/collection/{id}`. `
 
 ## Demo Mode
 
-Demo firm: `strand-okafor`. Demo date anchor: `2026-05-29` (frozen — all relative date math uses this).
+Demo firm: `strand-okafor`. Demo date anchor: `2026-06-25` (frozen — all relative date math uses this).
 
 Five demo conditions must pass `GET /api/demo/ready` before any recording:
 - `dl-mercer-001`: HARD_LEGAL deadline 6 days out, unconfirmed

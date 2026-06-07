@@ -31,12 +31,12 @@ function greet(name: string, hour: number): string {
 function formatGeneratedAt(iso: string): { date: string; time: string; hour: number } {
   const d   = new Date(iso);
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const hour  = d.getUTCHours();
-  const min   = d.getUTCMinutes();
+  const hour  = d.getHours();
+  const min   = d.getMinutes();
   const ampm  = hour >= 12 ? 'PM' : 'AM';
   const h12   = hour % 12 || 12;
   return {
-    date:  `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`,
+    date:  `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
     time:  `${h12}:${String(min).padStart(2, '0')} ${ampm}`,
     hour,
   };

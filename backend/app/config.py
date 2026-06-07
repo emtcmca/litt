@@ -54,5 +54,5 @@ def get_effective_datetime() -> datetime:
     demo_date_str = os.getenv("LITT_DEMO_DATE", "")
     if demo_mode and demo_date_str:
         demo_date = date.fromisoformat(demo_date_str)
-        return datetime.combine(demo_date, datetime.min.time())
+        return datetime.combine(demo_date, datetime.now().time())
     return datetime.now()
