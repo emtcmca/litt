@@ -29,10 +29,10 @@ const NAV: NavSection[] = [
     { id: 'brief',    label: 'Brief',     path: '/brief', icon: 'clock', star: true },
   ]},
   { group: 'Watch', items: [
-    { id: 'deadlines',     label: 'Deadlines',      path: '/deadlines',     icon: 'shield', count: 1 },
-    { id: 'budgets',       label: 'Budgets',         path: '/budgets',       icon: 'chart',  count: 1 },
-    { id: 'relationships', label: 'Clients & comms', path: '/relationships', icon: 'mail',   count: 1 },
-    { id: 'anomalies',     label: 'Anomalies',       path: '/anomalies',     icon: 'alert',  count: 1 },
+    { id: 'clients',   label: 'Clients',   path: '/clients',    icon: 'users',  count: 4 },
+    { id: 'deadlines', label: 'Deadlines', path: '/deadlines',  icon: 'shield', count: 1 },
+    { id: 'budgets',   label: 'Budgets',   path: '/budgets',    icon: 'chart',  count: 1 },
+    { id: 'anomalies', label: 'Anomalies', path: '/anomalies',  icon: 'alert',  count: 1 },
   ]},
   { group: 'Collect', items: [
     { id: 'collect', label: 'Billing & WIP', path: '/collect', icon: 'dollar', count: 2 },
@@ -76,7 +76,10 @@ export function ConsoleRail() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeUser, setActiveUser] = useState(() => USERS.find(u => u.you) ?? USERS[0]);
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/clients') return pathname === '/clients' || pathname.startsWith('/clients/');
+    return pathname === path;
+  };
 
   return (
     <nav style={{

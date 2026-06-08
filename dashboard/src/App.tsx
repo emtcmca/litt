@@ -14,6 +14,9 @@ import { Anomalies } from './pages/Anomalies';
 import { AgentConsole } from './pages/AgentConsole';
 import { Policy } from './pages/Policy';
 import { Integrations } from './pages/Integrations';
+import { Clients } from './pages/Clients';
+import { ClientNew } from './pages/ClientNew';
+import { Client } from './pages/Client';
 import { TimerHUD } from './components/TimerHUD';
 
 const FIRM_ID    = 'strand-okafor';
@@ -60,6 +63,21 @@ export default function App() {
         <Route path="/deadlines" element={
           <ConsoleShell>
             <Deadlines />
+          </ConsoleShell>
+        } />
+        <Route path="/clients" element={
+          <ConsoleShell>
+            <Clients />
+          </ConsoleShell>
+        } />
+        <Route path="/clients/new" element={
+          <ConsoleShell>
+            <ClientNew />
+          </ConsoleShell>
+        } />
+        <Route path="/clients/:clientId" element={
+          <ConsoleShell>
+            <Client />
           </ConsoleShell>
         } />
         <Route path="/relationships" element={

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { T } from '../../tokens';
-import { Icon } from '../ui/Icon';
+import { Icon, type IconName } from '../ui/Icon';
 import { Mono } from '../ui/Mono';
 import {
   getMaintenance,
@@ -20,15 +20,15 @@ const MX_KIND_TONE: Record<string, string> = {
   matter:   T.muted,
 };
 
-const MX_KIND_ICON: Record<string, string> = {
+const MX_KIND_ICON: Record<string, IconName> = {
   deadline: 'shield',
   contact:  'users',
-  budget:   'chart-bar',
-  matter:   'book-open',
+  budget:   'chart',
+  matter:   'book',
 };
 
 function kindTone(kind: string) { return MX_KIND_TONE[kind] ?? T.muted; }
-function kindIcon(kind: string) { return MX_KIND_ICON[kind] ?? 'circle'; }
+function kindIcon(kind: string): IconName { return MX_KIND_ICON[kind] ?? 'dot'; }
 
 // ── Confidence pill ───────────────────────────────────────────────────────────
 
@@ -115,7 +115,7 @@ function SuggestionCard({
         borderRadius: 12, border: `1px solid ${T.line}`,
         color: T.teal, fontSize: 12,
       }}>
-        <Icon name="check-circle" size={14} color={T.teal} />
+        <Icon name="check" size={14} color={T.teal} />
         <Mono style={{ fontSize: 11 }}>Applied &amp; written to the ledger</Mono>
       </div>
     );
@@ -396,7 +396,7 @@ export function MaintenancePanel({
           background: 'rgba(158,225,199,.12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Icon name="refresh-cw" size={14} color={T.auditAccent} />
+          <Icon name="refresh" size={14} color={T.auditAccent} />
         </div>
 
         {/* Title block */}
@@ -457,8 +457,8 @@ export function MaintenancePanel({
           }}
         >
           {reviewing
-            ? <><Icon name="loader" size={12} color={T.auditMuted} /> Reviewing…</>
-            : <><Icon name="refresh-cw" size={12} color={T.brass} /> Review now</>
+            ? <><Icon name="dot" size={12} color={T.auditMuted} /> Reviewing…</>
+            : <><Icon name="refresh" size={12} color={T.brass} /> Review now</>
           }
         </button>
       </div>

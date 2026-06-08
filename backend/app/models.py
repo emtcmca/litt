@@ -56,6 +56,51 @@ class MatterType(str, Enum):
     litigation = "litigation"
     regulatory = "regulatory"
     advisory = "advisory"
+    estate = "estate"
+    corporate = "corporate"
+
+
+class ClientType(str, Enum):
+    individual = "individual"
+    entity = "entity"
+    trust = "trust"
+    estate = "estate"
+
+
+class ClientStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+    closed = "closed"
+
+
+class ExtractionConfidence(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
+    not_found = "not_found"
+
+
+class UpdateClass(str, Enum):
+    safe = "safe"
+    judgment = "judgment"
+
+
+class SuggestionStatus(str, Enum):
+    held = "held"
+    applied = "applied"
+    dismissed = "dismissed"
+
+
+class MaintenanceCadence(str, Enum):
+    hourly = "hourly"
+    daily = "daily"
+    events = "events"
+
+
+class PendingClientStatus(str, Enum):
+    drafted = "drafted"
+    confirmed = "confirmed"
+    discarded = "discarded"
 
 
 class MatterStatus(str, Enum):
@@ -346,6 +391,20 @@ class Client(LittBaseModel):
     billing_guidelines: BillingGuidelines = Field(default_factory=BillingGuidelines)
     engagement_terms: EngagementTerms = Field(default_factory=EngagementTerms)
     notes: Optional[str] = None
+    # Client module additions
+    client_type: ClientType = ClientType.entity
+    client_status: ClientStatus = ClientStatus.active
+    primary_contact_name: str = ""
+    primary_contact_phone: str = ""
+    originating_attorney_id: str = ""
+    responsible_attorney_id: str = ""
+    engagement_letter_ref: Optional[str] = None
+    conflict_check_names: List[str] = Field(default_factory=list)
+    conflict_check_date: Optional[date] = None
+    conflict_check_cleared: bool = False
+    maintenance_cadence: MaintenanceCadence = MaintenanceCadence.hourly
+    last_reviewed_at: Optional[datetime] = None
+    watched_signal_count: int = 0
 
 
 class Matter(LittBaseModel):
@@ -359,6 +418,13 @@ class Matter(LittBaseModel):
     opened_at: datetime
     last_activity: datetime
     last_client_contact: Optional[datetime] = None
+    # Client module additions
+    opposing_counsel: Optional[str] = None
+    court: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    case_number: Optional[str] = None
+    expected_resolution: Optional[date] = None
+    matter_budget_cap: Optional[Decimal] = None
 
 
 class TimeEntry(LittBaseModel):
@@ -463,6 +529,7 @@ class AuditEvent(LittBaseModel):
     actor: str
     entity_type: str
     entity_id: str
+    client_id: Optional[str] = None
     before_state: Optional[Dict[str, Any]] = None
     after_state: Optional[Dict[str, Any]] = None
     idempotency_key: Optional[str] = None
@@ -550,3 +617,136 @@ class BudgetUtilization(BaseModel):
     alert_threshold_warn: float = 0.75
     alert_threshold_critical: float = 0.90
     alert_status: AlertStatus
+
+
+# ---------------------------------------------------------------------------
+# Client module models
+# ---------------------------------------------------------------------------
+
+class ExtractionResult(BaseModel):
+    """Stateless — never written to Firestore. POST /api/clients/extract returns this."""
+    client_name: Optional[str] = None
+    client_type: Optional[str] = None
+    primary_contact_name: Optional[str] = None
+    primary_contact_email: Optional[str] = None
+    primary_contact_phone: Optional[str] = None
+    billing_rate: Optional[float] = None
+    billing_type: Optional[str] = None
+    billing_cycle: Optional[str] = None
+    payment_terms: Optional[str] = None
+    engagement_type: Optional[str] = None
+    date_engaged: Optional[str] = None
+    matter_name: Optional[str] = None
+    matter_type: Optional[str] = None
+    opposing_counsel: Optional[str] = None
+    court: Optional[str] = None
+    case_number: Optional[str] = None
+    conflict_check_names: List[str] = Field(default_factory=list)
+    confidence: Dict[str, str] = Field(default_factory=dict)
+    extraction_notes: str = ""
+    fields_extracted_count: int = 0
+    fields_total: int = 16
+
+
+class AppliedUpdate(LittBaseModel):
+    """Safe update — already written to the ledger. FYI display only."""
+    client_id: str
+    kind: str  # deadline | contact | budget | matter | conflict
+    field_label: str
+    change: str
+    source: str
+    source_ref: str
+    work: str  # deterministic | llm_assisted
+    confidence: Optional[float] = None
+    applied_at: datetime
+    audit_event_id: str
+
+
+class SuggestedUpdate(LittBaseModel):
+    """Judgment-tier update — held for attorney approval."""
+    client_id: str
+    title: str
+    detail: str
+    source: str
+    source_ref: str
+    confidence: float
+    status: SuggestionStatus = SuggestionStatus.held
+    resolution_reason: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    resolved_by: Optional[str] = None
+
+
+class ClientMaintenanceState(BaseModel):
+    """Computed read model — assembled from Firestore, not stored as-is."""
+    client_id: str
+    cadence: MaintenanceCadence
+    last_reviewed_label: str
+    last_reviewed_at: Optional[datetime] = None
+    next_sweep_label: str
+    reviews_today: int
+    watched_signal_count: int
+    applied: List[AppliedUpdate] = Field(default_factory=list)
+    suggested: List[SuggestedUpdate] = Field(default_factory=list)
+
+
+class PendingClient(LittBaseModel):
+    """Auto-drafted from watched inbox engagement letter. Held for attorney confirm."""
+    proposed_name: str
+    via: str
+    detected_at: datetime
+    source_file: str
+    extraction: ExtractionResult = Field(default_factory=ExtractionResult)
+    status: PendingClientStatus = PendingClientStatus.drafted
+
+
+class ClientListItem(BaseModel):
+    """Roster row — computed from Client + Matter + escalations."""
+    client_id: str
+    client_name: str
+    client_type: str
+    client_status: str
+    engagement: str
+    matter_short: str
+    rate: Optional[float] = None
+    billing: str = ""
+    matter_count: int = 1
+    pending_item_count: int = 0
+    budget_utilization_pct: Optional[float] = None
+    budget_used: Optional[float] = None
+    budget_cap_val: Optional[float] = None
+    days_since_contact: Optional[int] = None
+    last_contact_label: Optional[str] = None
+    last_reviewed_label: Optional[str] = None
+    held_suggestion_count: int = 0
+
+
+class MatterCreateRequest(BaseModel):
+    matter_name: str
+    matter_type: str
+    opposing_counsel: Optional[str] = None
+    court: Optional[str] = None
+    case_number: Optional[str] = None
+    expected_resolution: Optional[str] = None
+
+
+class ClientCreateRequest(BaseModel):
+    firm_id: str
+    client_name: str
+    client_type: str = "entity"
+    primary_contact_name: str
+    primary_contact_email: str
+    primary_contact_phone: str = ""
+    billing_rate: float
+    billing_type: str = "hourly"
+    billing_cycle: str = "monthly"
+    payment_terms: str = "net_30"
+    engagement_type: str
+    date_engaged: str
+    engagement_letter_ref: Optional[str] = None
+    responsible_attorney_id: str = "dana-strand"
+    conflict_check_names: List[str] = Field(default_factory=list)
+    silence_threshold_days: int = 14
+    budget_warn_threshold_pct: int = 75
+    budget_cap: Optional[float] = None
+    notes: Optional[str] = None
+    first_matter: MatterCreateRequest

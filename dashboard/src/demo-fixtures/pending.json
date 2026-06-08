@@ -1,0 +1,53 @@
+[
+  {
+    "id": "cordova-partners",
+    "firm_id": "strand-okafor",
+    "proposed_name": "Cordova Partners LLC",
+    "via": "Watched inbox · Gmail",
+    "detected_at": "2026-05-29T16:22:00.000Z",
+    "source_file": "Cordova-Engagement-Letter-signed.pdf",
+    "status": "drafted",
+    "created_at": "2026-05-29T16:22:00.000Z",
+    "updated_at": "2026-05-29T16:22:00.000Z",
+    "extraction": {
+      "client_name": "Cordova Partners LLC",
+      "client_type": "entity",
+      "primary_contact_name": "Raúl Cordova",
+      "primary_contact_email": "rcordova@cordovapartners.com",
+      "primary_contact_phone": null,
+      "billing_rate": 360,
+      "billing_type": "hourly",
+      "billing_cycle": "monthly",
+      "payment_terms": "net_30",
+      "engagement_type": "litigation",
+      "date_engaged": "2026-06-06",
+      "matter_name": "Cordova Partners — commercial lease dispute",
+      "matter_type": "litigation",
+      "opposing_counsel": null,
+      "court": null,
+      "case_number": null,
+      "conflict_check_names": ["Cordova Commercial Holdings"],
+      "confidence": {
+        "client_name": "high",
+        "client_type": "high",
+        "primary_contact_name": "high",
+        "primary_contact_email": "high",
+        "primary_contact_phone": "not_found",
+        "billing_rate": "high",
+        "billing_type": "high",
+        "billing_cycle": "medium",
+        "payment_terms": "medium",
+        "engagement_type": "high",
+        "date_engaged": "high",
+        "matter_name": "high",
+        "matter_type": "high",
+        "opposing_counsel": "not_found",
+        "court": "not_found",
+        "case_number": "not_found"
+      },
+      "extraction_notes": "Engagement letter clearly states scope, rate, and parties. Phone, opposing counsel, court, and case number not present in the document — flagged for attorney entry.",
+      "fields_extracted_count": 13,
+      "fields_total": 16
+    }
+  }
+]

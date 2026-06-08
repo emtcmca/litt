@@ -806,7 +806,7 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
 ## Phase 8 — Tests, Demo Fixtures, Deploy
 
 ### Backend tests
-- [ ] CM-P8-01 `backend/tests/test_client_tools.py` [NEW]:
+- [x] CM-P8-01 `backend/tests/test_client_tools.py` [NEW]:
   - `test_create_client_idempotent`
   - `test_create_matter_links_client`
   - `test_get_clients_returns_sorted_list`
@@ -814,7 +814,7 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
   - `test_classify_update_judgment_cases`
   - `test_dismiss_suggestion_rejects_empty_reason`
 
-- [ ] CM-P8-02 `backend/tests/test_client_routes.py` [NEW]:
+- [x] CM-P8-02 `backend/tests/test_client_routes.py` [NEW]:
   - `test_get_clients_200`
   - `test_create_client_201`
   - `test_create_client_idempotent_200`
@@ -823,23 +823,23 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
   - `test_dismiss_suggestion_empty_reason_422`
 
 ### Playwright smoke tests (`dashboard/tests/14-client-module.spec.ts`) [NEW]
-- [ ] CM-P8-03 Mock `**/api/clients*` with `clients.json`; `**/api/clients/*/maintenance*` with `maintenance.json`; `**/api/clients/pending*` with `pending.json`
-- [ ] CM-P8-04 Test: `/clients` renders 4 rows, sorted Mercer first
-- [ ] CM-P8-05 Test: Mercer row has danger left-border; Lindqvist row has no danger left-border
-- [ ] CM-P8-06 Test: clicking Mercer row navigates to `/clients/mercer-industries`
-- [ ] CM-P8-07 Test: `/clients/mercer-industries` renders without crash — "Needs attention" section visible
-- [ ] CM-P8-08 Test: needs-attention card click opens `ResolvePanel` (heading visible)
-- [ ] CM-P8-09 Test: maintenance panel renders "HELD FOR YOUR REVIEW" + "APPLIED AUTOMATICALLY" headers
-- [ ] CM-P8-10 Test: "Apply & log" fires `POST` to maintenance apply endpoint
-- [ ] CM-P8-11 Test: "Dismiss" → "Dismiss with reason" disabled; type 4 chars → enabled
-- [ ] CM-P8-12 Test: `/clients/new` renders drop zone + dark auto-onboard panel
-- [ ] CM-P8-13 Test: `/clients/new?pending=cordova-partners` renders review state with "auto-drafted · held" chip
+- [x] CM-P8-03 Mock `**/api/clients*` with `clients.json`; `**/api/clients/*/maintenance*` with `maintenance.json`; `**/api/clients/pending*` with `pending.json`
+- [x] CM-P8-04 Test: `/clients` renders 4 rows, sorted Mercer first
+- [x] CM-P8-05 Test: Mercer row has danger left-border; Lindqvist row has no danger left-border
+- [x] CM-P8-06 Test: clicking Mercer row navigates to `/clients/mercer-industries`
+- [x] CM-P8-07 Test: `/clients/mercer-industries` renders without crash — "Needs attention" section visible
+- [x] CM-P8-08 Test: needs-attention card click opens `ResolvePanel` (heading visible)
+- [x] CM-P8-09 Test: maintenance panel renders "HELD FOR YOUR REVIEW" + "APPLIED AUTOMATICALLY" headers
+- [x] CM-P8-10 Test: "Apply & log" fires `POST` to maintenance apply endpoint
+- [x] CM-P8-11 Test: "Dismiss" → "Dismiss with reason" disabled; type 4 chars → enabled
+- [x] CM-P8-12 Test: `/clients/new` renders drop zone + dark auto-onboard panel
+- [x] CM-P8-13 Test: `/clients/new?pending=cordova-partners` renders review state with "auto-drafted · held" chip
 
 ### Final gate checks
-- [ ] CM-G8-01 `pytest tests/` — all tests green (200+ total incl. new client tests)
-- [ ] CM-G8-02 `tsc --noEmit` clean
-- [ ] CM-G8-03 `npm run build` clean (no unused vars, no type errors — catches TS6133 before Cloud Run)
-- [ ] CM-G8-04 `GET /api/demo/ready` — all 5 demo conditions still pass after seeding clients
+- [x] CM-G8-01 `pytest tests/` — 379 passed (368 + 11 new client tests)
+- [x] CM-G8-02 `tsc --noEmit` clean
+- [x] CM-G8-03 `npm run build` clean (no type errors; chunk size warning is cosmetic)
+- [x] CM-G8-04 `GET /api/demo/ready` — all 5 demo conditions pass
 - [ ] CM-G8-05 Cloud Run redeploy: `gcloud run deploy --source` — `/clients` accessible at live URL
 
 ---

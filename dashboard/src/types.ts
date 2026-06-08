@@ -345,6 +345,7 @@ export interface AuditLogEvent {
   actor: string;
   entity_type: string;
   entity_id: string;
+  client_id: string | null;
   before_state: Record<string, unknown> | null;
   after_state: Record<string, unknown> | null;
   idempotency_key: string | null;
@@ -565,6 +566,8 @@ export interface RawDeadline {
   days_out: number | null;
   escalation_level: string | null;
   email_reference?: string | null;
+  last_confirmed_at?: string | null;
+  last_confirmed_by?: string | null;
 }
 
 export interface BudgetUtilizationItem {
@@ -635,4 +638,153 @@ export interface InboundDismissRequest {
   message_id: string;
   expected_version: number;
   idempotency_key?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Client module (v1.2.0)
+// ---------------------------------------------------------------------------
+
+export type ExtractionConfidence = "high" | "medium" | "low" | "not_found";
+export type SuggestionStatus = "held" | "applied" | "dismissed";
+export type MaintenanceCadence = "hourly" | "daily" | "events";
+export type PendingClientStatus = "drafted" | "confirmed" | "discarded";
+
+export interface ClientListItem {
+  client_id: string;
+  client_name: string;
+  client_type: string;
+  client_status: string;
+  engagement: string;
+  matter_short: string;
+  rate: number | null;
+  billing: string;
+  matter_count: number;
+  pending_item_count: number;
+  budget_utilization_pct: number | null;
+  budget_used: number | null;
+  budget_cap_val: number | null;
+  days_since_contact: number | null;
+  last_contact_label: string | null;
+  last_reviewed_label: string | null;
+  held_suggestion_count: number;
+}
+
+export interface ExtractionResult {
+  client_name: string | null;
+  client_type: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
+  billing_rate: number | null;
+  billing_type: string | null;
+  billing_cycle: string | null;
+  payment_terms: string | null;
+  engagement_type: string | null;
+  date_engaged: string | null;
+  matter_name: string | null;
+  matter_type: string | null;
+  opposing_counsel: string | null;
+  court: string | null;
+  case_number: string | null;
+  conflict_check_names: string[];
+  confidence: Record<string, ExtractionConfidence>;
+  extraction_notes: string;
+  fields_extracted_count: number;
+  fields_total: number;
+}
+
+export interface AppliedUpdate {
+  id: string;
+  firm_id: string;
+  client_id: string;
+  kind: string;
+  field_label: string;
+  change: string;
+  source: string;
+  source_ref: string;
+  work: "deterministic" | "llm_assisted";
+  confidence: number | null;
+  applied_at: string;
+  audit_event_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuggestedUpdate {
+  id: string;
+  firm_id: string;
+  client_id: string;
+  title: string;
+  detail: string;
+  source: string;
+  source_ref: string;
+  confidence: number;
+  status: SuggestionStatus;
+  resolution_reason: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientMaintenanceState {
+  client_id: string;
+  cadence: MaintenanceCadence;
+  last_reviewed_label: string;
+  last_reviewed_at: string | null;
+  next_sweep_label: string;
+  reviews_today: number;
+  watched_signal_count: number;
+  applied: AppliedUpdate[];
+  suggested: SuggestedUpdate[];
+}
+
+export interface PendingClient {
+  id: string;
+  firm_id: string;
+  proposed_name: string;
+  via: string;
+  detected_at: string;
+  source_file: string;
+  extraction: ExtractionResult;
+  status: PendingClientStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatterCreateRequest {
+  matter_name: string;
+  matter_type: string;
+  opposing_counsel?: string | null;
+  court?: string | null;
+  case_number?: string | null;
+  expected_resolution?: string | null;
+}
+
+export interface ClientCreateRequest {
+  firm_id: string;
+  client_name: string;
+  client_type?: string;
+  primary_contact_name: string;
+  primary_contact_email: string;
+  primary_contact_phone?: string;
+  billing_rate: number;
+  billing_type?: string;
+  billing_cycle?: string;
+  payment_terms?: string;
+  engagement_type: string;
+  date_engaged: string;
+  engagement_letter_ref?: string | null;
+  responsible_attorney_id?: string;
+  conflict_check_names?: string[];
+  silence_threshold_days?: number;
+  budget_cap?: number | null;
+  notes?: string | null;
+  first_matter: MatterCreateRequest;
+}
+
+export interface ClientCreateResponse {
+  client_id: string;
+  matter_id: string;
+  status: string;
 }

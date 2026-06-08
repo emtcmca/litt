@@ -96,11 +96,12 @@ def get_audit_log(
     tier: str = "",
     entity_type: str = "",
     actor: str = "",
+    client_id: str = "",
     limit: int = 200,
 ):
     """
     Returns recent audit log events, newest first.
-    Optional filters: tier, entity_type, actor.
+    Optional filters: tier, entity_type, actor, client_id.
     """
     try:
         query = collection_ref(firm_id, "audit_log")
@@ -122,6 +123,8 @@ def get_audit_log(
             if entity_type and d.get("entity_type") != entity_type:
                 continue
             if actor and d.get("actor") != actor:
+                continue
+            if client_id and d.get("client_id") != client_id:
                 continue
             events.append(d)
 
