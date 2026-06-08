@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { InboundMessage, RelationshipMatter } from '../types';
 import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
+import { ClientsSubnav } from '../components/clients/ClientsSubnav';
 import { approveComm, dismissInbound, getInbound, getRelationships, snoozeInbound } from '../api';
 import commitmentsRaw from '../demo-fixtures/commitments.json';
 
@@ -410,6 +411,11 @@ export function Relationships() {
     <div style={{ overflowY: 'auto', padding: '24px 30px 60px', height: '100%' }}>
       <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gap: 18 }}>
 
+        {/* sub-nav */}
+        <div style={{ justifySelf: 'start' }}>
+          <ClientsSubnav />
+        </div>
+
         {/* header */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -495,7 +501,9 @@ export function Relationships() {
                       <span className="litt-pulse" style={{ width: 7, height: 7, borderRadius: 999, background: T.gold }} />
                       <span style={{ fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.gold, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>No contact in {hero.days_since_contact} days · a draft is ready</span>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: '-.01em' }}>{hero.client_name}</div>
+                    <div style={{ fontSize: 18, fontWeight: 600, color: T.ink, letterSpacing: '-.01em' }}>
+                      <Link to={`/clients/${hero.client_id}`} style={{ color: T.ink, textDecoration: 'none' }}>{hero.client_name}</Link>
+                    </div>
                     <span style={{ fontSize: 11.5, color: T.muted, fontFamily: 'var(--font-mono)', display: 'block' }}>{hero.matter_name} · last contact {hero.last_client_contact} · threshold {THRESH}d</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 6 }}>
@@ -555,7 +563,9 @@ export function Relationships() {
             return (
               <div key={r.matter_id} style={{ display: 'grid', gridTemplateColumns: '210px 1fr 132px', gap: 16, alignItems: 'center', padding: '13px 18px', borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${T.soft}`, borderLeft: `3px solid ${w.key === 'silent' ? T.gold : 'transparent'}` }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r.client_name}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                    <Link to={`/clients/${r.client_id}`} style={{ color: T.ink, textDecoration: 'none' }}>{r.client_name}</Link>
+                  </div>
                   <span style={{ fontSize: 10.5, color: T.faint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block', fontFamily: 'var(--font-mono)' }}>{r.matter_name}</span>
                 </div>
                 <div style={{ minWidth: 0 }}>

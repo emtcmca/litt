@@ -793,13 +793,13 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
 
 *Small changes — client names become `<Link>` in 3 existing pages.*
 
-- [ ] CM-P7-01 `dashboard/src/pages/Brief.tsx` — `client_name` in each decision card → `<Link to={/clients/${d.client_id}} style={{color:T.ink}} onClick={e => e.stopPropagation()}>{d.client_name}</Link>` (stop propagation so the ResolvePanel opener doesn't fire)
-- [ ] CM-P7-02 Deadlines page — `client_name` column → `<Link>`
-- [ ] CM-P7-03 `Relationships.tsx` — client name rows → `<Link>`
+- [x] CM-P7-01 `dashboard/src/pages/Brief.tsx` — `client_name` in each decision card → `<Link>` with stopPropagation; `client_id` added to Decision interface and all 5 push sites
+- [x] CM-P7-02 Deadlines page — `clientId` added to `PinnedDeadline`; client name column → `<Link>`
+- [x] CM-P7-03 `Relationships.tsx` — hero + table row client names → `<Link>`
 
 ### Phase 7 gate checks
 - [ ] CM-G7-01 Brief → clicking client name navigates to command center (not ResolvePanel)
-- [ ] CM-G7-02 `tsc --noEmit` clean
+- [x] CM-G7-02 `tsc --noEmit` clean
 
 ---
 

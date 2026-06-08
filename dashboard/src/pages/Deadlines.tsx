@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { RawDeadline, RelationshipMatter } from '../types';
 import { getDeadlinesFull, getRelationships } from '../api';
 import { T } from '../tokens';
@@ -36,6 +36,7 @@ function fmtDate(iso: string): string {
 interface PinnedDeadline {
   id: string;
   client: string;
+  clientId?: string;
   description: string;
   cls: string;
   daysOut: number;
@@ -307,7 +308,9 @@ function DeadlineBook({ items, total }: { items: PinnedDeadline[]; total: number
               {d.description}
             </div>
             <Mono style={{ fontSize: 10.5, color: T.faint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-              {d.client}
+              {d.clientId
+                ? <Link to={`/clients/${d.clientId}`} style={{ color: T.ink, fontWeight: 600, textDecoration: 'none' }}>{d.client}</Link>
+                : d.client}
             </Mono>
             {d.isUnconfirmed
               ? <Mono style={{ fontSize: 10, color: T.danger, fontWeight: 600 }}>UNCONFIRMED · needs you</Mono>
@@ -359,6 +362,7 @@ export function Deadlines() {
           return {
             id:            d.id,
             client:        names?.client_name ?? d.client_id ?? d.matter_id,
+            clientId:      d.client_id,
             description:   d.description,
             cls:           d.classification,
             daysOut:       d.days_out ?? 0,

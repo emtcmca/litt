@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { ActionResult, BriefResponse, BriefSections } from '../types';
 import { T } from '../tokens';
 import { Icon } from '../components/ui/Icon';
@@ -35,6 +35,7 @@ interface Decision {
   headline: string;
   kind: string;
   client: string;
+  client_id?: string;
 }
 
 const GATE_COLOR: Record<string, string> = {
@@ -60,7 +61,7 @@ function deriveDecisions(sections: BriefSections): Decision[] {
       ? 'ESCALATION'
       : d.escalation_level ? 'REVIEW_REQUIRED' : 'AUTO_SAFE';
     if (gate !== 'AUTO_SAFE') {
-      decs.push({ id: d.deadline_id, gate, headline: d.description, kind: 'deadline', client: d.client_name });
+      decs.push({ id: d.deadline_id, gate, headline: d.description, kind: 'deadline', client: d.client_name, client_id: d.client_id });
     }
   }
 
@@ -73,6 +74,7 @@ function deriveDecisions(sections: BriefSections): Decision[] {
         headline: e.narrative ?? `${e.hours}h — ${e.matter_name}`,
         kind: 'billing',
         client: e.client_name,
+        client_id: e.client_id,
       });
     }
   }
@@ -89,6 +91,7 @@ function deriveDecisions(sections: BriefSections): Decision[] {
       headline: `Budget at ${b.utilization_pct}% — ${b.client_name}`,
       kind: 'budget risk',
       client: b.client_name,
+      client_id: b.client_id,
     });
   }
 
@@ -99,6 +102,7 @@ function deriveDecisions(sections: BriefSections): Decision[] {
       headline: `${s.days_since_contact}d since last contact`,
       kind: 'client silence',
       client: s.client_name,
+      client_id: s.client_id,
     });
   }
 
@@ -290,7 +294,12 @@ export function Brief() {
                   <span style={{ width: 8, height: 8, borderRadius: 999, background: col, flexShrink: 0 }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{d.headline}</div>
-                    <span style={{ fontSize: 10.5, color: T.faint, fontFamily: 'var(--font-mono)' }}>{KIND_LABEL[d.kind] ?? d.kind} · {d.client}</span>
+                    <span style={{ fontSize: 10.5, color: T.faint, fontFamily: 'var(--font-mono)' }}>
+                      {KIND_LABEL[d.kind] ?? d.kind} ·{' '}
+                      {d.client_id
+                        ? <Link to={`/clients/${d.client_id}`} style={{ color: T.ink, textDecoration: 'none', fontWeight: 600 }} onClick={e => e.stopPropagation()}>{d.client}</Link>
+                        : d.client}
+                    </span>
                   </div>
                   <Icon name="chevron" size={13} color={T.faint} />
                 </button>
