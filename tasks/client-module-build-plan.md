@@ -840,7 +840,7 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
 - [x] CM-G8-02 `tsc --noEmit` clean
 - [x] CM-G8-03 `npm run build` clean (no type errors; chunk size warning is cosmetic)
 - [x] CM-G8-04 `GET /api/demo/ready` — all 5 demo conditions pass
-- [ ] CM-G8-05 Cloud Run redeploy: `gcloud run deploy --source` — `/clients` accessible at live URL
+- [x] CM-G8-05 Cloud Run redeploy: backend rev litt-backend-00012-g5z, dashboard rev litt-dashboard-00017-7kw — both live, /api/demo/ready green
 
 ---
 
