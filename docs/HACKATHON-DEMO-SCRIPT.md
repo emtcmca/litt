@@ -51,82 +51,114 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 
 ---
 
-## Script with Timing Marks
+## Scene Map
 
-### 0:00–0:08 — Architecture hook (maintenance panel visible)
-
-**SCREEN:** `/clients/mercer-industries` — maintenance panel. "APPLIED AUTOMATICALLY" section visible with 3–4 applied rows. "HELD FOR YOUR REVIEW" section with suggestion cards below.
-
-**NARRATOR:**
-> "Litt is a multi-agent system built on Google ADK. One coordinator. Four sub-agents. Gemini 2.5 Pro via Vertex AI for all probabilistic reasoning. This is the maintenance agent output — client updates Litt classified, applied autonomously, and logged — while the attorney was in court."
-
-**ACTION:** Hold on maintenance panel. Both sections must be readable.
+| Time | Screen | Action | Narration |
+|---|---|---|---|
+| 0:00–0:12 | `/clients/mercer-industries` maintenance panel | Hold — both headers readable | Architecture hook (26 words) |
+| 0:12–0:20 | Agent Console | Navigate, click Run Closeout | "ADK coordinator dispatching" (14 words) |
+| 0:20–1:07 | Timeline loading | Do not touch | 4 sub-agents + routing (98 words) |
+| 1:07–1:20 | Brief | Scroll: Rivera → Acme → Whitmore | "Coordinator output" (29 words) |
+| 1:20–1:37 | ResolvePanel + source email | Click Rivera → View source email | "Declarative decision: escalate" (36 words) |
+| 1:37–1:47 | AuditEventDrawer | Click Verify, hold 2s on audit_event_id | "CREATE-only, legal_defensibility" (25 words) |
+| 1:47–1:54 | Close modal | — | Architecture close (12 words) |
+| 1:54–2:00 | Title card | Static | Silent |
 
 ---
 
-### 0:08–0:18 — Coordinator trigger
+## Narration word budget
+
+130 wpm is a natural technical speaking pace. Every narration block is calibrated to fit its window.
+
+| Scene | Window | Word budget | Actual |
+|---|---|---|---|
+| Maintenance hook | 0:00–0:12 (12s) | 26 | 26 |
+| Coordinator trigger | 0:12–0:20 (8s) | 17 | 14 |
+| Sweep | 0:20–1:07 (47s) | 102 | 98 |
+| Brief | 1:07–1:20 (13s) | 28 | 29 |
+| Rivera | 1:20–1:37 (17s) | 37 | 36 |
+| Audit | 1:37–1:47 (10s) | 22 | 25 |
+| Close | 1:47–1:54 (7s) | 15 | 12 |
+| **Total** | **114s narrated** | **247** | **240** |
+
+---
+
+## Script with Timing Marks
+
+### 0:00–0:12 — Architecture hook (maintenance panel visible)
+
+**SCREEN:** `/clients/mercer-industries` — maintenance panel. "APPLIED AUTOMATICALLY" section visible with 3–4 applied rows. "HELD FOR YOUR REVIEW" suggestion cards below.
+
+**NARRATOR:** *(26 words)*
+> "Litt — a multi-agent system on Google ADK. One coordinator. Four sub-agents. Gemini 2.5 Pro via Vertex AI. This is maintenance agent output — client updates classified, auto-applied, and logged."
+
+**ACTION:** Hold on maintenance panel. Both section headers must be readable.
+
+---
+
+### 0:12–0:20 — Coordinator trigger
 
 **ACTION:** Navigate to Agent Console. Timeline is empty. Click "Run Closeout."
 
-**NARRATOR:**
-> "Now watch the ADK coordinator dispatch sub-agents in real time. Strand & Okafor, June 25."
+**NARRATOR:** *(14 words)*
+> "ADK coordinator dispatching sub-agents in real time. Strand & Okafor — June 25."
 
 ---
 
-### 0:18–1:05 — Sweep runs (fill every second — this is the architecture proof)
+### 0:20–1:07 — Sweep runs (architecture proof — every word earns its place)
 
 **SCREEN:** Timeline loading. Do not scroll or click.
 
-**NARRATOR:**
-> "The coordinator uses a deterministic Python classification function — classify_signal() returns a SignalType enum. It never asks Gemini which sub-agent to call. Routing is a Python dict.
+**NARRATOR:** *(98 words)*
+> "classify_signal() — a deterministic Python function — returns a SignalType enum and routes to sub-agents. Gemini is never asked which agent to call. Routing is a Python dict.
 >
-> The billing sub-agent is running 7 pre-bill scrubber rules across all pending time entries — forbidden phrases, round-hour anomalies, missing narratives, rate deviations. The deadline sub-agent is reading every active deadline. For Rivera v. Holbrook, it's calling Gemini right now to extract a due date from an opposing counsel email — because no court order exists in Firestore. The comms sub-agent is building FactPackets from Firestore records and calendar data, then prompting Gemini to generate source-grounded client update drafts — post-processing validates every citation is real before the draft surfaces. The anomaly sub-agent is running 13 deterministic detectors across the billing surface.
+> Billing sub-agent: seven pre-bill scrubber rules — forbidden phrases, round-hour anomalies, missing narratives. Deadline sub-agent: for Rivera v. Holbrook, Gemini is extracting a due date from opposing counsel email right now — no court order exists in Firestore. Comms sub-agent: MCP-compatible Gmail and Calendar adapters feed FactPackets into Gemini for source-grounded client update drafts. Anomaly sub-agent: 13 deterministic detectors, severity-scored.
 >
-> State machine transitions are enforced by a VALID_TRANSITIONS dict in the tool layer. Every write to Firestore goes through the tool layer and calls log_audit_event(). Agents never write to Firestore directly."
+> State machine transitions enforced by VALID_TRANSITIONS dict. Every Firestore write goes through the tool layer and calls log_audit_event(). Agents never write directly."
 
-**[~1:02–1:05: Timeline populates — observations animate in]**
+**[~1:04–1:07: Timeline populates — observations animate in]**
 
 ---
 
-### 1:05–1:18 — Brief appears, three callouts
+### 1:07–1:20 — Brief appears, three callouts
 
 **SCREEN:** Timeline complete. Brief populated. Scroll slowly: Rivera → Acme → Whitmore.
 
-**NARRATOR:**
-> "The closeout brief — coordinator output. Three escalations: Rivera v. Holbrook, ESCALATION, SOURCE CONFLICT. Acme Commercial, 92% budget utilization, CRITICAL. Whitmore Group, 16 days since last confirmed client contact."
+**NARRATOR:** *(29 words)*
+> "Coordinator output — the closeout brief. Three escalations: Rivera v. Holbrook, ESCALATION, SOURCE CONFLICT. Acme Commercial — 92% budget, CRITICAL. Whitmore Group — 16 days without client contact."
 
-**ACTION:** 1–2 second pause on each item as you name it.
+**ACTION:** 1-second pause on each item as you name it.
 
 ---
 
-### 1:18–1:36 — Rivera: declarative intent in action
+### 1:20–1:37 — Rivera: declarative intent in action
 
 **ACTION:** Click Rivera deadline item → modal opens → click "View source email."
 
 **SCREEN:** Source email body. From: jcolbert@colbertmarsh.com. "by tomorrow (Friday), June 26, 2026" readable.
 
-**NARRATOR:**
-> "The deadline agent detected a source conflict: opposing counsel email only, no court order in Firestore. Gemini extracted the date from unstructured email text. The agent's declarative decision: escalate — do not auto-confirm a deadline from a single external source. The source is visible. The reasoning is traceable."
+**NARRATOR:** *(36 words)*
+> "Deadline agent: source conflict — opposing counsel email only, no court order in Firestore. Gemini extracted the date. Declarative decision: escalate, do not auto-confirm from a single external source. Source visible. Reasoning traceable."
 
 ---
 
-### 1:36–1:46 — Audit trail: production-grade proof
+### 1:37–1:47 — Audit trail: production-grade proof
 
 **ACTION:** Click Verify → AuditEventDrawer appears. Hold 2 seconds — `audit_event_id` readable.
 
 **SCREEN:** AuditEventDrawer — tier: legal_defensibility, before_state, after_state visible.
 
-**NARRATOR:**
-> "Every tool call — agent and attorney — is a CREATE-only Firestore audit entry. Tier: legal_defensibility. Before and after state. The audit_log collection is append-only at the Firestore security rule layer. Immutable by design."
+**NARRATOR:** *(25 words)*
+> "Every tool call — agent and attorney — is CREATE-only. Tier: legal_defensibility. Before and after state. Append-only at the Firestore security rule layer."
 
 ---
 
-### 1:46–1:54 — Close: what the architecture produces
+### 1:47–1:54 — Close
 
-**ACTION:** Close modal. Full brief visible.
+**ACTION:** Close modal.
 
-**NARRATOR:**
-> "One coordinator. Four sub-agents. Gemini 2.5 Pro for reasoning. Python for every gate. The firm's operational surface — monitored, acted on, and auditable."
+**NARRATOR:** *(12 words)*
+> "One coordinator. Four sub-agents. Deterministic gates. Every decision logged. This is the architecture."
 
 ---
 
@@ -146,23 +178,13 @@ github.com/emtcmca/litt
 
 ## Pacing Notes
 
-- **0:00–0:08 is the most important scene change from v2.** Open on the maintenance panel showing work already done autonomously. This answers the judge's first question ("what does the agent actually *do*?") before the sweep even runs.
+- **0:00–0:12 is the most important scene change from v2.** Open on the maintenance panel showing work already done autonomously. This answers the judge's first question ("what does the agent actually *do*?") before the sweep even runs.
 - **"Declarative intent" is the frame for Rivera.** The old script called it "proof of safety." The judge's vocabulary from the guide is "declarative intent." The agent decided to escalate — not a rule, a decision.
 - **Use ADK vocabulary explicitly:** "coordinator," "sub-agent," "classify_signal()," "SignalType enum," "VALID_TRANSITIONS dict." Judges score this.
 - **MCP gets one mention.** The guide weights MCP heavily. Work in: "The comms sub-agent uses MCP-compatible ingestion adapters for Gmail and Calendar." One sentence during sweep narration is sufficient — judges notice it.
 - **Do not use product language during the sweep.** "Billing agent is protecting the firm's revenue" is sales copy. "Billing agent is running 7 pre-bill scrubber rules" is architecture.
 - **The audit trail close is technical, not emotional.** The old script said "fee dispute or malpractice review — the answer is here." Cut that. "CREATE-only Firestore audit entry, tier: legal_defensibility, append-only at the security rule layer" is what impresses a technical judge.
 - **If sweep finishes faster than expected**, expand the VALID_TRANSITIONS / tool layer explanation. Judges never tire of architectural detail.
-
----
-
-## Revised narration — MCP line (insert during sweep at ~0:45)
-
-Add this line during the comms sub-agent section:
-
-> "The comms and deadline sub-agents consume MCP-compatible Gmail and Calendar adapters — the same interface the production OAuth connectors will use."
-
-One sentence. Checks the MCP box for judges.
 
 ---
 
