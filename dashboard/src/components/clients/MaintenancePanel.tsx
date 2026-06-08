@@ -306,7 +306,17 @@ function AppliedRow({ a, onAuditClick }: { a: AppliedUpdate; onAuditClick?: (id:
 
 // ── MaintenancePanel ──────────────────────────────────────────────────────────
 
-export function MaintenancePanel({ clientId, firmId, refreshTrigger }: { clientId: string; firmId: string; refreshTrigger?: number }) {
+export function MaintenancePanel({
+  clientId,
+  firmId,
+  refreshTrigger,
+  onActionComplete,
+}: {
+  clientId: string;
+  firmId: string;
+  refreshTrigger?: number;
+  onActionComplete?: () => void;
+}) {
   ensurePulse();
 
   const [state, setState] = useState<ClientMaintenanceState | null>(null);
@@ -330,19 +340,30 @@ export function MaintenancePanel({ clientId, firmId, refreshTrigger }: { clientI
 
   useEffect(() => { loadState(); }, [clientId, firmId, refreshTrigger]);
 
+  function handleActionDone() {
+    loadState();
+    onActionComplete?.();
+  }
+
   async function handleReview() {
     setReviewing(true);
-    const s = await reviewClient(firmId, clientId);
-    setState(s);
-    setReviewing(false);
+    try {
+      const s = await reviewClient(firmId, clientId);
+      setState(s);
+    } finally {
+      setReviewing(false);
+    }
   }
 
   async function handleCadence(key: string) {
     if (!state || cadenceWorking) return;
     setCadenceWorking(true);
-    await setCadence(clientId, key, firmId);
-    await loadState();
-    setCadenceWorking(false);
+    try {
+      await setCadence(clientId, key, firmId);
+      await loadState();
+    } finally {
+      setCadenceWorking(false);
+    }
   }
 
   if (!state) {
@@ -495,7 +516,7 @@ export function MaintenancePanel({ clientId, firmId, refreshTrigger }: { clientI
                   s={s}
                   clientId={clientId}
                   firmId={firmId}
-                  onDone={loadState}
+                  onDone={handleActionDone}
                 />
               ))}
             </div>

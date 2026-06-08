@@ -21,6 +21,7 @@ import {
   getBrief,
   getInbound,
   getAuditLog,
+  getMaintenance,
   reviewClient,
 } from '../api';
 import type {
@@ -28,6 +29,7 @@ import type {
   AuditLogEvent,
   BriefResponse,
   ClientListItem,
+  ClientMaintenanceState,
   InboundMessage,
   RawDeadline,
 } from '../types';
@@ -263,6 +265,11 @@ export function Client() {
       .finally(() => setLoading(false));
   }, [clientId]);
 
+  function refreshAudit() {
+    if (!clientId) return;
+    getAuditLog(FIRM_ID, { clientId }).then(data => setAudit(data.events)).catch(() => {});
+  }
+
   // ── Brief decisions for this client ──────────────────────────────────────
 
   const decisions: ItemDescriptor[] = [];
@@ -401,7 +408,7 @@ export function Client() {
               disabled={reviewing}
               onClick={async () => {
                 setReviewing(true);
-                try { await reviewClient(FIRM_ID, clientId!); setSweepToken(t => t + 1); } catch { /* swallow */ }
+                try { await reviewClient(FIRM_ID, clientId!); setSweepToken(t => t + 1); refreshAudit(); } catch { /* swallow */ }
                 setReviewing(false);
               }}
               style={{
@@ -452,7 +459,7 @@ export function Client() {
         </div>
 
         {/* ── Maintenance panel ────────────────────────────────────────── */}
-        <MaintenancePanel clientId={clientId!} firmId={FIRM_ID} refreshTrigger={sweepToken} />
+        <MaintenancePanel clientId={clientId!} firmId={FIRM_ID} refreshTrigger={sweepToken} onActionComplete={refreshAudit} />
 
         {/* ── All Deadlines ─────────────────────────────────────────────── */}
         <div>

@@ -13,6 +13,10 @@ import type {
   BillingWriteOffRequest,
   BriefResponse,
   BudgetUtilizationItem,
+  ClientCreateRequest,
+  ClientCreateResponse,
+  ClientListItem,
+  ClientMaintenanceState,
   CommsApproveRequest,
   CommsDismissRequest,
   CommsQueueRequest,
@@ -22,10 +26,12 @@ import type {
   DeadlineVerifyRequest,
   DemoReadyResponse,
   DemoResetResponse,
+  ExtractionResult,
   InboundDismissRequest,
   InboundMessage,
   InboundSnoozeRequest,
   MatterSummary,
+  PendingClient,
   RawDeadline,
   RelationshipMatter,
   ScrubberFlag,
@@ -41,6 +47,19 @@ const BASE = "/api";
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.detail ?? err.message ?? "Request failed");
+  }
+  return res.json();
+}
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -157,12 +176,13 @@ export function dismissComm(req: CommsDismissRequest): Promise<ActionResult> {
 
 export function getAuditLog(
   firmId: string,
-  opts: { tier?: string; entityType?: string; actor?: string; limit?: number } = {}
+  opts: { tier?: string; entityType?: string; actor?: string; clientId?: string; limit?: number } = {}
 ): Promise<AuditLogResponse> {
   const params: Record<string, string> = { firm_id: firmId };
   if (opts.tier) params.tier = opts.tier;
   if (opts.entityType) params.entity_type = opts.entityType;
   if (opts.actor) params.actor = opts.actor;
+  if (opts.clientId) params.client_id = opts.clientId;
   if (opts.limit != null) params.limit = String(opts.limit);
   return get<AuditLogResponse>("/audit-log", params);
 }
@@ -226,6 +246,78 @@ export function snoozeInbound(req: InboundSnoozeRequest): Promise<ActionResult> 
 
 export function dismissInbound(req: InboundDismissRequest): Promise<ActionResult> {
   return post<ActionResult>("/actions/inbound/dismiss", req);
+}
+
+// ---------------------------------------------------------------------------
+// Client module (v1.2.0)
+// ---------------------------------------------------------------------------
+
+export function getClients(firmId: string): Promise<ClientListItem[]> {
+  return get<ClientListItem[]>("/clients", { firm_id: firmId });
+}
+
+export function getPendingClients(firmId: string): Promise<PendingClient[]> {
+  return get<PendingClient[]>("/clients/pending", { firm_id: firmId });
+}
+
+export function createClient(req: ClientCreateRequest): Promise<ClientCreateResponse> {
+  return post<ClientCreateResponse>("/clients", req);
+}
+
+export function confirmPendingClient(
+  pid: string,
+  edits: Partial<ClientCreateRequest> = {},
+  firmId = "strand-okafor",
+  responsibleAttorneyId = "dana-strand",
+): Promise<ClientCreateResponse> {
+  return post<ClientCreateResponse>(`/clients/pending/${pid}/confirm`, {
+    firm_id: firmId,
+    responsible_attorney_id: responsibleAttorneyId,
+    edits,
+  });
+}
+
+export async function extractFromDocument(firmId: string, file: File): Promise<ExtractionResult> {
+  const fd = new FormData();
+  fd.append("firm_id", firmId);
+  fd.append("document", file);
+  const res = await fetch(`${BASE}/clients/extract`, { method: "POST", body: fd });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.detail ?? err.message ?? "Extraction failed");
+  }
+  return res.json();
+}
+
+export function getMaintenance(firmId: string, clientId: string): Promise<ClientMaintenanceState> {
+  return get<ClientMaintenanceState>(`/clients/${clientId}/maintenance`, { firm_id: firmId });
+}
+
+export function reviewClient(firmId: string, clientId: string): Promise<ClientMaintenanceState> {
+  return post<ClientMaintenanceState>(`/clients/${clientId}/review`, { firm_id: firmId });
+}
+
+export function setCadence(clientId: string, cadence: string, firmId = "strand-okafor"): Promise<ActionResult> {
+  return patch<ActionResult>(`/clients/${clientId}/cadence`, { cadence, firm_id: firmId });
+}
+
+export function applySuggestion(
+  clientId: string,
+  sid: string,
+  firmId = "strand-okafor",
+  actor = "dana-strand",
+): Promise<ActionResult> {
+  return post<ActionResult>(`/clients/${clientId}/suggestions/${sid}/apply`, { firm_id: firmId, actor });
+}
+
+export function dismissSuggestion(
+  clientId: string,
+  sid: string,
+  reason: string,
+  firmId = "strand-okafor",
+  actor = "dana-strand",
+): Promise<ActionResult> {
+  return post<ActionResult>(`/clients/${clientId}/suggestions/${sid}/dismiss`, { firm_id: firmId, actor, reason });
 }
 
 // ---------------------------------------------------------------------------
