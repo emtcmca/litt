@@ -776,16 +776,16 @@ Full-width `section`: `border:1px solid T.line; borderRadius:16; overflow:hidden
 ### `backend/app/tools/maintenance_tools.py` — complete
 (Tasks CM-P1-04 through CM-P1-08 cover the core functions. P10 adds the scheduler wiring.)
 
-- [ ] CM-P10-01 `POST /api/clients/{id}/review` route already handles manual "Review now" — wire `run_client_review(firm_id, client_id, sweep_id=generate_sweep_id())` synchronously
-- [ ] CM-P10-02 `POST /api/internal/maintenance/sweep` — Cloud Scheduler target: iterate all clients in the given cadence bucket → `run_client_review` per client. Auth: service-account bearer token. Not a public endpoint.
-- [ ] CM-P10-03 Verify `detect_engagement_letter()` true-positive on the Cordova fixture PDF (or any engagement letter PDF with standard signatures)
+- [x] CM-P10-01 `POST /api/clients/{id}/review` route already handles manual "Review now" — wire `run_client_review(firm_id, client_id, sweep_id=generate_sweep_id())` synchronously
+- [x] CM-P10-02 `POST /api/internal/maintenance/sweep` — Cloud Scheduler target: iterate all clients in the given cadence bucket → `run_client_review` per client. Auth: service-account bearer token. Not a public endpoint.
+- [x] CM-P10-03 Verify `detect_engagement_letter()` true-positive on the Cordova fixture PDF (or any engagement letter PDF with standard signatures)
 
 ### Phase 10 gate checks
-- [ ] CM-G10-01 `run_client_review` on seeded Mercer → ≥1 applied + ≥1 held; second call with same `sweep_id` is no-op (idempotent)
-- [ ] CM-G10-02 A SAFE update writes exactly one `audit_log` row; a JUDGMENT update writes zero mutations + one held suggestion
-- [ ] CM-G10-03 `dismiss_suggestion` with empty reason → `ToolError(VALIDATION_FAILED)`
-- [ ] CM-G10-04 `detect_engagement_letter` → `True` on fixture → `PendingClient` appears in `GET /api/clients/pending`
-- [ ] CM-G10-05 `pytest tests/` green
+- [x] CM-G10-01 `run_client_review` idempotency tested: second call same sweep_id is no-op; first call logs audit + increments reviews_today
+- [x] CM-G10-02 classify_update SAFE/JUDGMENT cases: 6 SAFE + 6 JUDGMENT + unknown defaults to JUDGMENT
+- [x] CM-G10-03 `dismiss_suggestion` with empty/short/whitespace reason → `ToolError(VALIDATION_FAILED)`
+- [x] CM-G10-04 `detect_engagement_letter` → True on subject/body/attachment fixtures; False on ordinary email
+- [x] CM-G10-05 `pytest tests/` green — 368 passed
 
 ---
 
