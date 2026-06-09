@@ -168,11 +168,17 @@ Time entry data is structured from capture to export for legal e-billing compati
 
 ## Architecture
 
-![Litt architecture diagram](architecture.png)
+![Litt architecture — signal flow](architecture-design-1.png)
 
-The architecture diagram above shows six zones: ingestion through MCP-compatible adapters, ADK coordinator with deterministic Python routing, four specialist sub-agents with explicit Python/Gemini labels, the tool layer as the only write path, the append-only audit log, and the attorney UI as the output surface.
+Six zones: ingestion through MCP-compatible adapters, ADK coordinator with deterministic Python routing, four specialist sub-agents with explicit Python/Gemini labels, the tool layer as the only write path, the append-only audit log, and the attorney UI as the output surface. Gate chips (ESCALATION · REVIEW · BLOCKED) mark every human decision point.
 
-*Caption: Litt's coordinator routes signals to four specialist agents using deterministic Python. Gemini handles only language tasks, while all state changes pass through audited tools and attorney gates.*
+*The coordinator routes signals to four specialist agents using deterministic Python. Gemini handles only language tasks. All state changes pass through audited tools and attorney gates.*
+
+![Litt architecture — design principles](architecture-design-2.png)
+
+A legal practice cannot tolerate probabilistic data integrity. Billing records, deadline confirmations, and audit events may surface in malpractice proceedings — they must be correct and immutable. Eight design constraints enforce this: routing as code, no load-bearing LLM calls, a single write path, idempotency + optimistic locking, 13 deterministic anomaly detectors, append-only audit log, source-cited drafts, and a frozen demo clock so relative date math never drifts.
+
+*Every architectural constraint above is enforced in code, not in a prompt.*
 
 ---
 
