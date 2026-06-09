@@ -6,6 +6,10 @@ import { Icon } from '../components/ui/Icon';
 import type { IconName } from '../components/ui/Icon';
 import { runSweep } from '../api';
 import sweepFixture from '../demo-fixtures/sweep.json';
+import { SweepStatusBar } from '../components/console/SweepStatusBar';
+import type { SweepPhase, SweepSource } from '../components/console/SweepStatusBar';
+import { JudgeProofStrip } from '../components/console/JudgeProofStrip';
+import { ArchitectureLegend } from '../components/console/ArchitectureLegend';
 
 const FIRM_ID   = 'strand-okafor';
 const STEP_MS   = 640;
@@ -243,8 +247,8 @@ function GraphNode({ id, live, dim, selected, idle, commitColor, liveTool, tech,
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: T.surface, border: `1px solid ${ring ?? T.line}`, borderRadius: 9, padding: '8px 10px', boxShadow: live ? `0 0 0 3px ${ring}22` : '0 1px 2px rgba(20,20,18,.04)' }}>
           <span style={{ width: 24, height: 24, borderRadius: 6, background: T.wash2, display: 'grid', placeItems: 'center', flexShrink: 0 }}><Icon name={n.icon} size={13} color={live ? (ring ?? T.muted) : T.muted} /></span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: T.ink, lineHeight: 1.1 }}>{n.label}</div>
-            <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: T.faint }}>{n.sub}</span>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, lineHeight: 1.1 }}>{n.label}</div>
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: T.faint }}>{n.sub}</span>
           </div>
         </div>
       </div>
@@ -261,7 +265,7 @@ function GraphNode({ id, live, dim, selected, idle, commitColor, liveTool, tech,
             <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Coordinator</span>
             <span style={{ marginLeft: 'auto', fontSize: 8.5, fontFamily: 'var(--font-mono)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.04em', color: '#5F6F66', border: '1px solid rgba(95,111,102,.4)', borderRadius: 4, padding: '1px 5px' }}>Python</span>
           </div>
-          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.4 }}>{tech ? n.tech : n.plain}</div>
+          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4 }}>{tech ? n.tech : n.plain}</div>
         </div>
       </div>
     );
@@ -277,15 +281,15 @@ function GraphNode({ id, live, dim, selected, idle, commitColor, liveTool, tech,
             <span style={{ width: 26, height: 26, borderRadius: 7, background: isLLM ? 'rgba(29,158,117,.1)' : 'rgba(20,34,31,.06)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <Icon name={n.icon} size={14} color={isLLM ? T.teal : T.forest} />
             </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, flex: 1, minWidth: 0 }}>{a?.name ?? id}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: T.ink, flex: 1, minWidth: 0 }}>{a?.name ?? id}</span>
             <span style={{ fontSize: 8.5, fontFamily: 'var(--font-mono)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.04em', color: isLLM ? T.teal : '#5F6F66', border: `1px solid ${isLLM ? 'rgba(29,158,117,.4)' : 'rgba(95,111,102,.4)'}`, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>{isLLM ? 'Gemini' : 'Python'}</span>
           </div>
-          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.4, marginTop: 6 }}>{tech ? n.tech : n.plain}</div>
+          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.4, marginTop: 6 }}>{tech ? n.tech : n.plain}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7, paddingTop: 7, borderTop: `1px solid ${T.soft}` }}>
             {isLLM && <span style={{ fontSize: 8.5, fontFamily: 'var(--font-mono)', fontWeight: 600, color: T.teal, border: '1px solid rgba(29,158,117,.4)', borderRadius: 4, padding: '0 4px' }}>⇄ inbox</span>}
-            <span style={{ fontSize: 9.5, fontFamily: 'var(--font-mono)', color: T.teal }}>{a?.handledToday ?? 0} handled</span>
+            <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: T.teal }}>{a?.handledToday ?? 0} handled</span>
             <span style={{ color: T.faint, fontSize: 9 }}>·</span>
-            <span style={{ fontSize: 9.5, fontFamily: 'var(--font-mono)', color: (a?.surfaced ?? 0) > 0 ? T.gold : T.faint }}>{a?.surfaced ?? 0} to you</span>
+            <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: (a?.surfaced ?? 0) > 0 ? T.gold : T.faint }}>{a?.surfaced ?? 0} to you</span>
           </div>
         </div>
       </div>
@@ -304,8 +308,8 @@ function GraphNode({ id, live, dim, selected, idle, commitColor, liveTool, tech,
       <div style={{ background: bg, border: `1px solid ${ring ?? (isDark ? 'transparent' : isBrief ? 'rgba(169,132,53,.4)' : T.line)}`, borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 9, boxShadow: live ? `0 0 0 4px ${ring}22` : 'none' }}>
         <Icon name={n.icon} size={15} color={accent} stroke={isBrief ? 2.2 : 1.6} />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: fg, lineHeight: 1.1 }}>{n.label}</div>
-          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: isDark ? T.auditMuted : T.faint }}>{n.sub}</span>
+          <div style={{ fontSize: 13, fontWeight: 600, color: fg, lineHeight: 1.1 }}>{n.label}</div>
+          <span style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', color: isDark ? T.auditMuted : T.faint }}>{n.sub}</span>
         </div>
       </div>
     </div>
@@ -624,15 +628,18 @@ export function AgentConsole() {
   const nav      = useNavigate();
   const frozen   = new URLSearchParams(location.search).get('frozen') === '1';
 
-  const [sweep,      setSweep]      = useState<SweepStep[]>([]);
-  const [step,       setStep]       = useState(-1);
-  const [playing,    setPlaying]    = useState(false);
-  const [tech,       setTech]       = useState(false);
-  const [sel,        setSel]        = useState<string | null>(null);
-  const [idleIdx,    setIdleIdx]    = useState(0);
-  const [error,      setError]      = useState<string | null>(null);
-  const [isRunning,  setIsRunning]  = useState(false);
+  const [sweep,       setSweep]       = useState<SweepStep[]>([]);
+  const [step,        setStep]        = useState(-1);
+  const [sweepPhase,  setSweepPhase]  = useState<SweepPhase>('idle');
+  const [sweepSource, setSweepSource] = useState<SweepSource | null>(null);
+  const [tech,        setTech]        = useState(false);
+  const [sel,         setSel]         = useState<string | null>(null);
+  const [idleIdx,     setIdleIdx]     = useState(0);
+  const [error,       setError]       = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Derived playing state
+  const playing = sweepPhase === 'playing';
 
   function clearTimers() { timers.current.forEach(clearTimeout); timers.current = []; }
   useEffect(() => () => clearTimers(), []);
@@ -647,11 +654,12 @@ export function AgentConsole() {
 
   // Idle heartbeat
   useEffect(() => {
-    if (frozen || step >= 0 || playing) return;
+    if (frozen || step >= 0 || sweepPhase === 'playing') return;
     const t = setInterval(() => setIdleIdx(i => (i + 1) % AGENT_IDS.length), IDLE_MS);
     return () => clearInterval(t);
-  }, [frozen, step, playing]);
-  const idleOn    = step < 0 && !playing && !sel;
+  }, [frozen, step, sweepPhase]);
+
+  const idleOn    = step < 0 && sweepPhase !== 'playing' && !sel;
   const idleAgent = AGENT_IDS[idleIdx];
   const idleSrc   = AGENT_SOURCES[idleAgent] ?? [];
   const idleNodes = idleOn ? new Set([...idleSrc, 'coordinator', idleAgent]) : new Set<string>();
@@ -659,45 +667,57 @@ export function AgentConsole() {
 
   const handleRun = useCallback(async () => {
     clearTimers();
-    setIsRunning(true);
-    setError(null);
     setSel(null);
+    setError(null);
+    setSweepPhase('loading');
+    setSweepSource(null);
+
+    const liveCall = runSweep(FIRM_ID)
+      .then(res => ({ obs: res.timeline.observations as AgentObservation[], source: 'live-api' as SweepSource }));
+
+    const timeoutFallback = new Promise<{ obs: AgentObservation[]; source: SweepSource }>(resolve =>
+      setTimeout(() => resolve({ obs: sweepFixture as AgentObservation[], source: 'demo-fixture' }), 4500)
+    );
+
+    let obs: AgentObservation[];
+    let source: SweepSource;
     try {
-      let obs: AgentObservation[];
-      try {
-        const res = await runSweep(FIRM_ID);
-        obs = res.timeline.observations;
-      } catch {
-        // Backend not running — use demo fixture
-        obs = sweepFixture as AgentObservation[];
-      }
-      const steps = obs.map(adaptObs);
-      setSweep(steps);
-      setStep(-1);
-      setPlaying(true);
-      for (let i = 0; i < steps.length; i++) {
-        const id = setTimeout(() => {
-          setStep(i);
-          if (i === steps.length - 1) setPlaying(false);
-        }, (i + 1) * STEP_MS);
-        timers.current.push(id);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sweep failed');
-    } finally {
-      setIsRunning(false);
+      ({ obs, source } = await Promise.race([liveCall, timeoutFallback]));
+    } catch {
+      obs    = sweepFixture as AgentObservation[];
+      source = 'demo-fixture';
+    }
+
+    const steps = obs.map(adaptObs);
+    setSweep(steps);
+    setSweepSource(source);
+    setStep(-1);
+    setSweepPhase('playing');
+
+    for (let i = 0; i < steps.length; i++) {
+      const id = setTimeout(() => {
+        setStep(i);
+        if (i === steps.length - 1) setSweepPhase('complete');
+      }, (i + 1) * STEP_MS);
+      timers.current.push(id);
     }
   }, []);
 
-  function pause() { clearTimers(); setPlaying(false); }
-  function scrub(i: number) { clearTimers(); setPlaying(false); setSel(null); setStep(i); }
+  function pause() { clearTimers(); setSweepPhase('idle'); }
+  function scrub(i: number) { clearTimers(); setSweepPhase('idle'); setSel(null); setStep(i); }
 
   const g = stepGraph(step >= 0 && step < sweep.length ? sweep[step] : null);
   const cur         = step >= 0 && step < sweep.length ? sweep[step] : null;
   const commitColor = cur ? COMMIT_META[cur.commit].color : null;
 
+  // Sweep stats for SweepStatusBar
+  const handledCount  = sweep.filter(s => s.commit === 'AUTO_SAFE').length;
+  const surfacedCount = sweep.filter(s => s.commit !== 'AUTO_SAFE').length;
+
+  const isLoading = sweepPhase === 'loading';
+
   return (
-    <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%', minHeight: 0, background: T.wash }}>
+    <div style={{ display: 'grid', gridTemplateRows: 'auto auto 1fr', height: '100%', minHeight: 0, background: T.wash }}>
       {/* header */}
       <div style={{ padding: '20px 26px 16px', borderBottom: `1px solid ${T.soft}`, background: T.surface }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
@@ -711,13 +731,26 @@ export function AgentConsole() {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <SweepStatusBar
+              phase={sweepPhase}
+              source={sweepSource}
+              stepCount={sweep.length}
+              handledCount={handledCount}
+              surfacedCount={surfacedCount}
+            />
             <div style={{ display: 'inline-flex', background: T.wash2, border: `1px solid ${T.line}`, borderRadius: 999, padding: 3 }}>
               {([['Plain English', false], ['Technical', true]] as [string, boolean][]).map(([label, val]) => (
                 <button key={label} onClick={() => setTech(val)} style={{ padding: '6px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-sans)', background: tech === val ? T.forest : 'transparent', color: tech === val ? T.brass : T.muted }}>{label}</button>
               ))}
             </div>
-            <button onClick={() => playing ? pause() : handleRun()} disabled={isRunning} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10, background: T.forest, color: T.brass, border: `1px solid ${T.forest}`, cursor: isRunning ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const, opacity: isRunning ? 0.7 : 1 }}>
-              {playing ? (
+            <button
+              onClick={() => isLoading ? undefined : playing ? pause() : handleRun()}
+              disabled={isLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10, background: T.forest, color: T.brass, border: `1px solid ${T.forest}`, cursor: isLoading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const, opacity: isLoading ? 0.7 : 1 }}
+            >
+              {isLoading ? (
+                <><span className="litt-pulse" style={{ width: 7, height: 7, borderRadius: 999, background: T.brass }} />Starting sweep...</>
+              ) : playing ? (
                 <><span style={{ display: 'inline-flex', gap: 2.5 }}><span style={{ width: 2.5, height: 11, background: T.brass }} /><span style={{ width: 2.5, height: 11, background: T.brass }} /></span>Pause</>
               ) : (
                 <><Icon name="refresh" size={15} color={T.brass} />{sweep.length > 0 && step === sweep.length - 1 ? 'Replay sweep' : step >= 0 ? 'Resume' : 'Run closeout sweep'}</>
@@ -728,15 +761,18 @@ export function AgentConsole() {
         {error && <div style={{ fontSize: 12, color: T.danger, marginTop: 8 }}>{error}</div>}
       </div>
 
+      {/* JudgeProofStrip — architecture receipt for judges */}
+      <JudgeProofStrip />
+
       {/* body */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 312px', minHeight: 0, overflow: 'auto' }}>
         {/* graph canvas */}
-        <div style={{ position: 'relative', minHeight: 560, minWidth: 0, borderRight: `1px solid ${T.soft}`, backgroundImage: 'radial-gradient(rgba(20,20,18,.05) 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+        <div style={{ position: 'relative', minHeight: 620, minWidth: 0, borderRight: `1px solid ${T.soft}`, backgroundImage: 'radial-gradient(rgba(20,20,18,.05) 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
           {/* column captions */}
           {([['Signals in', 116], ['Router', 372], ['Specialist agents', 624], ['On the record', 872]] as [string, number][]).map(([label, x]) => (
-            <span key={label} style={{ position: 'absolute', left: `${(x / 1000) * 100}%`, top: 14, transform: 'translateX(-50%)', fontSize: 9.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.faint, whiteSpace: 'nowrap', zIndex: 3 }}>{label}</span>
+            <span key={label} style={{ position: 'absolute', left: `${(x / 1000) * 100}%`, top: 14, transform: 'translateX(-50%)', fontSize: 10.5, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' as const, letterSpacing: '.1em', color: T.muted, whiteSpace: 'nowrap', zIndex: 3 }}>{label}</span>
           ))}
-          {/* legend */}
+          {/* legend (top-right) */}
           <div style={{ position: 'absolute', right: 14, top: 30, zIndex: 3, display: 'grid', gap: 4, background: 'rgba(255,255,255,.74)', borderRadius: 9, padding: '6px 10px', border: `1px solid ${T.soft}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="20" height="6" style={{ display: 'block' }}><line x1="1" y1="3" x2="19" y2="3" stroke={T.teal} strokeWidth="1.6" strokeDasharray="1.5 3" strokeLinecap="round" /></svg>
@@ -787,6 +823,9 @@ export function AgentConsole() {
               onSelect={id => { pause(); setSel(s => s === id ? null : id); }}
             />
           ))}
+
+          {/* architecture legend — bottom-left, visible in Technical mode */}
+          <ArchitectureLegend visible={tech} />
 
           {/* scrubber dock */}
           <div style={{ position: 'absolute', left: 18, right: 18, bottom: 14, background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(6px)', border: `1px solid ${T.line}`, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 14, zIndex: 5, boxShadow: '0 4px 16px rgba(20,20,18,.08)' }}>

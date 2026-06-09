@@ -45,8 +45,10 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 4. Navigate to /clients/mercer-industries — confirm maintenance panel shows
    both "HELD FOR YOUR REVIEW" items AND "APPLIED AUTOMATICALLY" items
 5. Navigate to Agent Console — confirm timeline is empty, "Run Closeout" visible
-6. Browser: hide bookmarks bar (Ctrl+Shift+B), no extensions visible, full screen
-7. Mic check
+6. Verify JudgeProofStrip visible below header: 5 chips (Track 1, ADK, MCP adapters,
+   Gemini via Vertex, Cloud Run + Firestore)
+7. Browser: hide bookmarks bar (Ctrl+Shift+B), no extensions visible, full screen
+8. Mic check
 ```
 
 ---
@@ -100,6 +102,10 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 
 **ACTION:** Navigate to Agent Console. Timeline is empty. Click "Run Closeout."
 
+**[verify]** JudgeProofStrip visible below header — 5 chips readable before clicking.
+
+**[verify]** After click: status chip appears in header — "Starting closeout sweep..." with pulse dot.
+
 **NARRATOR:** *(14 words)*
 > "ADK coordinator dispatching sub-agents in real time. Strand & Okafor — June 25."
 
@@ -118,6 +124,8 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 
 **[~1:04–1:07: Timeline populates — observations animate in]**
 
+**[verify]** "Replay sweep" button appears in header after timeline completes.
+
 ---
 
 ### 1:07–1:20 — Brief appears, three callouts
@@ -134,6 +142,8 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 ### 1:20–1:37 — Rivera: declarative intent in action
 
 **ACTION:** Click Rivera deadline item → modal opens → click "View source email."
+
+**[verify]** ProofBlock is open by default — Gate row shows ESCALATION in red. "What will be logged" audit panel visible above Verify button.
 
 **SCREEN:** Source email body. From: jcolbert@colbertmarsh.com. "by tomorrow (Friday), June 26, 2026" readable.
 

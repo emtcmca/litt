@@ -14,6 +14,8 @@ A solo or two-attorney firm generates dozens of operational decisions every day:
 
 The result is malpractice risk from missed deadlines, billing disputes from unreviewed entries, and client churn from communication lapses. Enterprise legal tech addresses this for BigLaw. The 100,000+ small firms in the U.S. get nothing.
 
+Pricing target: $299–$499/month per attorney for v1.1 GA — designed for the 100,000+ solo and two-attorney U.S. firms currently priced out of enterprise legal operations software.
+
 Litt is the operational control layer that runs between a small firm's tools and its attorneys — watching every gap, surfacing every risk, and acting autonomously on everything that doesn't require a legal decision.
 
 ---
@@ -166,15 +168,11 @@ Time entry data is structured from capture to export for legal e-billing compati
 
 ## Architecture
 
-*(Embed `docs/architecture.png` here in Devpost submission)*
+![Litt architecture diagram](architecture.png)
 
-Key elements visible in diagram:
-- Ingestion layer with MCP-compatible adapter interfaces (Gmail, Calendar)
-- ADK coordinator + four sub-agents
-- ADK observability → Cloud Trace
-- Deterministic tool layer (Python only write path)
-- Firestore with security rule enforcement
-- React dashboard + email digest attorney interface
+The architecture diagram above shows six zones: ingestion through MCP-compatible adapters, ADK coordinator with deterministic Python routing, four specialist sub-agents with explicit Python/Gemini labels, the tool layer as the only write path, the append-only audit log, and the attorney UI as the output surface.
+
+*Caption: Litt's coordinator routes signals to four specialist agents using deterministic Python. Gemini handles only language tasks, while all state changes pass through audited tools and attorney gates.*
 
 ---
 

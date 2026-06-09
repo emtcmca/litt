@@ -5,7 +5,8 @@ import type { ProofData } from './resolveTypes';
 
 interface Props {
   proof: ProofData;
-  defaultOpen?: boolean;
+  gate?: string;           // 'ESCALATION' | 'REVIEW' | 'BLOCKED' — drives defaultOpen
+  defaultOpen?: boolean;   // explicit override (backwards-compatible)
 }
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -47,12 +48,19 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export function ProofBlock({ proof, defaultOpen = false }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+export function ProofBlock({ proof, gate, defaultOpen }: Props) {
+  const shouldDefaultOpen = defaultOpen ?? (gate === 'ESCALATION' || gate === 'BLOCKED');
+  const [open, setOpen] = useState(shouldDefaultOpen);
 
   const confColor = typeof proof.confidence === 'number' && proof.confidence >= 0.8
     ? T.teal
     : T.faint;
+
+  const gateColor = gate === 'ESCALATION' ? T.danger
+    : gate === 'BLOCKED' ? T.forest
+    : T.gold;
+
+  const showEscalationTitle = gate === 'ESCALATION' || gate === 'BLOCKED';
 
   return (
     <div style={{
@@ -84,7 +92,7 @@ export function ProofBlock({ proof, defaultOpen = false }: Props) {
           color: T.faint,
           letterSpacing: '0.02em',
         }}>
-          Show Litt's work — source, routing &amp; confidence
+          Show source, route, and gate
         </span>
         <span style={{
           transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -101,6 +109,21 @@ export function ProofBlock({ proof, defaultOpen = false }: Props) {
           padding: '0 14px 12px',
           borderTop: `1px solid ${T.line}`,
         }}>
+          {/* Internal title for escalation/blocked gates */}
+          {showEscalationTitle && (
+            <div style={{ paddingTop: 10, paddingBottom: 6 }}>
+              <span style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '.08em',
+                color: T.faint,
+              }}>
+                Why Litt held this for attorney judgment
+              </span>
+            </div>
+          )}
+
           <Row label="Reading">
             <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.5 }}>
               {proof.what || '—'}
@@ -142,14 +165,24 @@ export function ProofBlock({ proof, defaultOpen = false }: Props) {
           <Row label="Routing">
             {proof.route.agent && <Chip text={proof.route.agent} />}
             {proof.route.work  && <Chip text={proof.route.work} />}
-            {proof.route.llm && proof.route.llm !== 'n/a' && (
-              <Chip text={proof.route.llm} color={T.teal} />
-            )}
+            {proof.route.extra && <Chip text={proof.route.extra} />}
+          </Row>
+
+          <Row label="Model">
+            {proof.route.llm && proof.route.llm !== 'n/a'
+              ? <Chip text={proof.route.llm} color={T.teal} />
+              : <Chip text="Python only · no model call" color="#5F6F66" />
+            }
             {typeof proof.confidence === 'number' && (
               <Chip text={`confidence: ${proof.confidence.toFixed(2)}`} color={confColor} />
             )}
-            {proof.route.extra && <Chip text={proof.route.extra} />}
           </Row>
+
+          {gate && (
+            <Row label="Gate">
+              <Chip text={gate} color={gateColor} />
+            </Row>
+          )}
         </div>
       )}
     </div>

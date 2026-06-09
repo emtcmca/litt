@@ -978,7 +978,7 @@ export function ResolvePanel({ descriptor, firmId, attorneyId, onClose, onSucces
 
           {/* Proof block */}
           <div style={{ marginBottom: 16 }}>
-            <ProofBlock proof={descriptor.proof} />
+            <ProofBlock proof={descriptor.proof} gate={descriptor.gate} />
           </div>
 
           {/* Audit log preview */}
@@ -1016,6 +1016,28 @@ export function ResolvePanel({ descriptor, firmId, attorneyId, onClose, onSucces
                 color: T.auditMuted,
               }}>
                 actor={auditEvent.actor} · entity={auditEvent.entity} · tier={auditEvent.tier}
+              </p>
+            </div>
+          )}
+
+          {/* What will be logged — explanatory audit note */}
+          {activeAction && (
+            <div style={{
+              background: T.wash2,
+              border: `1px solid ${T.soft}`,
+              borderRadius: 9,
+              padding: '10px 13px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 9,
+              marginTop: 12,
+            }}>
+              <Icon name="shield" size={14} color={T.faint} style={{ marginTop: 1, flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
+                {activeAction.tier === 'legal'
+                  ? 'On approval, Litt creates an audit event recording before_state, after_state, actor, idempotency_key, and tier: legal_defensibility. Existing audit records are never modified.'
+                  : 'On action, Litt creates an operational audit event recording actor, reason, and resulting status.'
+                }
               </p>
             </div>
           )}

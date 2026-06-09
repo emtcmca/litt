@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ConsoleShell } from './components/console/ConsoleShell';
 import { Overview } from './pages/Overview';
 import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
@@ -17,9 +17,10 @@ import { Integrations } from './pages/Integrations';
 import { Clients } from './pages/Clients';
 import { ClientNew } from './pages/ClientNew';
 import { Client } from './pages/Client';
+import { ArchitecturePreview } from './pages/ArchitecturePreview';
 import { TimerHUD } from './components/TimerHUD';
 
-const FIRM_ID    = 'strand-okafor';
+const FIRM_ID = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
 
 function NotFound() {
@@ -32,19 +33,20 @@ function NotFound() {
   );
 }
 
-export default function App() {
+function AppRoutes() {
+  const location = useLocation();
+  const hideHud = location.pathname === '/architecture';
+
   return (
-    <BrowserRouter>
+    <>
       <Routes>
-        {/* Email preview — no shell */}
+        <Route path="/architecture" element={<ArchitecturePreview />} />
         <Route path="/email-preview" element={<EmailPreview />} />
-        {/* Legacy audit route — keep for backwards compat */}
         <Route path="/audit" element={
           <ConsoleShell>
             <AuditLog />
           </ConsoleShell>
         } />
-        {/* Console routes */}
         <Route path="/" element={
           <ConsoleShell>
             <Overview />
@@ -126,7 +128,15 @@ export default function App() {
           </ConsoleShell>
         } />
       </Routes>
-      <TimerHUD firmId={FIRM_ID} attorneyId={ATTORNEY_ID} />
+      {!hideHud && <TimerHUD firmId={FIRM_ID} attorneyId={ATTORNEY_ID} />}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 }
