@@ -30,7 +30,7 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 | "Small law firms lose time in gaps" hook | **Cut** | Sales pitch language |
 | "Dana didn't search her inbox" close | **Cut** | Sales pitch language |
 | Maintenance panel at 1:44 | **Move to 0:00** | This is the autonomous action proof — lead with it |
-| Rivera ESCALATION + source email | **Keep** | Shows declarative intent: agent escalated instead of guessing |
+| Mercer ESCALATION + court order source | **Keep** | Shows declarative intent: agent escalated instead of guessing |
 | Sweep narration (4 sub-agents) | **Keep, reframe** | Lead with ADK coordinator vocabulary, not feature description |
 | Audit trail | **Keep** | Production-grade proof |
 
@@ -60,8 +60,8 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 | 0:00–0:12 | `/clients/mercer-industries` maintenance panel | Hold — both headers readable | Architecture hook (26 words) |
 | 0:12–0:20 | Agent Console | Navigate, click Run Closeout | "ADK coordinator dispatching" (14 words) |
 | 0:20–1:07 | Timeline loading | Do not touch | 4 sub-agents + routing (98 words) |
-| 1:07–1:20 | Brief | Scroll: Rivera → Acme → Whitmore | "Coordinator output" (29 words) |
-| 1:20–1:37 | ResolvePanel + source email | Click Rivera → View source email | "Declarative decision: escalate" (36 words) |
+| 1:07–1:20 | Brief | Scroll: Mercer → Acme → Whitmore | "Coordinator output" (29 words) |
+| 1:20–1:37 | ResolvePanel + court order source | Click Mercer deadline → View source | "Declarative decision: escalate" (32 words) |
 | 1:37–1:47 | AuditEventDrawer | Click Verify, hold 2s on audit_event_id | "CREATE-only, legal_defensibility" (25 words) |
 | 1:47–1:54 | Close modal | — | Architecture close (12 words) |
 | 1:54–2:00 | Title card | Static | Silent |
@@ -78,7 +78,7 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 | Coordinator trigger | 0:12–0:20 (8s) | 17 | 14 |
 | Sweep | 0:20–1:07 (47s) | 102 | 98 |
 | Brief | 1:07–1:20 (13s) | 28 | 29 |
-| Rivera | 1:20–1:37 (17s) | 37 | 36 |
+| Mercer | 1:20–1:37 (17s) | 37 | 32 |
 | Audit | 1:37–1:47 (10s) | 22 | 25 |
 | Close | 1:47–1:54 (7s) | 15 | 12 |
 | **Total** | **114s narrated** | **247** | **240** |
@@ -118,7 +118,7 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 **NARRATOR:** *(98 words)*
 > "classify_signal() — a deterministic Python function — returns a SignalType enum and routes to sub-agents. Gemini is never asked which agent to call. Routing is a Python dict.
 >
-> Billing sub-agent: seven pre-bill scrubber rules — forbidden phrases, round-hour anomalies, missing narratives. Deadline sub-agent: for Rivera v. Holbrook, Gemini is extracting a due date from opposing counsel email right now — no court order exists in Firestore. Comms sub-agent: MCP-compatible Gmail and Calendar adapters feed FactPackets into Gemini for source-grounded client update drafts. Anomaly sub-agent: 13 deterministic detectors, severity-scored.
+> Billing sub-agent: seven pre-bill scrubber rules — forbidden phrases, round-hour anomalies, missing narratives. Deadline sub-agent: Mercer v. Dunlap — HARD_LEGAL court deadline, 6 days out, unconfirmed. Escalation fires on any HARD_LEGAL deadline without attorney acknowledgment inside the window. Comms sub-agent: MCP-compatible Gmail and Calendar adapters feed FactPackets into Gemini for source-grounded client update drafts. Anomaly sub-agent: 13 deterministic detectors, severity-scored.
 >
 > State machine transitions enforced by VALID_TRANSITIONS dict. Every Firestore write goes through the tool layer and calls log_audit_event(). Agents never write directly."
 
@@ -130,25 +130,25 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 
 ### 1:07–1:20 — Brief appears, three callouts
 
-**SCREEN:** Timeline complete. Brief populated. Scroll slowly: Rivera → Acme → Whitmore.
+**SCREEN:** Timeline complete. Brief populated. Scroll slowly: Mercer → Acme → Whitmore.
 
 **NARRATOR:** *(29 words)*
-> "Coordinator output — the closeout brief. Three escalations: Rivera v. Holbrook, ESCALATION, SOURCE CONFLICT. Acme Commercial — 92% budget, CRITICAL. Whitmore Group — 16 days without client contact."
+> "Coordinator output — the closeout brief. Three items: Mercer v. Dunlap — ESCALATION, 6 days unconfirmed. Acme Commercial — 82% budget, WARN. Whitmore Group — 16 days without client contact."
 
 **ACTION:** 1-second pause on each item as you name it.
 
 ---
 
-### 1:20–1:37 — Rivera: declarative intent in action
+### 1:20–1:37 — Mercer: declarative intent in action
 
-**ACTION:** Click Rivera deadline item → modal opens → click "View source email."
+**ACTION:** Click Mercer v. Dunlap deadline item → modal opens.
 
 **[verify]** ProofBlock is open by default — Gate row shows ESCALATION in red. "What will be logged" audit panel visible above Verify button.
 
-**SCREEN:** Source email body. From: jcolbert@colbertmarsh.com. "by tomorrow (Friday), June 26, 2026" readable.
+**SCREEN:** ResolvePanel open. Source excerpt from Cuyahoga County court order visible. "no later than July 1, 2026" readable.
 
-**NARRATOR:** *(36 words)*
-> "Deadline agent: source conflict — opposing counsel email only, no court order in Firestore. Gemini extracted the date. Declarative decision: escalate, do not auto-confirm from a single external source. Source visible. Reasoning traceable."
+**NARRATOR:** *(32 words)*
+> "Deadline agent: HARD_LEGAL — Mercer v. Dunlap, 6 days out, unconfirmed. Source is a court order. Declarative decision: escalate — HARD_LEGAL deadlines never auto-confirmed without attorney acknowledgment. Source visible. Reasoning traceable."
 
 ---
 
@@ -189,7 +189,7 @@ github.com/emtcmca/litt
 ## Pacing Notes
 
 - **0:00–0:12 is the most important scene change from v2.** Open on the maintenance panel showing work already done autonomously. This answers the judge's first question ("what does the agent actually *do*?") before the sweep even runs.
-- **"Declarative intent" is the frame for Rivera.** The old script called it "proof of safety." The judge's vocabulary from the guide is "declarative intent." The agent decided to escalate — not a rule, a decision.
+- **"Declarative intent" is the frame for Mercer.** The old script called it "proof of safety." The judge's vocabulary from the guide is "declarative intent." The agent decided to escalate — not a rule, a decision.
 - **Use ADK vocabulary explicitly:** "coordinator," "sub-agent," "classify_signal()," "SignalType enum," "VALID_TRANSITIONS dict." Judges score this.
 - **MCP gets one mention.** The guide weights MCP heavily. Work in: "The comms sub-agent uses MCP-compatible ingestion adapters for Gmail and Calendar." One sentence during sweep narration is sufficient — judges notice it.
 - **Do not use product language during the sweep.** "Billing agent is protecting the firm's revenue" is sales copy. "Billing agent is running 7 pre-bill scrubber rules" is architecture.
@@ -204,9 +204,9 @@ github.com/emtcmca/litt
 - [ ] Agent Console — `DEMO MODE — strand-okafor — 2026-06-25` banner visible
 - [ ] "Run Closeout" button click visible
 - [ ] Timeline loading state (not blank screen)
-- [ ] Rivera ESCALATION with amber badge in timeline
-- [ ] Rivera `SOURCE CONFLICT` badge in modal header
-- [ ] Source email body — from: jcolbert@colbertmarsh.com, "tomorrow (Friday), June 26" readable
+- [ ] Mercer v. Dunlap ESCALATION badge in brief list
+- [ ] ResolvePanel — Gate row shows ESCALATION in red, ProofBlock open by default
+- [ ] Source excerpt — "no later than July 1, 2026" from Cuyahoga County court order readable
 - [ ] AuditEventDrawer — `audit_event_id` + tier: legal_defensibility readable (hold 2s)
 - [ ] Title card — "Track 1 — Net-New Agents" + full stack legible
 
@@ -317,7 +317,7 @@ Download from blackmagicdesign.com. Create project "Litt Demo."
 4. **Trim** head (2s buffer) and tail. Hard cap: 1:58–1:59 after render
 5. **Sync audio** (Option B/C): align narration to visual action frame-precisely
    - "Coordinator dispatches sub-agents" → aligns to click of Run Closeout
-   - "Rivera, SOURCE CONFLICT" → aligns to Rivera card appearing in timeline
+   - "Mercer, ESCALATION" → aligns to Mercer card appearing in brief
 6. **Set audio level:** narration at -12dB peak. Background music at -25dB if used.
 
 ### Lower-third labels (recommended — judges notice technical callouts)
@@ -329,8 +329,8 @@ Drag "Text+" from Effects Library onto video track. Small, bottom-left, 2–4 se
 | `Google ADK — Coordinator + 4 Sub-Agents` | 0:18 — sweep starts |
 | `MCP-compatible Gmail + Calendar adapters` | ~0:45 — comms sub-agent mentioned |
 | `classify_signal() → SignalType enum` | ~0:25 — routing explained |
-| `Gemini 2.5 Pro — live date extraction` | When Rivera appears in brief |
-| `SOURCE CONFLICT — escalated, not auto-applied` | Rivera modal open |
+| `HARD_LEGAL · 6 days · unconfirmed` | When Mercer appears in brief |
+| `ESCALATION — escalated, not auto-confirmed` | Mercer modal open |
 | `CREATE-only · tier: legal_defensibility` | AuditEventDrawer visible |
 | `SAFE → auto-applied · JUDGMENT → held` | Maintenance panel at start |
 
