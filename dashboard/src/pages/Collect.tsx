@@ -33,7 +33,7 @@ const CHECK_NAME_MAP: Record<string, string> = {
 };
 
 function money(n: number) {
-  return '$' + n.toLocaleString();
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function deriveScrubberRules(items: BriefTimeEntryItem[]) {

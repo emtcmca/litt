@@ -235,7 +235,7 @@ def get_budgets(firm_id: str):
             result.append({
                 "client_id":       client_id,
                 "client_name":     client.get("name", client_id),
-                "utilization_pct": float(util.utilization_pct),
+                "utilization_pct": round(float(util.utilization_pct) * 100, 1),
                 "billed_to_date":  float(util.billed_to_date),
                 "approved_unbilled": float(util.approved_unbilled),
                 "total_committed": float(util.total_committed),

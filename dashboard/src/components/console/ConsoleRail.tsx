@@ -92,8 +92,11 @@ export function ConsoleRail() {
 
       {/* brand */}
       <div style={{ padding: '18px 18px 14px', borderBottom: `1px solid ${BORDER}` }}>
-        <img src="/icons-logo/litt_logo_main_no_tagline.png" alt="Litt" style={{ height: 28, display: 'block' }} />
-        <Mono style={{ fontSize: 10.5, color: '#9DA89A', marginTop: 6 }}>{FIRM_NAME}</Mono>
+        <img src="/icons-logo/litt_logo_main_no_tagline.png" alt="Litt" style={{ height: 52, display: 'block', filter: 'invert(1)', mixBlendMode: 'screen' }} />
+        <div style={{ marginTop: 12 }}>
+          <Mono style={{ fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '.1em', color: '#8A9688', display: 'block', marginBottom: 3 }}>Client firm</Mono>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#BFB89E', fontFamily: 'var(--font-sans)', display: 'block' }}>{FIRM_NAME}</span>
+        </div>
       </div>
 
       {/* nav */}

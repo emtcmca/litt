@@ -8,7 +8,7 @@ import { getBudgets } from '../api';
 const FIRM_ID = 'strand-okafor';
 const WARN_PCT = 75, CRIT_PCT = 90;
 
-function money(n: number) { return '$' + n.toLocaleString(); }
+function money(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 function BudgetRow({ item, last }: { item: BudgetUtilizationItem; last: boolean }) {
   const navigate = useNavigate();

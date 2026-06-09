@@ -103,7 +103,7 @@ export function EmailPreview() {
           <EmailItem key={b.client_id} accent="var(--color-border-warning)">
             <p style={{ margin: '0 0 4px', fontWeight: 500 }}>{b.client_name}</p>
             <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 12 }}>
-              ${b.total_committed.toLocaleString()} / ${b.budget_cap.toLocaleString()} ({b.utilization_pct.toFixed(0)}%)
+              ${b.total_committed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / ${b.budget_cap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({b.utilization_pct.toFixed(1)}%)
             </p>
           </EmailItem>
         ))}

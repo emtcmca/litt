@@ -89,7 +89,7 @@ function deriveBooksFromSections(s: BriefSections): BookCard[] {
   const brOver  = br.items.filter(i => i.alert_status === 'WARN' || i.alert_status === 'CRITICAL').length;
   const brWorse = br.items.length > 0 ? br.items.reduce((mx, i) => i.utilization_pct > mx.utilization_pct ? i : mx, br.items[0]) : null;
   const brLine  = brOver > 0 && brWorse
-    ? `${brOver} client${brOver !== 1 ? 's' : ''} over 75% · ${brWorse.client_name.split(' ')[0]} ${brWorse.utilization_pct}%`
+    ? `${brOver} client${brOver !== 1 ? 's' : ''} over 75% · ${brWorse.client_name.split(' ')[0]} ${brWorse.utilization_pct.toFixed(1)}%`
     : `${br.count} clients · all within budget`;
 
   // Clients & comms
