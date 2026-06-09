@@ -17,7 +17,7 @@ const DETECTORS: [string, number][] = [
 
 // Static cleared list — brief has no cleared_today count in v1.x
 const CLEARED = [
-  { what: 'Duplicate of te-014 — auto-merged', when: '4:31 PM', by: 'billing_agent' },
+  { what: 'Duplicate billing entry — merged and logged', when: '4:31 PM', by: 'Billing agent' },
   { what: 'Round-hours entry te-009 — session log matched', when: '2:02 PM', by: 'Dana Strand' },
 ];
 
@@ -81,7 +81,7 @@ export function Anomalies() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Anomalies</h1>
-            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.gold, background: `${T.gold}1a`, border: `1px solid ${T.gold}44`, borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>watch</span>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.gold, background: `${T.gold}1a`, border: `1px solid ${T.gold}44`, borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>Anomaly monitor</span>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '64ch' }}>
             Thirteen deterministic detectors run over every billing and operational pattern, scored by severity × confidence. Nothing is dismissed silently — clearing an anomaly always requires a reason on the record.

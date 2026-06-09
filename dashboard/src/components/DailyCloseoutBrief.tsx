@@ -153,6 +153,13 @@ const GATE_SPEC: Record<GateLevel, CSSProperties> = {
   AUTO_SAFE:       { background: 'rgba(29,158,117,.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,.26)' },
 };
 
+const GATE_DISPLAY: Record<GateLevel, string> = {
+  ESCALATION:      'Attorney must decide',
+  REVIEW_REQUIRED: 'Review required',
+  BLOCKED:         'Action held',
+  AUTO_SAFE:       'Logged safely',
+};
+
 function GateBadge({ gate }: { gate: GateLevel }) {
   return (
     <span style={{
@@ -169,7 +176,7 @@ function GateBadge({ gate }: { gate: GateLevel }) {
       alignSelf: 'start',
       ...GATE_SPEC[gate],
     }}>
-      {gate}
+      {GATE_DISPLAY[gate] ?? gate}
     </span>
   );
 }
@@ -343,7 +350,7 @@ function buildDecisionRows(
       title:       isConflict
                  ? `${d.matter_name} — source conflict · ${d.days_out}d`
                  : isEsc
-                 ? `${d.matter_name} — unconfirmed HARD_LEGAL deadline`
+                 ? `${d.matter_name} — unconfirmed court/legal deadline`
                  : `${d.matter_name} — ${d.days_out}d deadline${d.is_unconfirmed ? ' unconfirmed' : ''}`,
       description: isConflict
                  ? `${d.description}. ${d.days_out} day${d.days_out !== 1 ? 's' : ''} until ${d.due_date}. Source: opposing counsel communication only — no confirming court order found in firm records.`
@@ -621,15 +628,15 @@ function NavPanel({ brief, decisionCount, activeView, onViewChange, firmName: _f
       <div style={{ background: 'rgba(255,253,248,.72)', border: `1px solid ${C.line}`, borderRadius: 12, padding: 12, display: 'grid', gap: 10 }}>
         <span style={labelStyle}>Gate model</span>
         {([
-          ['ESCALATION',      C.danger,  'Cannot resolve alone.'],
-          ['REVIEW_REQUIRED', C.gold,    'Attorney judgment needed.'],
-          ['BLOCKED',         C.forest,  'Prepared, not sent.'],
-          ['AUTO_SAFE',       C.teal,    'Safe to log or monitor.'],
-        ] as [string, string, string][]).map(([gate, color, desc]) => (
-          <div key={gate} style={{ display: 'grid', gridTemplateColumns: '10px 1fr', gap: 8, alignItems: 'start' }}>
+          ['Attorney must decide', C.danger,  'Cannot resolve alone.'],
+          ['Review required',      C.gold,    'Attorney judgment needed.'],
+          ['Action held',          C.forest,  'Prepared, not sent.'],
+          ['Logged safely',        C.teal,    'Safe to log or monitor.'],
+        ] as [string, string, string][]).map(([label, color, desc]) => (
+          <div key={label} style={{ display: 'grid', gridTemplateColumns: '10px 1fr', gap: 8, alignItems: 'start' }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: color, marginTop: 3, flexShrink: 0 }} />
             <div>
-              <strong style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, color: C.ink }}>{gate}</strong>
+              <strong style={{ display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, color: C.ink }}>{label}</strong>
               <span style={{ display: 'block', color: C.muted, fontSize: 11, lineHeight: 1.25 }}>{desc}</span>
             </div>
           </div>
@@ -1137,6 +1144,12 @@ interface ProofRailProps {
 
 function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decisionCount, traceRef, sweepError, isOpen, onToggle }: ProofRailProps) {
   const agentNames = ['deadline_agent', 'billing_agent', 'comms_agent', 'anomaly_agent'];
+  const agentDisplayNames: Record<string, string> = {
+    deadline_agent: 'Deadline agent',
+    billing_agent:  'Billing agent',
+    comms_agent:    'Comms agent',
+    anomaly_agent:  'Anomaly agent',
+  };
   const lastAgent  = displayed[displayed.length - 1]?.agent_name ?? '';
 
   const agentStatus = (name: string): 'ready' | 'running' | 'done' => {
@@ -1236,8 +1249,8 @@ function ProofRail({ isPlaying, isSweepComplete, displayed, gateCounts, decision
               boxShadow:    isActive ? '0 0 0 2px rgba(158,225,199,.1)' : undefined,
               transition:   'border-color 0.2s ease, box-shadow 0.2s ease',
             }}>
-              <span style={{ color: C.auditMuted, fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {name}
+              <span style={{ color: C.auditMuted, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.04em' }}>
+                {agentDisplayNames[name] ?? name}
               </span>
               <strong style={{ color: '#F5F0DC', fontSize: 14 }}>{status}</strong>
             </div>

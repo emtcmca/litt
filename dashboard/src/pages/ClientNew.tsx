@@ -396,8 +396,8 @@ export function ClientNew() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Icon name="refresh" size={14} color={T.auditAccent} />
-              <Mono style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em', color: T.auditAccent }}>
-                Litt also onboards automatically
+              <Mono style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.auditAccent }}>
+                Litt can also find new clients automatically
               </Mono>
             </div>
             <p style={{ margin: 0, fontSize: 13.5, color: '#EFEBDB', lineHeight: 1.55 }}>

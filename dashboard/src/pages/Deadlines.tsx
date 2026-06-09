@@ -181,7 +181,7 @@ function CadenceLadder({ items }: { items: PinnedDeadline[] }) {
         </Mono>
       </div>
       <p style={{ margin: '0 0 13px', fontSize: 11.5, color: T.faint, lineHeight: 1.45 }}>
-        HARD_LEGAL deadlines surface as they cross each window. Litt re-fires until you confirm.
+        Court/legal deadlines surface as they cross each window. Litt re-fires until you confirm.
       </p>
       <div style={{ display: 'grid', gap: 7 }}>
         {CADENCE.map(c => {
@@ -222,7 +222,7 @@ function CadenceLadder({ items }: { items: PinnedDeadline[] }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, paddingTop: 11, borderTop: `1px solid ${T.soft}` }}>
         <Icon name="clock" size={12} color={T.faint} />
         <Mono style={{ fontSize: 10.5, color: T.faint }}>
-          {hardLegal.filter(d => !cadenceTier(d.daysOut)).length} HARD_LEGAL beyond 14d · watching
+          {hardLegal.filter(d => !cadenceTier(d.daysOut)).length} court/legal beyond 14d — watching
         </Mono>
       </div>
     </div>
@@ -399,11 +399,11 @@ export function Deadlines() {
               color: T.gold, background: 'rgba(169,132,53,.1)',
               border: '1px solid rgba(169,132,53,.28)', borderRadius: 5, padding: '2px 7px',
             }}>
-              core job
+              Deadline monitor
             </Mono>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '66ch' }}>
-            Every court date, contractual trigger, and internal due date Litt is watching. A HARD_LEGAL deadline can't pass unseen — the escalation cadence surfaces it, and Litt holds it until you've confirmed you own it.
+            Every court date, contractual trigger, and internal due date Litt is watching. A court/legal deadline can't pass unseen — the escalation cadence surfaces it, and Litt holds it until you've confirmed you own it.
           </p>
         </div>
 
@@ -494,10 +494,10 @@ export function Deadlines() {
                 How it runs
               </Mono>
               <div style={{ fontSize: 12.5, color: '#E6E2D2', lineHeight: 1.5 }}>
-                <strong style={{ color: T.brass, fontWeight: 600 }}>deadline_agent</strong> computes days-remaining with a Python function and applies the cadence by class. No model decides whether a date matters.
+                <strong style={{ color: T.brass, fontWeight: 600 }}>Deadline agent</strong> computes days-remaining with a Python function and applies the cadence by class. No model decides whether a date matters.
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 4 }}>
-                {['work: deterministic', 'llm: none', 'gate: ESCALATION'].map(t => (
+                {['work: deterministic', 'llm: none', 'gate: attorney must decide'].map(t => (
                   <Mono key={t} style={{
                     fontSize: 10, color: T.auditAccent,
                     background: 'rgba(158,225,199,.08)',

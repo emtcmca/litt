@@ -6,6 +6,13 @@ import { Icon } from '../components/ui/Icon';
 import { ClientsSubnav } from '../components/clients/ClientsSubnav';
 import { approveComm, dismissInbound, getInbound, getRelationships, snoozeInbound } from '../api';
 import commitmentsRaw from '../demo-fixtures/commitments.json';
+import { agentLabel } from '../labels';
+
+function urgencyLabel(u: string) {
+  if (u === 'HIGH') return 'High priority';
+  if (u === 'MEDIUM') return 'Medium priority';
+  return 'Low priority';
+}
 
 const FIRM_ID     = 'strand-okafor';
 const ATTORNEY_ID = 'dana-strand';
@@ -103,7 +110,6 @@ function InboundCard({ msg, expanded, onToggle, onActioned }: {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
             <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{msg.from_name}</span>
-            <span style={{ fontSize: 10.5, color: T.faint, fontFamily: 'var(--font-mono)' }}>{msg.client_id} · {msg.matter_id}</span>
             {msg.cross_agent && (
               <span style={{ fontSize: 9.5, fontWeight: 600, color: T.gold, background: 'rgba(169,132,53,.12)', border: '1px solid rgba(169,132,53,.33)', borderRadius: 5, padding: '1px 6px', fontFamily: 'var(--font-mono)' }}>→ Billing</span>
             )}
@@ -112,7 +118,7 @@ function InboundCard({ msg, expanded, onToggle, onActioned }: {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <div style={{ textAlign: 'right' as const }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: tone, textTransform: 'uppercase' as const, letterSpacing: '.04em', display: 'block', fontFamily: 'var(--font-mono)' }}>{msg.urgency}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: tone, display: 'block', fontFamily: 'var(--font-mono)' }}>{urgencyLabel(msg.urgency)}</span>
             {hasDraft && <span style={{ fontSize: 10, color: T.teal, fontFamily: 'var(--font-mono)' }}>reply ready</span>}
           </div>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: T.forest, fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap' as const }}>
@@ -133,11 +139,11 @@ function InboundCard({ msg, expanded, onToggle, onActioned }: {
             <span style={{ width: 38, height: 38, borderRadius: 999, background: T.wash2, border: `1px solid ${T.line}`, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: T.muted, fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{initials(msg.from_name)}</span>
             <div style={{ flex: 1, minWidth: 180 }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: T.ink }}>{msg.from_name} <span style={{ fontSize: 12, fontWeight: 400, color: T.faint }}>· {fmtRole(msg.from_role)}</span></div>
-              <span style={{ fontSize: 11, color: T.muted, fontFamily: 'var(--font-mono)', display: 'block' }}>{msg.client_id} · {msg.matter_id} · {fmtDate(msg.received_at)}</span>
+              <span style={{ fontSize: 11, color: T.muted, fontFamily: 'var(--font-mono)', display: 'block' }}>{fmtDate(msg.received_at)}</span>
             </div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 999, background: `${tone}12`, border: `1px solid ${tone}38` }}>
               <span style={{ width: 6, height: 6, borderRadius: 999, background: tone }} />
-              <span style={{ fontSize: 10.5, fontWeight: 600, color: tone, fontFamily: 'var(--font-mono)' }}>{msg.urgency} · awaiting {msg.wait_days}d</span>
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: tone, fontFamily: 'var(--font-mono)' }}>{urgencyLabel(msg.urgency)} · awaiting {msg.wait_days}d</span>
             </span>
           </div>
 
@@ -168,7 +174,7 @@ function InboundCard({ msg, expanded, onToggle, onActioned }: {
                     <span style={{ fontSize: 12.5, color: T.ink, lineHeight: 1.4 }}>
                       {a.text}
                       {a.handoff_agent && (
-                        <span style={{ fontSize: 9.5, fontWeight: 600, color: T.danger, background: 'rgba(155,45,35,.08)', border: '1px solid rgba(155,45,35,.24)', borderRadius: 5, padding: '1px 6px', marginLeft: 6, whiteSpace: 'nowrap' as const, fontFamily: 'var(--font-mono)' }}>→ {a.handoff_agent}</span>
+                        <span style={{ fontSize: 9.5, fontWeight: 600, color: T.danger, background: 'rgba(155,45,35,.08)', border: '1px solid rgba(155,45,35,.24)', borderRadius: 5, padding: '1px 6px', marginLeft: 6, whiteSpace: 'nowrap' as const, fontFamily: 'var(--font-mono)' }}>Also affects {agentLabel(a.handoff_agent)}</span>
                       )}
                     </span>
                   </div>
@@ -420,7 +426,7 @@ export function Relationships() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Clients & comms</h1>
-            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>relationships</span>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>Client communications</span>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '70ch' }}>
             Litt watches your inbox and your matters. It surfaces the client messages that need a reply — summarizing each, pulling out the action items, and drafting what you'd send — and it flags the relationships going quiet. Reading is read-only; every draft is held for your signature.

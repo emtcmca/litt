@@ -1187,3 +1187,38 @@
 - Section heading exists in README
 - No existing content removed
 - Renders as valid markdown
+
+---
+
+# Litt — v1.1.4 UI Label & Polish Pass
+
+**Sprint:** Hackathon demo prep — complete  
+**Status key:** `[ ]` not started · `[~]` in progress · `[x]` done
+
+## Goal
+Replace raw technical enum values (HARD_LEGAL, deadline_agent, ESCALATION, etc.) with
+human-readable labels across all dashboard pages. Optimize for hackathon judging.
+
+## Completed
+
+- [x] V114-01 `dashboard/src/labels.ts` — global enum→display label mapper (new file)
+- [x] V114-02 `dashboard/index.html` — title `dashboard-temp` → `Litt | Strand & Okafor`
+- [x] V114-03 `ConsoleRail.tsx` — logo wordmark → PNG asset; status copy cleaned
+- [x] V114-04 `Overview.tsx` — HARD_LEGAL → court/legal; copy fixes
+- [x] V114-05 `Brief.tsx` — badge sentence-case; schedule text; hero footer; KIND_LABEL
+- [x] V114-06 `resolveTypes.ts` — KIND_META all sentence-cased
+- [x] V114-07 `AuditLedger.tsx` — AGENT_NAMES humanized
+- [x] V114-08 `Integrations.tsx` — badge uppercase removed
+- [x] V114-09 `Policy.tsx` — badge, rule labels, firm-locked badge, "Firm floor" copy
+- [x] V114-10 `Anomalies.tsx` — badge; CLEARED agent names; entity_id out of elevated callout
+- [x] V114-11 `Deadlines.tsx` — badge; HARD_LEGAL → court/legal; agent display; gate tag
+- [x] V114-12 `Clients.tsx` — badge sentence-case
+- [x] V114-13 `DailyCloseoutBrief.tsx` — GATE_DISPLAY map; ProofRail agent names; gate legend; DecisionRow title
+- [x] V114-14 `EmailPreview.tsx` — clsLabel on classification; raw IDs removed; BLOCK/WARN → Block/Flag; version → v1.1.4
+- [x] V114-15 `Budgets.tsx` — badge sentence-case
+- [x] V114-16 `Relationships.tsx` — badge; raw client_id/matter_id removed; urgency sentence-case; handoff_agent humanized
+- [x] V114-17 `Client.tsx` — Sec labels sentence-case; textTransform removed from Sec component
+- [x] V114-18 `MaintenancePanel.tsx` — HELD FOR YOUR REVIEW / APPLIED AUTOMATICALLY → sentence case
+- [x] V114-19 `ClientNew.tsx` — LITT ALSO ONBOARDS AUTOMATICALLY → human copy
+- [x] V114-20 `AgentConsole.tsx` — badge uppercase removed; HARD_LEGAL blurb → court/legal
+- [x] V114-21 `buildDescriptor.ts` — clsLabel() on classification in stakes text

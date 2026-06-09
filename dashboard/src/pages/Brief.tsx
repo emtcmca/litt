@@ -131,14 +131,19 @@ function deriveDecisions(sections: BriefSections): Decision[] {
 }
 
 const KIND_LABEL: Record<string, string> = {
-  deadline: 'deadline', billing: 'billing', anomaly: 'anomaly',
-  'budget risk': 'budget risk', 'client silence': 'client silence',
+  deadline:         'Deadline',
+  billing:          'Billing & WIP',
+  anomaly:          'Anomaly',
+  'budget risk':    'Budget risk',
+  'client silence': 'Quiet client',
+  inbound:          'Client email',
+  compound:         'Compound risk',
 };
 
 const SCHEDULES = [
   { k: 'daily',   label: 'Daily closeout',          time: '5:00 PM',    sub: 'Every business day' },
   { k: 'morning', label: 'Morning brief',            time: '8:00 AM',    sub: 'Start-of-day scan' },
-  { k: 'events',  label: 'On significant events',    time: 'Real-time',  sub: 'New HARD_LEGAL deadline, scrubber block…' },
+  { k: 'events',  label: 'On significant events',    time: 'Real-time',  sub: 'New court deadline or billing block' },
 ] as const;
 
 export function Brief() {
@@ -242,7 +247,7 @@ export function Brief() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Brief</h1>
-            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>the centerpiece</span>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>Core workflow</span>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '64ch' }}>
             Litt assembles everything that needs you into one closeout — on demand, or on a schedule you set. Everything it surfaces is gated to your judgment and written to the record.
@@ -261,7 +266,7 @@ export function Brief() {
               {crit > 0 && <span style={{ color: '#F0A8A0' }}>· {crit} critical</span>}
             </div>
             <span style={{ fontSize: 11.5, color: T.auditMuted, marginTop: 6, display: 'block', fontFamily: 'var(--font-mono)' }}>
-              Next scheduled run: tomorrow 5:00 PM · 4 agents · 1 deterministic router
+              Next scheduled run: tomorrow 5:00 PM · 4 agents · deterministic routing
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 9 }}>

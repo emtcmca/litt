@@ -7,6 +7,7 @@ import type {
   BriefTimeEntryItem,
 } from '../../types';
 import type { ActionDef, ItemDescriptor, ProofData } from './resolveTypes';
+import { clsLabel } from '../../labels';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -54,8 +55,8 @@ export function buildDeadlineDescriptor(
     headline:    item.description,
     plain:       'Review the deadline details and confirm it\'s on your calendar, or extend.',
     stakes:      isEscalation
-      ? `${item.classification} — ${daysLabel} out. This deadline has not been confirmed — if missed, consequences are immediate and irreversible.`
-      : `${item.classification} — ${daysLabel} out. Confirm this deadline or extend if the date is changing.`,
+      ? `${clsLabel(item.classification)} — ${daysLabel} out. This deadline has not been confirmed — if missed, consequences are immediate and irreversible.`
+      : `${clsLabel(item.classification)} — ${daysLabel} out. Confirm this deadline or extend if the date is changing.`,
     actions:  [confirm, extend],
     version: item.version,
     proof: emptyProof({

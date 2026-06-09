@@ -104,15 +104,15 @@ export const GATE_TONE: Record<string, GateTone> = {
 // ---------------------------------------------------------------------------
 
 export const KIND_META: Record<string, { label: string; icon: IconName }> = {
-  deadline:         { label: 'DEADLINE',       icon: 'shield'  },
-  billing:          { label: 'BILLING & WIP',  icon: 'dollar'  },
-  budget:           { label: 'BUDGET RISK',    icon: 'chart'   },
-  'budget risk':    { label: 'BUDGET RISK',    icon: 'chart'   },
-  anomaly:          { label: 'ANOMALY',        icon: 'alert'   },
-  silence:          { label: 'CLIENT COMMS',   icon: 'mail'    },
-  'client silence': { label: 'CLIENT COMMS',   icon: 'mail'    },
-  inbound:          { label: 'INBOUND TRIAGE', icon: 'mail'    },
-  compound:         { label: 'COMPOUND RISK',  icon: 'shield'  },
+  deadline:         { label: 'Deadline',       icon: 'shield'  },
+  billing:          { label: 'Billing & WIP',  icon: 'dollar'  },
+  budget:           { label: 'Budget risk',    icon: 'chart'   },
+  'budget risk':    { label: 'Budget risk',    icon: 'chart'   },
+  anomaly:          { label: 'Anomaly',        icon: 'alert'   },
+  silence:          { label: 'Quiet client',   icon: 'mail'    },
+  'client silence': { label: 'Quiet client',   icon: 'mail'    },
+  inbound:          { label: 'Client email',   icon: 'mail'    },
+  compound:         { label: 'Compound risk',  icon: 'shield'  },
 };
 
 // ---------------------------------------------------------------------------

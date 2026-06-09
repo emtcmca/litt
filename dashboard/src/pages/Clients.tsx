@@ -195,7 +195,7 @@ export function Clients() {
                 color: T.teal, background: T.tealSoft,
                 border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px',
               }}>
-                roster
+                Client roster
               </Mono>
             </div>
             <p style={{ margin: '6px 0 0', fontSize: 14, color: T.muted, lineHeight: 1.5, maxWidth: '60ch' }}>

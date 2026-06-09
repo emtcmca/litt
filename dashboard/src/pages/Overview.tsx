@@ -75,7 +75,7 @@ function deriveBooksFromSections(s: BriefSections): BookCard[] {
   const hlItems = dl.items.filter(i => i.classification === 'HARD_LEGAL' && i.is_unconfirmed);
   const dlNearest = hlItems.length > 0 ? Math.min(...hlItems.map(i => i.days_out)) : null;
   const dlLine = dlUnconfirmed > 0 && dlNearest != null
-    ? `${dlUnconfirmed} unconfirmed HARD_LEGAL · nearest ${dlNearest}d`
+    ? `${dlUnconfirmed} unconfirmed court/legal · nearest ${dlNearest}d`
     : `${dl.count} tracked`;
 
   // Billing & WIP
@@ -210,7 +210,7 @@ export function Overview() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Icon name="refresh" size={14} color={T.auditAccent} />
               <span style={{ fontSize: 13, fontWeight: 600, color: '#EFEBDB' }}>Agents</span>
-              <Mono style={{ marginLeft: 'auto', fontSize: 10, color: T.auditMuted }}>see them work →</Mono>
+              <Mono style={{ marginLeft: 'auto', fontSize: 10, color: T.auditMuted }}>See agents work →</Mono>
             </div>
             <p style={{ margin: '7px 0 0', fontSize: 12, color: T.auditMuted, lineHeight: 1.4 }}>
               4 sub-agents + a deterministic router · last sweep {time}
@@ -245,7 +245,7 @@ export function Overview() {
               <Mono style={{ marginLeft: 'auto', fontSize: 10, color: T.faint }}>manage →</Mono>
             </div>
             <p style={{ margin: '7px 0 0', fontSize: 12, color: T.muted, lineHeight: 1.4 }}>
-              Gmail & Calendar connected via MCP · LEDES export ready
+              Gmail and Calendar connected · e-billing export ready
             </p>
           </button>
         </div>

@@ -14,10 +14,10 @@ const TIER_META: Record<AuditTier, { label: string; human: string; color: string
 
 const AGENT_NAMES: Record<string, string> = {
   coordinator:    'Coordinator',
-  billing_agent:  'billing_agent',
-  deadline_agent: 'deadline_agent',
-  comms_agent:    'comms_agent',
-  anomaly_agent:  'anomaly_agent',
+  billing_agent:  'Billing agent',
+  deadline_agent: 'Deadline agent',
+  comms_agent:    'Comms agent',
+  anomaly_agent:  'Anomaly agent',
 };
 
 function isLittActor(actor: string): boolean {

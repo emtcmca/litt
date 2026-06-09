@@ -481,7 +481,7 @@ export function MaintenancePanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.gold }} />
             <Mono style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: '.06em' }}>
-              HELD FOR YOUR REVIEW
+              Held for your review
             </Mono>
             {held.length > 0 && (
               <span style={{
@@ -529,7 +529,7 @@ export function MaintenancePanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.teal }} />
             <Mono style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: '.06em' }}>
-              APPLIED AUTOMATICALLY
+              Applied automatically
             </Mono>
             <Mono style={{ fontSize: 10, color: T.faint, marginLeft: 'auto' }}>
               safe · already logged

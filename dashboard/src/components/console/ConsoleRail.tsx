@@ -92,10 +92,8 @@ export function ConsoleRail() {
 
       {/* brand */}
       <div style={{ padding: '18px 18px 14px', borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-.03em', color: '#EFEBDB' }}>
-          Litt<span style={{ color: T.teal }}>.</span>
-        </div>
-        <Mono style={{ fontSize: 10.5, color: '#9DA89A', marginTop: 3 }}>{FIRM_NAME}</Mono>
+        <img src="/icons-logo/litt_logo_main_no_tagline.png" alt="Litt" style={{ height: 28, display: 'block' }} />
+        <Mono style={{ fontSize: 10.5, color: '#9DA89A', marginTop: 6 }}>{FIRM_NAME}</Mono>
       </div>
 
       {/* nav */}
@@ -167,7 +165,7 @@ export function ConsoleRail() {
             boxShadow: `0 0 6px ${T.auditAccent}`,
             display: 'inline-block',
           }} />
-          <Mono style={{ fontSize: 10.5, color: '#9DA89A' }}>All systems nominal</Mono>
+          <Mono style={{ fontSize: 10.5, color: '#9DA89A' }}>Demo systems ready</Mono>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Mono style={{ fontSize: 10, color: '#7E8A7C' }}>Last sweep</Mono>
@@ -178,19 +176,7 @@ export function ConsoleRail() {
           <Mono style={{ fontSize: 10, color: T.brass }}>2 connected</Mono>
         </div>
         {/* demo date anchor */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-          <span style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9, color: T.brass,
-            background: 'rgba(214,193,129,.18)',
-            border: '1px solid rgba(214,193,129,.45)',
-            borderRadius: 3, padding: '1px 5px',
-            letterSpacing: '.04em',
-          }}>
-            DEMO
-          </span>
-          <Mono style={{ fontSize: 10, color: T.brass }}>· {DEMO_DATE_DISPLAY}</Mono>
-        </div>
+        <Mono style={{ fontSize: 10, color: T.brass, marginTop: 2 }}>Demo date: {DEMO_DATE_DISPLAY}</Mono>
       </div>
 
       {/* user switcher */}

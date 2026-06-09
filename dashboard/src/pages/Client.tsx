@@ -58,7 +58,7 @@ function fmtTime(iso: string): string {
 function Sec({ label, count }: { label: string; count?: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-      <Mono style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em', color: T.muted }}>
+      <Mono style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.muted }}>
         {label}
       </Mono>
       {count != null && count > 0 && (
@@ -437,7 +437,7 @@ export function Client() {
         {/* ── Needs Attention + Health ──────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
           <div>
-            <Sec label="NEEDS ATTENTION" count={escalationCount > 0 ? escalationCount : undefined} />
+            <Sec label="Needs attention" count={escalationCount > 0 ? escalationCount : undefined} />
             <div style={{ display: 'grid', gap: 9 }}>
               {decisions.length === 0 ? (
                 <Mono style={{ fontSize: 12.5, color: T.faint }}>
@@ -463,7 +463,7 @@ export function Client() {
 
         {/* ── All Deadlines ─────────────────────────────────────────────── */}
         <div>
-          <Sec label="ALL DEADLINES" count={deadlines.length > 0 ? deadlines.length : undefined} />
+          <Sec label="Deadlines" count={deadlines.length > 0 ? deadlines.length : undefined} />
           <div style={{
             background: T.surface, border: `1px solid ${T.line}`,
             borderRadius: 14, overflow: 'hidden',
@@ -530,7 +530,7 @@ export function Client() {
 
         {/* ── Billing · WIP · Budget ────────────────────────────────────── */}
         <div>
-          <Sec label="BILLING · WIP · BUDGET" />
+          <Sec label="Billing · WIP · Budget" />
           <div style={{
             background: T.surface, border: `1px solid ${T.line}`,
             borderRadius: 14, overflow: 'hidden',
@@ -687,7 +687,7 @@ export function Client() {
 
         {/* ── Inbound ───────────────────────────────────────────────────── */}
         <div>
-          <Sec label="INBOUND" count={inbound.length > 0 ? inbound.length : undefined} />
+          <Sec label="Inbound" count={inbound.length > 0 ? inbound.length : undefined} />
           <div style={{ display: 'grid', gap: 8 }}>
             {inbound.length === 0 ? (
               <Mono style={{ fontSize: 12.5, color: T.faint }}>
@@ -747,7 +747,7 @@ export function Client() {
 
         {/* ── Full Audit Trail ──────────────────────────────────────────── */}
         <div>
-          <Sec label="FULL AUDIT TRAIL" />
+          <Sec label="Audit trail" />
           <div style={{
             background: T.surface, border: `1px solid ${T.line}`,
             borderRadius: 14, overflow: 'hidden',

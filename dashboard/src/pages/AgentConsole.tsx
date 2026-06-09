@@ -62,7 +62,7 @@ const COORDINATOR_META = {
 const AGENTS_META: AgentMeta[] = [
   { id: 'deadline_agent', name: 'Deadline Monitor', model: null,
     watches: 'All active deadlines · your commitments', logic: '4 escalation tiers by classification',
-    blurb: 'Computes days-remaining and applies an escalation cadence by deadline class. Surfaces unconfirmed HARD_LEGAL deadlines as critical.',
+    blurb: 'Computes days-remaining and applies an escalation cadence by deadline class. Surfaces unconfirmed court/legal deadlines as critical.',
     handledToday: 11, surfaced: 1 },
   { id: 'billing_agent', name: 'Billing Reconciliation', model: null,
     watches: 'Pending time entries · budgets', logic: 'Pre-bill scrubber (7 rules) · budget math',
@@ -704,7 +704,7 @@ export function AgentConsole() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Agent console</h1>
-              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px' }}>the engine room</span>
+              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '.04em', color: T.teal, background: T.tealSoft, border: '1px solid rgba(29,158,117,.28)', borderRadius: 5, padding: '2px 7px' }}>The engine room</span>
             </div>
             <p style={{ margin: '6px 0 0', fontSize: 13.5, color: T.muted, lineHeight: 1.5, maxWidth: '60ch' }}>
               Watch Litt think. A coordinator routes every signal to a specialist with deterministic code, the agents do the work, and anything legal is gated back to you.

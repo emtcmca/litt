@@ -25,9 +25,9 @@ const POLICY_DOMAINS: PolicyDomain[] = [
   {
     id: 'deadlines', name: 'Deadlines', icon: 'shield',
     rules: [
-      { id: 'dl_hardlegal', label: 'Confirm HARD_LEGAL deadlines', firm: 'gated', mine: 'gated', lockable: false, note: 'Malpractice-critical — firm requires confirmation.' },
-      { id: 'dl_cadence', label: 'Escalation cadence (HARD_LEGAL)', type: 'cadence', firm: '14·7·3·1d', mine: '14·7·3·1d', note: 'Days-out tiers that surface a deadline.' },
-      { id: 'dl_soft', label: 'Auto-confirm SOFT_INTERNAL deadlines', firm: 'gated', mine: 'gated', lockable: true, note: 'Firm allows automation; you keep it gated.' },
+      { id: 'dl_hardlegal', label: 'Confirm court/legal deadlines', firm: 'gated', mine: 'gated', lockable: false, note: 'Malpractice-critical — firm requires confirmation.' },
+      { id: 'dl_cadence', label: 'Escalation cadence (court/legal)', type: 'cadence', firm: '14·7·3·1d', mine: '14·7·3·1d', note: 'Days-out tiers that surface a deadline.' },
+      { id: 'dl_soft', label: 'Auto-confirm internal deadlines', firm: 'gated', mine: 'gated', lockable: true, note: 'Firm allows automation; you keep it gated.' },
     ],
   },
   {
@@ -118,13 +118,13 @@ function PolicyRuleRow({ rule, last, value, onChange }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
           <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{rule.label}</span>
           {firmLocked && (
-            <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.05em', color: T.danger, background: T.dangerSoft, border: '1px solid rgba(155,45,35,.24)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono)' }}>
-              <Icon name="lock" size={9} color={T.danger} />firm-locked
+            <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.04em', color: T.danger, background: T.dangerSoft, border: '1px solid rgba(155,45,35,.24)', borderRadius: 4, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono)' }}>
+              <Icon name="lock" size={9} color={T.danger} />Firm locked
             </span>
           )}
         </div>
         <span style={{ fontSize: 12, color: T.muted, lineHeight: 1.4, display: 'block', marginTop: 3 }}>{rule.note}</span>
-        <span style={{ fontSize: 10, color: T.faint, marginTop: 4, display: 'block', fontFamily: 'var(--font-mono)' }}>Firm floor: {rule.firm}</span>
+        <span style={{ fontSize: 10, color: T.faint, marginTop: 4, display: 'block', fontFamily: 'var(--font-mono)' }}>Firm minimum: {rule.firm}</span>
       </div>
 
       {isPosture && firmLocked && (
@@ -174,7 +174,7 @@ export function Policy() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: '-.02em', color: T.ink }}>Policy & autonomy</h1>
-            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.08em', color: T.gold, background: 'rgba(169,132,53,.1)', border: '1px solid rgba(169,132,53,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>tune</span>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.04em', color: T.gold, background: 'rgba(169,132,53,.1)', border: '1px solid rgba(169,132,53,.28)', borderRadius: 5, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>Autonomy settings</span>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 14.5, color: T.muted, lineHeight: 1.5, maxWidth: '66ch' }}>
             How much Litt does on its own. It starts fully gated — every legal action asks you first. Widen its autonomy on the safe actions as trust grows. The firm sets the floor; you can only tighten it.
