@@ -281,18 +281,6 @@ export function Brief() {
           </div>
         </section>
 
-        {/* daily closeout brief CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: T.surface, border: `1px solid ${T.line}`, borderRadius: 12, padding: '13px 18px', flexWrap: 'wrap' as const }}>
-          <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, display: 'block' }}>Daily Closeout Brief</span>
-            <span style={{ fontSize: 12, color: T.muted, marginTop: 2, display: 'block' }}>
-              This queue shows what needs a decision. The full closeout adds supporting detail, proof chains, and the complete agent log — formatted for end-of-day review.
-            </span>
-          </div>
-          <button onClick={() => navigate('/closeout')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: T.forest, color: T.brass, fontSize: 13, fontWeight: 600, padding: '10px 16px', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
-            Open full closeout <Icon name="arrow" size={13} color={T.brass} />
-          </button>
-        </div>
 
         {/* 2-col body */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16 }}>

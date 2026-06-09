@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ConsoleShell } from './components/console/ConsoleShell';
 import { Overview } from './pages/Overview';
-import { DailyCloseoutBrief } from './components/DailyCloseoutBrief';
 import { Brief } from './pages/Brief';
 import { EmailPreview } from './pages/EmailPreview';
 import { AuditLog } from './pages/AuditLog';
@@ -55,11 +54,6 @@ function AppRoutes() {
         <Route path="/brief" element={
           <ConsoleShell>
             <Brief />
-          </ConsoleShell>
-        } />
-        <Route path="/closeout" element={
-          <ConsoleShell>
-            <DailyCloseoutBrief />
           </ConsoleShell>
         } />
         <Route path="/deadlines" element={
