@@ -189,6 +189,25 @@ Five demo conditions must pass `GET /api/demo/ready` before any recording:
 
 ---
 
+## Dashboard UI Design System
+
+All dashboard components use the Litt design system. Do not introduce other palettes, fonts, or design patterns without explicit instruction.
+
+**Palette (teal-to-gold):**
+- Primary brand teal: `#0D9488` (actions, active states)
+- Secondary gold/amber: `#D97706` (accents, highlights)
+- Background: dark neutral (see existing components for exact values)
+- Apply teal for interactive elements, gold for secondary emphasis — never swap them
+
+**Typography:**
+- Body / UI text: IBM Plex Sans
+- Monospace / code / numbers: IBM Plex Mono (or system monospace)
+- Do not substitute other typefaces
+
+**Verification rule:** After any visual change, capture a screenshot and verify it matches the mockup or existing design intent before committing.
+
+---
+
 ## Submission
 
 - GitHub repo: `github.com/emtcmca/litt` (must be public)

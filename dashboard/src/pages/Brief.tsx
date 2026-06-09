@@ -44,6 +44,16 @@ const GATE_COLOR: Record<string, string> = {
   AUTO_SAFE: T.teal,
 };
 
+const KIND_COLOR: Record<string, string> = {
+  deadline:         T.danger,
+  billing:          '#C17F24',
+  anomaly:          '#B85C1A',
+  'budget risk':    '#A98435',
+  'client silence': '#6B7B6E',
+  inbound:          '#1D9E75',
+  compound:         '#7B5EAD',
+};
+
 function fmtTime(iso: string): string {
   const d = new Date(iso);
   const h = d.getUTCHours();
@@ -294,20 +304,29 @@ export function Brief() {
               <div style={{ padding: '20px 18px', fontSize: 13, color: T.faint }}>Nothing needs you right now.</div>
             )}
             {decs.map((d, i) => {
-              const col = GATE_COLOR[d.gate];
+              const isEsc  = d.gate === 'ESCALATION';
+              const isRev  = d.gate === 'REVIEW_REQUIRED';
+              const kindColor = KIND_COLOR[d.kind] ?? T.faint;
+              const borderColor = isEsc ? T.danger : isRev ? '#A98435' : 'transparent';
+              const bg = isEsc ? 'rgba(155,45,35,.07)' : isRev ? 'rgba(169,132,53,.045)' : 'transparent';
               return (
-                <button key={d.id} onClick={() => setModal({ kind: d.kind, id: d.id, gate: d.gate })} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 11, alignItems: 'center', padding: '12px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, textDecoration: 'none', borderLeft: `3px solid ${d.gate === 'ESCALATION' ? T.danger : 'transparent'}`, width: '100%', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, background: col, flexShrink: 0 }} />
+                <button key={d.id} onClick={() => setModal({ kind: d.kind, id: d.id, gate: d.gate })} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 12, alignItems: 'center', padding: isEsc ? '14px 18px' : '11px 18px', borderBottom: i === decs.length - 1 ? 'none' : `1px solid ${T.soft}`, borderLeft: `4px solid ${borderColor}`, width: '100%', background: bg, textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  <span style={{ width: isEsc ? 10 : 8, height: isEsc ? 10 : 8, borderRadius: 999, background: kindColor, flexShrink: 0, boxShadow: isEsc ? `0 0 0 3px rgba(155,45,35,.15)` : 'none' }} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{d.headline}</div>
-                    <span style={{ fontSize: 10.5, color: T.faint, fontFamily: 'var(--font-mono)' }}>
-                      {KIND_LABEL[d.kind] ?? d.kind} ·{' '}
-                      {d.client_id
-                        ? <Link to={`/clients/${d.client_id}`} style={{ color: T.ink, textDecoration: 'none', fontWeight: 600 }} onClick={e => e.stopPropagation()}>{d.client}</Link>
-                        : d.client}
-                    </span>
+                    <div style={{ fontSize: isEsc ? 14 : 13.5, fontWeight: isEsc ? 700 : 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{d.headline}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' as const }}>
+                      <span style={{ fontSize: 10.5, color: T.faint, fontFamily: 'var(--font-mono)' }}>
+                        {KIND_LABEL[d.kind] ?? d.kind} ·{' '}
+                        {d.client_id
+                          ? <Link to={`/clients/${d.client_id}`} style={{ color: T.muted, textDecoration: 'none', fontWeight: 600 }} onClick={e => e.stopPropagation()}>{d.client}</Link>
+                          : d.client}
+                      </span>
+                      {isEsc && (
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.07em', color: T.danger, background: 'rgba(155,45,35,.12)', border: '1px solid rgba(155,45,35,.28)', borderRadius: 3, padding: '1px 5px', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>ESCALATION</span>
+                      )}
+                    </div>
                   </div>
-                  <Icon name="chevron" size={13} color={T.faint} />
+                  <Icon name="chevron" size={13} color={isEsc ? T.danger : T.faint} />
                 </button>
               );
             })}

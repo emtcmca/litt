@@ -77,7 +77,7 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 | Maintenance hook | 0:00–0:12 (12s) | 26 | 26 |
 | Coordinator trigger | 0:12–0:20 (8s) | 17 | 14 |
 | Sweep | 0:20–1:07 (47s) | 102 | 98 |
-| Brief | 1:07–1:20 (13s) | 28 | 29 |
+| Brief | 1:07–1:20 (13s) | 28 | 27 |
 | Mercer | 1:20–1:37 (17s) | 37 | 32 |
 | Audit | 1:37–1:47 (10s) | 22 | 25 |
 | Close | 1:47–1:54 (7s) | 15 | 12 |
@@ -132,8 +132,8 @@ The demo does NOT need to sell the product. It needs to show the architecture wo
 
 **SCREEN:** Timeline complete. Brief populated. Scroll slowly: Mercer → Acme → Whitmore.
 
-**NARRATOR:** *(29 words)*
-> "Coordinator output — the closeout brief. Three items: Mercer v. Dunlap — ESCALATION, 6 days unconfirmed. Acme Commercial — 82% budget, WARN. Whitmore Group — 16 days without client contact."
+**NARRATOR:** *(27 words)*
+> "Coordinator output — the closeout brief. Eleven decisions, six critical. Mercer v. Dunlap — ESCALATION, 6 days unconfirmed. Acme Commercial — 82% budget, WARN. Whitmore — 16 days, no contact."
 
 **ACTION:** 1-second pause on each item as you name it.
 
