@@ -1,49 +1,40 @@
 Litt — Hackathon Demo Narration
 ElevenLabs: paste entire block as one clip. Voice: Adam or Antoni. Speed: 0.92x.
-Target: ~114 seconds of narration (6s silence built in at end before Playwright stops).
+Target: ~96 seconds of spoken narration. Video is ~1:42 — splash plays silently as outro.
 ---------------------------------------------------------------------------
 
-Litt — a multi-agent system on Google ADK. One coordinator. Four sub-agents.
-Gemini 2.5 Pro via Vertex AI. This is maintenance agent output — client updates
-classified, auto-applied, and logged.
+Eleven decisions. Six critical. Every morning, Litt surfaces what needs attorney attention
+— before the window closes.
 
-ADK coordinator dispatching sub-agents in real time. Strand and Okafor — June twenty-fifth.
+Mercer v. Dunlap. HARD_LEGAL. Six days out. Unconfirmed. The source evidence is right there
+— opposing counsel's email, extracted and surfaced automatically.
 
-classify_signal() — a deterministic Python function — returns a SignalType enum and routes
-to sub-agents. Gemini is never asked which agent to call. Routing is a Python dict.
+Every action an attorney takes creates an immutable audit entry. CREATE-only. Tier: legal
+defensibility. Before and after state. Append-only at the Firestore security rule layer.
+
+One coordinator. Four sub-agents on Google ADK. Running it now.
+
+classify_signal() — a deterministic Python function — returns a SignalType enum.
+Gemini is never asked which agent to call. Routing is a Python dict.
 
 Billing sub-agent: seven pre-bill scrubber rules — forbidden phrases, round-hour anomalies,
-missing narratives. Deadline sub-agent: Mercer v. Dunlap — HARD_LEGAL court deadline,
-six days out, unconfirmed. Escalation fires on any HARD_LEGAL deadline without attorney
-acknowledgment inside the window. Comms sub-agent: MCP-compatible Gmail and Calendar
-adapters feed FactPackets into Gemini for source-grounded client update drafts. Anomaly
-sub-agent: thirteen deterministic detectors, severity-scored.
+missing narratives. Deadline sub-agent: escalation fires on any HARD_LEGAL deadline without
+attorney acknowledgment inside the window. Comms sub-agent: source-grounded client update
+drafts via Gemini. Anomaly sub-agent: thirteen deterministic detectors, severity-scored.
 
-State machine transitions enforced by VALID_TRANSITIONS dict. Every Firestore write goes
-through the tool layer and calls log_audit_event(). Agents never write directly.
+State machine transitions enforced by VALID_TRANSITIONS. Every Firestore write goes through
+the tool layer. Agents never write directly.
 
-Coordinator output — the closeout brief. Eleven decisions, six critical. Mercer v. Dunlap
-— ESCALATION, six days unconfirmed. Acme Commercial — eighty-two percent budget, WARN.
-Whitmore — sixteen days, no contact.
+Google ADK. Gemini 2.5 Pro via Vertex AI. Cloud Run. Firestore. One coordinator. Four
+specialists. Deterministic gates. Every decision logged.
 
-Deadline agent: HARD_LEGAL — Mercer v. Dunlap, six days out, unconfirmed. Source is a
-court order. Declarative decision: escalate — HARD_LEGAL deadlines never auto-confirmed
-without attorney acknowledgment. Source visible. Reasoning traceable.
-
-Every tool call — agent and attorney — is CREATE-only. Tier: legal_defensibility. Before
-and after state. Append-only at the Firestore security rule layer.
-
-One coordinator. Four sub-agents. Deterministic gates. Every decision logged.
-This is the architecture.
+Litt.
 
 ---------------------------------------------------------------------------
 END OF NARRATION
 Scene timing reference (align audio to these Playwright-driven scene changes):
-  0:00  Maintenance panel appears
-  0:12  Navigate to /agents — "ADK coordinator dispatching..."
-  0:20  Run Closeout clicked — "classify_signal()..." sweep narration starts
-  1:07  Navigate to /brief — "Coordinator output..."
-  1:20  Click Mercer card — "Deadline agent: HARD_LEGAL..."
-  1:37  Click Verify — "Every tool call..."
-  1:47  Close modal — "One coordinator..."
-  1:54  Title card appears (silent — narration ends before this)
+  0:00  /brief appears — "Eleven decisions..."
+  0:15  Mercer modal opens — "Mercer v. Dunlap..."
+  0:37  Close modal, /agents loads — "One coordinator..."
+  0:45  Run Closeout clicked — "classify_signal()..." lower-thirds appear
+  1:05  /splash appears — narration winds down; last 30s is visual silent outro

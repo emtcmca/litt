@@ -1,17 +1,26 @@
 /**
  * demo-record.cjs — Playwright demo recording driver for Litt v1.1.5
  *
- * WORKFLOW (no OBS or DaVinci needed):
+ * WORKFLOW:
  *   1.  cd dashboard && npm run dev          (port 3000)
- *   2.  cd backend && python -m uvicorn app.main:app --reload --port 8002
- *   3.  POST http://localhost:8002/api/demo/reset  (firm_id + confirm:true)
- *   4.  GET  http://localhost:8002/api/demo/ready  → all checks ok: True
+ *   2.  POST http://localhost:8002/api/demo/reset  (firm_id + confirm:true)
+ *   3.  Run calibration sequence (see CLAUDE.md — 10 API calls)
+ *   4.  GET  http://localhost:8002/api/demo/ready  → all ok: True
  *   5.  node demo-record.cjs
- *   6.  Generate ElevenLabs audio → save as demo-narration.mp3 in dashboard/
- *   7.  node demo-merge.cjs  → tmp/demo-videos/litt-demo-final.mp4
+ *   6.  node demo-merge.cjs  → tmp/demo-videos/litt-demo-final.mp4
  *
- * TIMING: Sweep completion is detected dynamically (watches for "Replay sweep"
- * button). Scenes 4–8 run on relative delays. No dead time after sweep.
+ * SCENE ORDER (brief-first; sweep runs AFTER brief is shown):
+ *   Scene 1  0:00–0:30  /brief — 11 decisions, scroll Mercer/Acme/Whitmore
+ *   Scene 2  0:12–0:30  Mercer modal — ProofBlock + "What will be logged"
+ *   Scene 3  0:30–0:42  Close modal → /agents
+ *   Scene 4  0:42–0:45  Click Run Closeout
+ *   Scene 5  0:45–1:05  Sweep animation + architecture lower-thirds
+ *   Scene 6  1:05–1:42  /splash end card
+ *
+ * WHY BRIEF-FIRST: Running the live sweep creates new Firestore escalations,
+ * inflating the brief decision count. By showing the brief BEFORE clicking
+ * Run Closeout, the 11/6 count is visible as intended. The brief is never
+ * re-fetched after the sweep in this flow.
  */
 
 'use strict';
@@ -23,21 +32,39 @@ const BASE             = 'http://localhost:3000';
 const VIDEO_OUTPUT_DIR = path.join(__dirname, '..', 'tmp', 'demo-videos');
 
 // ── Fixed scene start times (ms from recording start) ─────────────────────────
-// Only Scenes 1–3 use absolute timing. Scenes 4–8 use relative delays.
 const ABS = {
-  TRIGGER: 12_000,   // 0:12 — navigate to /agents
-  SWEEP:   20_000,   // 0:20 — click Run Closeout
+  MERCER_CLICK:  15_000,   // 0:15 — click Mercer deadline card
+  CLOSE_MODAL:   37_000,   // 0:37 — close modal, navigate to /agents
 };
 
-// ── Relative delays for Scenes 4–8 (ms from when each prior scene completes) ──
+// ── Relative delays ────────────────────────────────────────────────────────────
 const REL = {
-  BRIEF_BUFFER:    4_000,  // hold on completed sweep before navigating to Brief
-  BRIEF_TO_MERCER: 13_000, // dwell on Brief before clicking Mercer
-  MODAL_SETTLE:      900,  // wait after modal opens
-  MODAL_TO_AUDIT:  13_000, // hold on modal ProofBlock before audit panel
-  AUDIT_HOLD:       3_000, // hold on audit panel
-  CLOSE_HOLD:       7_000, // hold on closed modal
-  TITLE_HOLD:       7_000, // title card display duration
+  // Brief scroll timing
+  BRIEF_INITIAL_PAUSE: 2000,  // hold on brief before scrolling
+  PAUSE_ON_MERCER:     1500,
+  PAUSE_ON_ACME:       1200,
+  PAUSE_ON_WHITMORE:   1000,
+  SCROLL_TO_ACME:       530,
+  SCROLL_TO_WHITMORE:   190,
+
+  // Modal timing
+  MODAL_SETTLE:         900,   // wait after modal opens
+  MODAL_TO_AUDIT:     13_000,  // hold on ProofBlock before audit panel scroll
+
+  // Agents / sweep timing
+  AGENTS_SETTLE:       1500,   // wait after /agents loads before starting
+  HOVER_PROOF_STRIP:   2500,   // hover JudgeProofStrip before moving to button
+  PRE_CLICK_PAUSE:     1500,   // pause on Run Closeout before clicking
+  SWEEP_TIMEOUT:      20_000,  // max wait for "Replay sweep" to appear
+
+  // Post-sweep lower-thirds (shown while sweep timeline animates)
+  LT1_DURATION:        5000,   // "Google ADK — Coordinator + 4 Sub-Agents"
+  LT2_DURATION:        5000,   // "Billing · Deadlines · Client Comms · Anomalies"
+  LT3_DURATION:        4500,   // "Routing is a Python dict — not an LLM call"
+  POST_SWEEP_SETTLE:   2000,   // hold on completed sweep before splash
+
+  // Splash — long hold for visual outro; narration ends ~10s before video
+  TITLE_HOLD:         37_000,
 };
 
 // ── Intra-scene timing (ms) ────────────────────────────────────────────────────
@@ -47,15 +74,8 @@ const T = {
   CLICK_HOVER_PAUSE:  380,
   NAV_SETTLE:          700,
   LOWER_THIRD_FADE:    300,
-
-  SCROLL_TO_ACME:      530,
-  SCROLL_TO_WHITMORE:  190,
   SCROLL_STEPS:         10,
   SCROLL_STEP_DELAY:    35,
-
-  PAUSE_ON_MERCER:    1200,
-  PAUSE_ON_ACME:      1200,
-  PAUSE_ON_WHITMORE:  1100,
 };
 
 // ── Mouse tracking ─────────────────────────────────────────────────────────────
@@ -110,7 +130,7 @@ function clickFlash(page, x, y) {
   }, { x, y }).catch(() => {});
 }
 
-// ── Lower-third overlay (bottom-left, left-accent style) ──────────────────────
+// ── Lower-third overlay ────────────────────────────────────────────────────────
 
 async function showLowerThird(page, text) {
   await page.evaluate((txt) => {
@@ -152,85 +172,6 @@ async function hideLowerThird(page) {
     if (el) el.style.opacity = '0';
   });
   await page.waitForTimeout(T.LOWER_THIRD_FADE);
-}
-
-// ── Title card (full-screen, branded, animated) ────────────────────────────────
-
-async function showTitleCard(page) {
-  await page.evaluate(() => {
-    if (document.getElementById('litt-title-card')) return;
-
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes litt-tc-fade { from{opacity:0} to{opacity:1} }
-      @keyframes litt-tc-up   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-      #litt-title-card { animation: litt-tc-fade 0.6s ease forwards; }
-      .ltc { opacity:0; animation: litt-tc-up 0.55s ease forwards; }
-      .ltc-1 { animation-delay:0.15s }
-      .ltc-2 { animation-delay:0.30s }
-      .ltc-3 { animation-delay:0.45s }
-      .ltc-4 { animation-delay:0.60s }
-      .ltc-5 { animation-delay:0.75s }
-    `;
-    document.head.appendChild(style);
-
-    const tc = document.createElement('div');
-    tc.id = 'litt-title-card';
-    tc.style.cssText = [
-      'position:fixed', 'inset:0',
-      'background:#0B0E14',
-      'background-image:' +
-        'linear-gradient(rgba(13,148,136,0.055) 1px,transparent 1px),' +
-        'linear-gradient(90deg,rgba(13,148,136,0.055) 1px,transparent 1px)',
-      'background-size:52px 52px',
-      'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
-      'z-index:9999999',
-      "font-family:'IBM Plex Sans',system-ui,sans-serif",
-    ].join(';');
-
-    const pillStyle = (color, border, text) =>
-      `style="background:rgba(${color},0.14);border:1px solid rgba(${border},0.38);color:${text};` +
-      `font-size:13px;font-family:'IBM Plex Mono',monospace;padding:6px 16px;border-radius:20px;"`;
-
-    tc.innerHTML = `
-      <div style="text-align:center;max-width:860px;padding:0 48px;">
-
-        <!-- Litt wordmark -->
-        <div class="ltc ltc-1" style="margin-bottom:6px;">
-          <span style="color:#0D9488;font-size:80px;font-weight:700;letter-spacing:-4px;line-height:1;">Litt</span>
-        </div>
-
-        <!-- Tagline -->
-        <div class="ltc ltc-2" style="margin-bottom:44px;">
-          <span style="color:#94A3B8;font-size:22px;font-weight:400;letter-spacing:0.1px;">
-            Autonomous Operations Agent for Small Law Firms
-          </span>
-        </div>
-
-        <!-- Rule -->
-        <div class="ltc ltc-3" style="margin-bottom:36px;">
-          <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(13,148,136,0.55) 30%,rgba(13,148,136,0.55) 70%,transparent);width:520px;margin:0 auto;"></div>
-        </div>
-
-        <!-- Tech stack pills -->
-        <div class="ltc ltc-4" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;">
-          <span ${pillStyle('13,148,136','13,148,136','#5EEAD4')}>Google ADK</span>
-          <span ${pillStyle('13,148,136','13,148,136','#5EEAD4')}>Gemini 2.5 Pro</span>
-          <span ${pillStyle('13,148,136','13,148,136','#5EEAD4')}>Cloud Run</span>
-          <span ${pillStyle('13,148,136','13,148,136','#5EEAD4')}>Firestore</span>
-        </div>
-
-        <!-- Hackathon + GitHub -->
-        <div class="ltc ltc-5" style="display:flex;align-items:center;justify-content:center;gap:20px;">
-          <span ${pillStyle('217,119,6','217,119,6','#F59E0B')}>Track 1 — Net-New Agents</span>
-          <span style="color:#1F2937;font-size:16px;">·</span>
-          <span style="color:#374151;font-size:13px;font-family:'IBM Plex Mono',monospace;">github.com/emtcmca/litt</span>
-        </div>
-
-      </div>
-    `;
-    document.body.appendChild(tc);
-  });
 }
 
 // ── Smooth mouse + scroll helpers ─────────────────────────────────────────────
@@ -306,24 +247,21 @@ function elapsed(recordingStart) {
     args: ['--start-maximized', '--disable-infobars', '--no-default-browser-check'],
   });
 
-  // ── Pre-warm in a throw-away context (not recorded) ──────────────────────────
-  // Vite compiles route modules server-side on first request. Warming here means
-  // the recording context's first navigation hits already-compiled bundles.
-  console.log('[pre-warm] Loading routes (not recorded)...');
+  // ── Pre-warm (not recorded) ──────────────────────────────────────────────────
+  console.log('[pre-warm] Loading routes...');
   const warmCtx  = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   const warmPage = await warmCtx.newPage();
-  await warmPage.goto(`${BASE}/clients/mercer-industries`, { waitUntil: 'networkidle' });
-  await warmPage.goto(`${BASE}/agents`,                    { waitUntil: 'networkidle' });
-  await warmPage.goto(`${BASE}/brief`,                     { waitUntil: 'networkidle' });
-  await warmPage.goto(`${BASE}/clients/mercer-industries`, { waitUntil: 'networkidle' });
+  await warmPage.goto(`${BASE}/brief`,   { waitUntil: 'networkidle' });
+  await warmPage.goto(`${BASE}/agents`,  { waitUntil: 'networkidle' });
+  await warmPage.goto(`${BASE}/splash`,  { waitUntil: 'networkidle' });
+  await warmPage.goto(`${BASE}/brief`,   { waitUntil: 'networkidle' });
   await warmCtx.close();
   console.log('[pre-warm] Done.\n');
 
-  // ── 3s countdown ─────────────────────────────────────────────────────────────
   for (let i = 3; i >= 1; i--) { console.log(`  ${i}...`); await new Promise(r => setTimeout(r, 1000)); }
   console.log('  GO\n');
 
-  // ── Recording context starts here ─────────────────────────────────────────────
+  // ── Recording context ─────────────────────────────────────────────────────────
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
     recordVideo: {
@@ -334,149 +272,121 @@ function elapsed(recordingStart) {
   const page = await context.newPage();
   await page.setViewportSize({ width: 1920, height: 1080 });
 
-  // Prevent white flash on first navigation — app background is dark anyway
   await page.addInitScript(() => {
     document.documentElement.style.background = '#0B0E14';
   });
 
-  await page.goto(`${BASE}/clients/mercer-industries`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(600); // brief settle before Scene 1
+  await page.goto(`${BASE}/brief`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
 
   const T0 = Date.now();
 
-  // ── SCENE 1: 0:00–0:12 — maintenance panel ───────────────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 1: maintenance panel`);
+  // ── SCENE 1: 0:00–0:12 — /brief, scroll through decisions ────────────────────
+  console.log(`[${elapsed(T0)}] Scene 1: /brief`);
   await reinitOverlays(page);
-  await showLowerThird(page, 'SAFE → auto-applied  ·  JUDGMENT → held for review');
+  await showLowerThird(page, '11 decisions  ·  6 critical  ·  prioritized by urgency');
 
-  await smoothMove(page, 1180, 430);
-  await page.waitForTimeout(800);
-  await smoothMove(page, 1100, 480);
-  await page.waitForTimeout(400);
-  await smoothMove(page, 1150, 450);
+  // Initial pause — let the brief and lower-third settle before scrolling
+  await page.waitForTimeout(REL.BRIEF_INITIAL_PAUSE);
 
-  await waitUntil(ABS.TRIGGER, T0);
-
-  // ── SCENE 2: 0:12–0:20 — navigate to /agents, show architecture ───────────────
-  console.log(`[${elapsed(T0)}] Scene 2: /agents`);
-  await hideLowerThird(page);
-  await page.goto(`${BASE}/agents`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(T.NAV_SETTLE);
-  await reinitOverlays(page);
-  mouse.x = 100; mouse.y = 300;
-
-  await smoothMove(page, 760, 195); // hover on JudgeProofStrip
-  await page.waitForTimeout(600);
-
-  // Hover the Run Closeout button to show it — but do NOT click (would inflate decisions)
-  const runBtn = page.locator('button').filter({ hasText: /run closeout/i }).first();
-  const runBtnBox = await runBtn.boundingBox().catch(() => null);
-  if (runBtnBox) {
-    await smoothMove(page, runBtnBox.x + runBtnBox.width / 2, runBtnBox.y + runBtnBox.height / 2);
-    await page.waitForTimeout(400);
-  }
-
-  await waitUntil(ABS.SWEEP, T0);
-
-  // ── SCENE 3: agent architecture — fixed 20s, no live sweep ───────────────────
-  console.log(`[${elapsed(T0)}] Scene 3: agent architecture`);
-  await showLowerThird(page, 'Google ADK — Coordinator + 4 Sub-Agents');
-  await page.waitForTimeout(4000);
-  await smoothMove(page, 1380, 680);
-  await page.waitForTimeout(3000);
-
-  await hideLowerThird(page);
-  await showLowerThird(page, 'Billing · Deadlines · Client Comms · Anomalies — each has its own specialist');
-  await page.waitForTimeout(5000);
-  await smoothMove(page, 1350, 700);
-
-  await hideLowerThird(page);
-  await showLowerThird(page, 'Routing is a Python dict — not an LLM call');
-  await page.waitForTimeout(4000);
-  await smoothMove(page, 960, 540);
-  await page.waitForTimeout(2000);
-  await hideLowerThird(page);
-  await page.waitForTimeout(1500);
-
-  // ── SCENE 4: Brief — scroll Mercer → Acme → Whitmore ─────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 4: /brief`);
-  await page.goto(`${BASE}/brief`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(T.NAV_SETTLE);
-  await reinitOverlays(page);
-  mouse.x = 960; mouse.y = 540;
-
-  await showLowerThird(page, 'HARD_LEGAL  ·  6 days  ·  unconfirmed');
-
+  // Locate Mercer card
   const mercerCard = page.locator('text=/opposition.*summary judgment|mercer.*dunlap/i').first();
   await mercerCard.waitFor({ state: 'visible', timeout: 6000 });
   const mercerBox = await mercerCard.boundingBox();
   if (mercerBox) {
     await smoothMove(page, mercerBox.x + mercerBox.width * 0.4, mercerBox.y + mercerBox.height / 2);
   }
-  await page.waitForTimeout(T.PAUSE_ON_MERCER);
+  await page.waitForTimeout(REL.PAUSE_ON_MERCER);
 
-  await smoothScroll(page, T.SCROLL_TO_ACME);
-  await page.waitForTimeout(300);
-  await page.waitForTimeout(T.PAUSE_ON_ACME);
+  await smoothScroll(page, REL.SCROLL_TO_ACME);
+  await page.waitForTimeout(200);
+  await page.waitForTimeout(REL.PAUSE_ON_ACME);
 
-  await smoothScroll(page, T.SCROLL_TO_WHITMORE);
-  await page.waitForTimeout(300);
-  await page.waitForTimeout(T.PAUSE_ON_WHITMORE);
+  await smoothScroll(page, REL.SCROLL_TO_WHITMORE);
+  await page.waitForTimeout(200);
+  await page.waitForTimeout(REL.PAUSE_ON_WHITMORE);
 
-  // Scroll back to Mercer
-  await smoothScroll(page, -(T.SCROLL_TO_ACME + T.SCROLL_TO_WHITMORE + 40));
+  // Scroll back to top before clicking Mercer
+  await smoothScroll(page, -(REL.SCROLL_TO_ACME + REL.SCROLL_TO_WHITMORE + 40));
   await page.waitForTimeout(400);
   await hideLowerThird(page);
 
-  // Dwell on Brief until BRIEF_TO_MERCER ms has elapsed since Brief loaded
-  // (most time already used by scroll sequence; this catches up if scroll was fast)
-  const briefScrollTime = T.PAUSE_ON_MERCER + T.PAUSE_ON_ACME + T.PAUSE_ON_WHITMORE + 2000;
-  const briefRemaining  = REL.BRIEF_TO_MERCER - briefScrollTime;
-  if (briefRemaining > 0) await page.waitForTimeout(briefRemaining);
+  // ── SCENE 2: 0:12–0:30 — Mercer modal ────────────────────────────────────────
+  await waitUntil(ABS.MERCER_CLICK, T0);
+  console.log(`[${elapsed(T0)}] Scene 2: Mercer modal`);
 
-  // ── SCENE 5: click Mercer — ProofBlock + source excerpt ──────────────────────
-  console.log(`[${elapsed(T0)}] Scene 5: Mercer modal`);
-  await showLowerThird(page, 'ESCALATION — escalated, not auto-confirmed');
+  await showLowerThird(page, 'HARD_LEGAL  ·  6 days  ·  unconfirmed source');
   await mercerCard.waitFor({ state: 'visible', timeout: 4000 });
   await naturalClick(page, mercerCard, 'Mercer deadline card');
   await page.waitForTimeout(REL.MODAL_SETTLE);
 
-  await smoothMove(page, 960, 420); // ProofBlock area — Gate row visible
+  await smoothMove(page, 960, 420);  // ProofBlock area
   await page.waitForTimeout(800);
 
-  await smoothScroll(page, 130); // scroll modal to show "What will be logged" panel
+  await smoothScroll(page, 130);     // scroll to "What will be logged"
   await page.waitForTimeout(400);
   await smoothMove(page, 960, 560);
-
   await page.waitForTimeout(REL.MODAL_TO_AUDIT);
 
-  // ── SCENE 6: audit panel — CREATE-only proof ──────────────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 6: audit panel`);
-  await hideLowerThird(page);
-  await showLowerThird(page, 'CREATE-only  ·  tier: legal_defensibility  ·  append-only');
+  // ── SCENE 3: 0:30 — close modal, navigate to /agents ─────────────────────────
+  await waitUntil(ABS.CLOSE_MODAL, T0);
+  console.log(`[${elapsed(T0)}] Scene 3: closing modal → /agents`);
 
-  const auditPanel = page.locator('text=/what will be logged/i').first();
-  const auditVisible = await auditPanel.isVisible().catch(() => false);
-  if (auditVisible) {
-    await auditPanel.scrollIntoViewIfNeeded();
-    const box = await auditPanel.boundingBox();
-    if (box) await smoothMove(page, box.x + box.width / 2, box.y + box.height / 2 + 28);
-  } else {
-    await smoothScroll(page, 100);
-    await smoothMove(page, 960, 570);
-  }
-  await page.waitForTimeout(REL.AUDIT_HOLD);
-
-  // ── SCENE 7: close modal ──────────────────────────────────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 7: close modal`);
   await hideLowerThird(page);
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(600);
-  await smoothMove(page, 960, 400);
-  await page.waitForTimeout(REL.CLOSE_HOLD);
+  await page.waitForTimeout(400);
 
-  // ── SCENE 8: splash end card ──────────────────────────────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 8: splash end card`);
+  await page.goto(`${BASE}/agents`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(T.NAV_SETTLE);
+  await reinitOverlays(page);
+  mouse.x = 100; mouse.y = 300;
+
+  // ── SCENE 4: hover proof strip, then click Run Closeout ───────────────────────
+  console.log(`[${elapsed(T0)}] Scene 4: /agents — clicking Run Closeout`);
+
+  await smoothMove(page, 760, 195);       // JudgeProofStrip
+  await page.waitForTimeout(REL.HOVER_PROOF_STRIP);
+
+  const runBtn = page.locator('button').filter({ hasText: /run closeout/i }).first();
+  await runBtn.waitFor({ state: 'visible', timeout: 5000 });
+  const runBtnBox = await runBtn.boundingBox().catch(() => null);
+  if (runBtnBox) {
+    await smoothMove(page, runBtnBox.x + runBtnBox.width / 2, runBtnBox.y + runBtnBox.height / 2);
+    await page.waitForTimeout(REL.PRE_CLICK_PAUSE);
+  }
+
+  // CLICK — live sweep runs from here
+  await naturalClick(page, runBtn, 'Run Closeout');
+  await page.waitForTimeout(500);
+
+  // ── SCENE 5: sweep animates, architecture lower-thirds ────────────────────────
+  console.log(`[${elapsed(T0)}] Scene 5: sweep running`);
+
+  // Lower-thirds play while timeline observations animate in
+  await showLowerThird(page, 'Google ADK — Coordinator + 4 Sub-Agents');
+  await page.waitForTimeout(REL.LT1_DURATION);
+  await smoothMove(page, 1380, 680);
+
+  await hideLowerThird(page);
+  await showLowerThird(page, 'Billing · Deadlines · Client Comms · Anomalies');
+  await page.waitForTimeout(REL.LT2_DURATION);
+  await smoothMove(page, 1350, 700);
+
+  await hideLowerThird(page);
+  await showLowerThird(page, 'Routing is a Python dict — not an LLM call');
+  await page.waitForTimeout(REL.LT3_DURATION);
+  await smoothMove(page, 960, 540);
+
+  await hideLowerThird(page);
+
+  // Wait for "Replay sweep" if not yet visible — confirms sweep completed
+  await page.waitForSelector('text=/replay sweep/i', { timeout: REL.SWEEP_TIMEOUT })
+    .catch(() => console.log('[sweep] timeout — proceeding'));
+
+  await page.waitForTimeout(REL.POST_SWEEP_SETTLE);
+
+  // ── SCENE 6: splash end card ──────────────────────────────────────────────────
+  console.log(`[${elapsed(T0)}] Scene 6: /splash`);
   await page.goto(`${BASE}/splash`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(200);
   await smoothMove(page, 960, 540);
