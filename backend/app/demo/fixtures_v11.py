@@ -235,5 +235,5 @@ V11_FIXTURES = {
     "matters": [RIVERA_MATTER],
     "deadlines": [DL_RIVERA_001],
     "source_emails": [EMAIL_RIVERA_OPP_20260528],
-    "time_entries": [TE_009],
+    "time_entries": [],  # te-009 removed — round hours triggered too many sweep anomalies
 }

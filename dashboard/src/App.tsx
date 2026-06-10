@@ -17,6 +17,7 @@ import { Clients } from './pages/Clients';
 import { ClientNew } from './pages/ClientNew';
 import { Client } from './pages/Client';
 import { ArchitecturePreview } from './pages/ArchitecturePreview';
+import { Splash } from './pages/Splash';
 import { TimerHUD } from './components/TimerHUD';
 
 const FIRM_ID = 'strand-okafor';
@@ -40,6 +41,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/architecture" element={<ArchitecturePreview />} />
+        <Route path="/splash" element={<Splash />} />
         <Route path="/email-preview" element={<EmailPreview />} />
         <Route path="/audit" element={
           <ConsoleShell>

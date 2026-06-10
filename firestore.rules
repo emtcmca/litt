@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Caller holds a service-account custom claim (set at token mint time).
+    // The backend admin SDK bypasses these rules entirely; this guard applies
+    // only to direct client access (e.g., dashboard Firebase SDK calls).
+    function isServiceAccount() {
+      return request.auth != null && request.auth.token.role == 'service';
+    }
+
+    // Caller is an authenticated attorney scoped to this firm.
+    function isAttorneyInFirm(firmId) {
+      return request.auth != null
+          && request.auth.token.firm_id == firmId
+          && request.auth.token.role == 'attorney';
+    }
+
+    // Deny everything not explicitly permitted below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Firm-scoped collections — all documents live under firms/{firmId}/...
+    // -------------------------------------------------------------------------
+
+    // audit_log — CREATE-only. The append-only immutable record of every write
+    // in the system. update and delete are hardcoded false — no condition can
+    // override them. Do NOT add a wildcard rule inside this path.
+    match /firms/{firmId}/audit_log/{docId} {
+      allow create: if isServiceAccount();
+      allow read:   if isAttorneyInFirm(firmId);
+      allow update, delete: if false;
+    }
+
+    // deadline_events — CREATE-only. Append-only event log for the deadline
+    // state machine. Same immutability guarantee as audit_log.
+    match /firms/{firmId}/deadline_events/{docId} {
+      allow create: if isServiceAccount();
+      allow read:   if isAttorneyInFirm(firmId);
+      allow update, delete: if false;
+    }
+
+    // time_entries — no DELETE. State advances via update only (state machine
+    // enforced in Python); deleted entries would break the audit trail.
+    match /firms/{firmId}/time_entries/{docId} {
+      allow create, read, update: if isAttorneyInFirm(firmId);
+      allow delete: if false;
+    }
+
+    // ingestion_signals — service account only. Deduplication registry for
+    // Gmail / Calendar adapters. Attorneys have no direct access.
+    match /firms/{firmId}/ingestion_signals/{docId} {
+      allow create, read, update: if isServiceAccount();
+      allow delete: if false;
+    }
+
+    // Standard firm collections — full read/write for attorneys in this firm.
+    // These are enumerated explicitly (not a wildcard) so that the rules above
+    // cannot be circumvented by a broader match.
+    match /firms/{firmId}/attorneys/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/clients/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/matters/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/deadlines/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/client_communications/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/invoices/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+
+    match /firms/{firmId}/escalations/{docId} {
+      allow read, write: if isAttorneyInFirm(firmId);
+    }
+  }
+}
