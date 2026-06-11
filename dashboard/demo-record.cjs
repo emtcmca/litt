@@ -63,8 +63,11 @@ const REL = {
   LT3_DURATION:        4500,   // "Routing is a Python dict — not an LLM call"
   POST_SWEEP_SETTLE:   2000,   // hold on completed sweep before splash
 
-  // Splash — long hold for visual outro; narration ends ~10s before video
-  TITLE_HOLD:         37_000,
+  // Maintenance panel scene before splash
+  MAINTENANCE_HOLD:   15_000,  // hold on /clients/mercer-industries
+
+  // Splash — silent visual outro after narration ends
+  TITLE_HOLD:         20_000,
 };
 
 // ── Intra-scene timing (ms) ────────────────────────────────────────────────────
@@ -284,7 +287,7 @@ function elapsed(recordingStart) {
   // ── SCENE 1: 0:00–0:12 — /brief, scroll through decisions ────────────────────
   console.log(`[${elapsed(T0)}] Scene 1: /brief`);
   await reinitOverlays(page);
-  await showLowerThird(page, '11 decisions  ·  6 critical  ·  prioritized by urgency');
+  await showLowerThird(page, '17 decisions  ·  10 critical  ·  prioritized by urgency');
 
   // Initial pause — let the brief and lower-third settle before scrolling
   await page.waitForTimeout(REL.BRIEF_INITIAL_PAUSE);
@@ -385,8 +388,23 @@ function elapsed(recordingStart) {
 
   await page.waitForTimeout(REL.POST_SWEEP_SETTLE);
 
-  // ── SCENE 6: splash end card ──────────────────────────────────────────────────
-  console.log(`[${elapsed(T0)}] Scene 6: /splash`);
+  // ── SCENE 6: maintenance panel — safe vs human-gated ─────────────────────────
+  console.log(`[${elapsed(T0)}] Scene 6: maintenance panel`);
+  await page.goto(`${BASE}/clients/mercer-industries`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(T.NAV_SETTLE);
+  await reinitOverlays(page);
+  mouse.x = 960; mouse.y = 540;
+
+  await showLowerThird(page, 'SAFE → auto-applied  ·  JUDGMENT → held for attorney review');
+  await smoothMove(page, 1180, 430);
+  await page.waitForTimeout(1200);
+  await smoothMove(page, 1100, 490);
+  await page.waitForTimeout(REL.MAINTENANCE_HOLD);
+  await hideLowerThird(page);
+  await page.waitForTimeout(800);
+
+  // ── SCENE 7: splash end card ──────────────────────────────────────────────────
+  console.log(`[${elapsed(T0)}] Scene 7: /splash`);
   await page.goto(`${BASE}/splash`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(200);
 

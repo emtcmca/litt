@@ -19,7 +19,7 @@ RATE  = "+0%"   # natural pace; atempo in merge handles length fit
 #   0:48  — Scene 4: Run Closeout clicked, sweep runs
 #   1:09  — Scene 6: /splash (narration winds down, silent outro)
 NARRATION = """
-Eleven decisions. Six critical. Every morning, Litt surfaces what needs attorney attention
+Seventeen decisions. Ten critical. Every morning, Litt surfaces what needs attorney attention
 before the window closes.
 
 Mercer v. Dunlap. Hard legal deadline. Six days out. Unconfirmed.
@@ -29,18 +29,19 @@ Every action an attorney takes creates an immutable audit entry.
 Create only. Tier: legal defensibility. Before and after state.
 Append only at the Firestore security rule layer.
 
-One coordinator. Four sub-agents on Google ADK. Running it now.
+One coordinator. The billing agent, deadline agent, comms agent, and anomaly agent.
+All four running in parallel on Google ADK. Running it now.
 
 classify signal, a deterministic Python function, returns a signal type enum.
 Gemini is never asked which agent to call. Routing is a Python dict.
 
-Billing sub-agent: seven pre-bill scrubber rules, forbidden phrases, round-hour anomalies, missing narratives.
-Deadline sub-agent: escalation fires on any hard legal deadline without attorney acknowledgment inside the window.
-Comms sub-agent: source-grounded client update drafts via Gemini.
-Anomaly sub-agent: thirteen deterministic detectors, severity-scored.
+Billing: seven pre-bill scrubber rules, forbidden phrases, round-hour anomalies, missing narratives.
+Deadlines: escalation fires on any hard legal deadline without attorney acknowledgment.
+Comms: source-grounded client update drafts via Gemini.
+Anomalies: thirteen deterministic detectors, severity-scored.
 
-State machine transitions enforced by valid transitions.
-Every Firestore write goes through the tool layer. Agents never write directly.
+Safe decisions apply automatically. Legal decisions wait for the attorney.
+Autonomous on operations. Human-gated on law.
 
 Google ADK. Gemini 2.5 Pro via Vertex AI. Cloud Run. Firestore.
 One coordinator. Four specialists. Deterministic gates. Every decision logged.

@@ -113,9 +113,11 @@ console.log(`Video: ${videoDur.toFixed(1)}s  Audio: ${audioDur.toFixed(1)}s\n`);
 
 // apad ensures audio never ends before video — -shortest then clips to video length.
 // Without apad, -shortest would cut at audio end, removing the title card.
+// 2.5s silent lead-in so first word isn't cut off when video opens.
+// adelay pads the start; apad pads the end to reach video length.
 const audioFilter = atempoFilter
-  ? `-filter:a "atempo=${atempoFilter},apad"`
-  : `-filter:a "apad"`;
+  ? `-filter:a "adelay=2500|2500,atempo=${atempoFilter},apad"`
+  : `-filter:a "adelay=2500|2500,apad"`;
 
 const cmd = [
   'ffmpeg',
