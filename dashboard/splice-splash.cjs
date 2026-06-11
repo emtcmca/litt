@@ -20,26 +20,34 @@ const FINAL      = path.join(VIDEO_DIR, 'litt-demo-main.mp4');
 const SPLASH_SRC = path.join(VIDEO_DIR, 'splash-new.webm');
 const PART_A     = path.join(VIDEO_DIR, '_part_a.mp4');
 const PART_B     = path.join(VIDEO_DIR, '_part_b.mp4');
+const PART_B_AUD = path.join(VIDEO_DIR, '_part_b_aud.aac');
 const CONCAT_TXT = path.join(VIDEO_DIR, '_concat.txt');
 const OUT_FINAL  = path.join(VIDEO_DIR, 'litt-demo-final.mp4');
 
-// Splice point: scene 7 (/splash) starts at this timestamp in the final MP4.
-// Adjust if timing drifted. Check with: ffprobe litt-demo-final.mp4
-const SPLICE_SEC = 90.3;
+// Splice point: /splash starts here. Narration ends at ~94.9s (92.4s + 2.5s adelay).
+// The 4.6s of narration after the splice point is carried into the splash segment audio.
+const SPLICE_SEC  = 90.3;
+const NARR_END_S  = 95.0; // slightly past actual narration end — safe margin
 
-if (!fs.existsSync(FINAL))      { console.error('[ERROR] litt-demo-final.mp4 not found'); process.exit(1); }
+if (!fs.existsSync(FINAL))      { console.error('[ERROR] litt-demo-main.mp4 not found'); process.exit(1); }
 if (!fs.existsSync(SPLASH_SRC)) { console.error('[ERROR] splash-new.webm not found — run record-splash.cjs first'); process.exit(1); }
 
-console.log(`Splice point: ${SPLICE_SEC}s`);
-console.log('Step 1: trim main video...');
+console.log(`Splice point: ${SPLICE_SEC}s  |  Narration ends: ~${NARR_END_S}s`);
+console.log('Step 1: trim main video (A/V) at splice point...');
 execSync(
   `ffmpeg -y -i "${FINAL}" -t ${SPLICE_SEC} -c copy "${PART_A}"`,
   { stdio: 'inherit' }
 );
 
-console.log('\nStep 2: encode new splash segment...');
+console.log('\nStep 2a: extract trailing narration audio (splice point → narration end)...');
 execSync(
-  `ffmpeg -y -i "${SPLASH_SRC}" -c:v libx264 -crf 12 -preset slow -pix_fmt yuv420p -b:v 8000k -maxrate 10000k -bufsize 20000k -an "${PART_B}"`,
+  `ffmpeg -y -i "${FINAL}" -ss ${SPLICE_SEC} -to ${NARR_END_S} -vn -c:a copy "${PART_B_AUD}"`,
+  { stdio: 'inherit' }
+);
+
+console.log('\nStep 2b: encode splash video + trailing narration audio...');
+execSync(
+  `ffmpeg -y -i "${SPLASH_SRC}" -i "${PART_B_AUD}" -c:v libx264 -crf 12 -preset slow -pix_fmt yuv420p -b:v 8000k -maxrate 10000k -bufsize 20000k -c:a aac -b:a 192k -shortest "${PART_B}"`,
   { stdio: 'inherit' }
 );
 
@@ -51,7 +59,7 @@ execSync(
 );
 
 // Cleanup temp files
-[PART_A, PART_B, CONCAT_TXT].forEach(f => { try { fs.unlinkSync(f); } catch {} });
+[PART_A, PART_B, PART_B_AUD, CONCAT_TXT].forEach(f => { try { fs.unlinkSync(f); } catch {} });
 
 const size = Math.round(fs.statSync(OUT_FINAL).size / 1024);
 console.log(`\n✓ Done: ${OUT_FINAL}`);
