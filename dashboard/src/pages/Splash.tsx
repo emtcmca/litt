@@ -1,3 +1,23 @@
+export function Splash() {
+  return (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      margin: 0,
+      padding: 0,
+      overflow: 'hidden',
+      background: '#071410',
+    }}>
+      <img
+        src="/icons-logo/litt-splash.png"
+        alt="Litt"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+    </div>
+  );
+}
+
+// ── legacy icon components kept for reference ──────────────────────────────
 function GoogleIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -56,102 +76,3 @@ function CloudTraceIcon() {
   );
 }
 
-const STACK = [
-  { label: 'Google ADK', sub: 'Agent Dev Kit',  Icon: GoogleIcon },
-  { label: 'Gemini 2.5 Pro', sub: 'Vertex AI',  Icon: GeminiIcon },
-  { label: 'Cloud Run',      sub: null,          Icon: CloudRunIcon },
-  { label: 'Firestore',      sub: null,          Icon: FirestoreIcon },
-  { label: 'Cloud Trace',    sub: null,          Icon: CloudTraceIcon },
-];
-
-export function Splash() {
-  return (
-    <div style={{
-      background: '#071410',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-      padding: '0 48px',
-    }}>
-      <div style={{ textAlign: 'center', maxWidth: 860 }}>
-
-        <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'center' }}>
-          <img
-            src="/icons-logo/litt_logo_main_no_tagline.png"
-            alt="Litt"
-            style={{ height: 110, filter: 'invert(1)', mixBlendMode: 'screen' as const }}
-          />
-        </div>
-
-        <p style={{
-          color: '#94A3B8',
-          fontSize: 22,
-          fontWeight: 400,
-          margin: '0 0 36px',
-          lineHeight: 1.5,
-        }}>
-          Autonomous operations agent for{' '}
-          <strong style={{ color: '#E2E8F0' }}>solo attorneys</strong>
-          {' '}and{' '}
-          <strong style={{ color: '#E2E8F0' }}>small law firms.</strong>
-        </p>
-
-        <div style={{ marginBottom: 22 }}>
-          <span style={{
-            display: 'inline-block',
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: '#0D9488',
-          }} />
-        </div>
-
-        <p style={{
-          color: '#2D5040',
-          fontSize: 11,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          margin: '0 0 20px',
-        }}>
-          Built on Google Cloud
-        </p>
-
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 64 }}>
-          {STACK.map(({ label, sub, Icon }) => (
-            <div key={label} style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              borderRadius: 12,
-              padding: '18px 16px 16px',
-              textAlign: 'center',
-              minWidth: 106,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                <Icon />
-              </div>
-              <div style={{ color: '#CBD5E1', fontSize: 12, fontWeight: 500, marginBottom: sub ? 3 : 0 }}>
-                {label}
-              </div>
-              {sub && (
-                <div style={{ color: '#475569', fontSize: 10 }}>{sub}</div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <p style={{
-          color: '#1E3D2A',
-          fontSize: 11,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-        }}>
-          Litt &nbsp;·&nbsp; Less ops. More law.
-        </p>
-
-      </div>
-    </div>
-  );
-}
