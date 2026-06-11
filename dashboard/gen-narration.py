@@ -11,39 +11,41 @@ import os
 VOICE = "en-US-AndrewNeural"
 RATE  = "+0%"   # natural pace; atempo in merge handles length fit
 
-# ~160 words, ~100s at natural pace (+0%) → atempo ≈ 1.01x at merge (imperceptible).
+# ~195 words, ~86s at natural pace (+0%).
 # Scene alignment (approximate):
-#   0:00  — Scene 1: maintenance panel
-#   0:12  — Scene 2: /agents trigger
-#   0:20  — Scene 3: sweep (narrate architecture over running sweep)
-#   0:46  — Scene 4: brief callouts
-#   0:57  — Scene 5: Mercer modal
-#   1:15  — Scene 6: audit panel
-#   1:29  — title card (silent)
+#   0:00  — Scene 1: /brief, 11 decisions shown
+#   0:15  — Scene 2: Mercer modal opens
+#   0:37  — Scene 3: close modal, navigate to /agents
+#   0:48  — Scene 4: Run Closeout clicked, sweep runs
+#   1:09  — Scene 6: /splash (narration winds down, silent outro)
 NARRATION = """
-This is Litt — an autonomous operations agent for small law firms.
-Every client update is classified. Safe actions apply automatically.
-Anything requiring judgment is held for attorney review.
+Eleven decisions. Six critical. Every morning, Litt surfaces what needs attorney attention
+before the window closes.
 
-At the end of each day, Litt runs a sweep. One coordinator, four sub-agents,
-on Google ADK with Gemini 2.5 Pro.
+Mercer v. Dunlap. Hard legal deadline. Six days out. Unconfirmed.
+The source evidence is right there, opposing counsel's email, extracted and surfaced automatically.
 
-Each signal is classified and routed deterministically —
-not by asking an AI which agent to call. A Python routing table decides.
-Billing, deadlines, client communications, anomalies — each has its own specialist.
+Every action an attorney takes creates an immutable audit entry.
+Create only. Tier: legal defensibility. Before and after state.
+Append only at the Firestore security rule layer.
 
-Tonight's brief — deadlines, billing flags, anomalies, silent clients.
-Every item Litt surfaced, prioritized by urgency.
-Mercer is escalating. Acme is over budget. Whitmore hasn't been contacted in sixteen days.
+One coordinator. Four sub-agents on Google ADK. Running it now.
 
-Mercer versus Dunlap. Hard legal deadline, six days out. Source is a court order.
-Litt escalated it. Hard legal deadlines always require attorney acknowledgment.
-Litt never confirms one automatically.
+classify signal, a deterministic Python function, returns a signal type enum.
+Gemini is never asked which agent to call. Routing is a Python dict.
 
-Behind every decision is a defensible audit trail.
-Create only. Before and after state captured. Nothing ever edited or deleted.
+Billing sub-agent: seven pre-bill scrubber rules, forbidden phrases, round-hour anomalies, missing narratives.
+Deadline sub-agent: escalation fires on any hard legal deadline without attorney acknowledgment inside the window.
+Comms sub-agent: source-grounded client update drafts via Gemini.
+Anomaly sub-agent: thirteen deterministic detectors, severity-scored.
 
-Autonomous on operations. Human-gated on legal decisions. Every action logged.
+State machine transitions enforced by valid transitions.
+Every Firestore write goes through the tool layer. Agents never write directly.
+
+Google ADK. Gemini 2.5 Pro via Vertex AI. Cloud Run. Firestore.
+One coordinator. Four specialists. Deterministic gates. Every decision logged.
+
+Litt.
 """
 
 OUTPUT = os.path.join(os.path.dirname(__file__), "demo-narration.mp3")

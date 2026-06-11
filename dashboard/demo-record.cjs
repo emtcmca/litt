@@ -389,8 +389,23 @@ function elapsed(recordingStart) {
   console.log(`[${elapsed(T0)}] Scene 6: /splash`);
   await page.goto(`${BASE}/splash`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(200);
+
+  // Re-inject cursor after navigation (page DOM was replaced)
+  await initCursor(page);
   await smoothMove(page, 960, 540);
-  await page.waitForTimeout(REL.TITLE_HOLD);
+
+  // VP8 drops frames on completely static pages — drift the cursor slowly to
+  // keep frame generation running for the full TITLE_HOLD duration.
+  // initCursor must be called first so the element exists on this page.
+  const splashStart = Date.now();
+  while (Date.now() - splashStart < REL.TITLE_HOLD) {
+    const progress = (Date.now() - splashStart) / REL.TITLE_HOLD;
+    const x = Math.round(960 + Math.sin(progress * Math.PI * 4) * 60);
+    const y = Math.round(540 + Math.cos(progress * Math.PI * 3) * 40);
+    await page.mouse.move(x, y);
+    updateCursor(page, x, y);
+    await page.waitForTimeout(80);
+  }
 
   console.log(`[${elapsed(T0)}] Done — closing browser`);
   await browser.close();

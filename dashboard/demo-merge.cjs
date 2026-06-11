@@ -58,11 +58,26 @@ try {
 // ── Get durations and compute tempo ───────────────────────────────────────────
 
 function getDuration(filePath) {
-  const out = execSync(
-    `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`,
-    { encoding: 'utf8' }
-  ).trim();
-  return parseFloat(out);
+  // Try format duration header first (fast, works for mp3/mp4)
+  try {
+    const out = execSync(
+      `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${filePath}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    const d = parseFloat(out);
+    if (!isNaN(d) && d > 0) return d;
+  } catch {}
+  // Fall back to counting video packets — reliable for Playwright webm
+  // which lacks a duration header. Playwright records at 25 fps.
+  try {
+    const out = execSync(
+      `ffprobe -v quiet -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 "${filePath}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    const packets = parseInt(out, 10);
+    if (!isNaN(packets) && packets > 0) return packets / 25;
+  } catch {}
+  return NaN;
 }
 
 const videoDur = getDuration(videoIn);
